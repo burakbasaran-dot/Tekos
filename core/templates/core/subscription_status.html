@@ -1,0 +1,33 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Abonelik — {{ company.name|default:"Firma" }}{% endblock %}
+{% block content %}
+<div class="card" style="max-width:640px;">
+  <h2 style="margin-top:0;">Abonelik durumu</h2>
+  {% if not company %}
+    <p style="color:#4b5563;">Aktif firma seçili değil.
+      <a href="/platform/company/select/">Firma seçin</a>
+    </p>
+  {% else %}
+    <p><strong>Firma:</strong> {{ company.name }}</p>
+    {% if subscription and plan %}
+      <ul style="line-height:1.7;color:#374151;">
+        <li><strong>Plan:</strong> {{ plan.name }} ({{ plan.code }})</li>
+        <li><strong>Durum:</strong> {{ subscription.get_status_display }}</li>
+        <li><strong>Başlangıç:</strong> {{ subscription.start_date }}</li>
+        <li><strong>Bitiş:</strong> {{ subscription.end_date|default:"—" }}</li>
+        <li><strong>Deneme bitiş:</strong> {{ subscription.trial_end_date|default:"—" }}</li>
+        <li><strong>Kullanıcı limiti:</strong> {{ plan.user_limit }}</li>
+        <li><strong>Erişim:</strong> {% if read_only %}Salt okunur / kısıtlı{% else %}Aktif{% endif %}</li>
+      </ul>
+    {% else %}
+      <p style="color:#4b5563;">Bu firma için aktif abonelik kaydı bulunamadı. Yönetici paneli üzerinden plan atayabilirsiniz.</p>
+    {% endif %}
+  {% endif %}
+  <p style="margin-top:1.25rem;">
+    <a href="{% url 'stokapp:genel_ayarlar' %}" class="btn btn-secondary">← Ayarlara dön</a>
+    {% if user.is_staff %}
+      <a href="/admin/core/subscription/" class="btn btn-secondary">Admin abonelikler</a>
+    {% endif %}
+  </p>
+</div>
+{% endblock %}

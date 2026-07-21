@@ -3,6 +3,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_http_methods
 
 from core.models import Company
+from core.services.licensing import get_active_subscription, is_read_only
 from core.services.tenancy import get_user_companies, set_active_company
 
 
@@ -25,5 +26,23 @@ def company_select(request):
             "companies": companies,
             "active_company": getattr(request, "company", None),
             "error": error,
+        },
+    )
+
+
+@login_required
+@require_http_methods(["GET"])
+def subscription_status(request):
+    """Read-only subscription summary for the active company."""
+    company = getattr(request, "company", None)
+    sub = get_active_subscription(company) if company else None
+    return render(
+        request,
+        "core/subscription_status.html",
+        {
+            "company": company,
+            "subscription": sub,
+            "plan": sub.plan if sub else None,
+            "read_only": is_read_only(company) if company else True,
         },
     )

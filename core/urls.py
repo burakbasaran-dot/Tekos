@@ -10,6 +10,7 @@ urlpatterns = [
 
 platform_urlpatterns = [
     path("company/select/", views_platform.company_select, name="company_select"),
+    path("subscription/", views_platform.subscription_status, name="subscription_status"),
     path("setup/", views_setup.setup_wizard, {"step": 1}, name="setup_wizard"),
     path("setup/<int:step>/", views_setup.setup_wizard, name="setup_wizard_step"),
 ]

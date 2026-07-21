@@ -872,6 +872,8 @@
           </div>
           <div class="nav-section-content" id="settingsContent">
             <a href="{% url 'stokapp:genel_ayarlar' %}"><span class="icon">⚙️</span><span class="label">Genel Ayarlar</span></a>
+            <a href="/platform/company/select/"><span class="icon">🏢</span><span class="label">Firma Seçimi</span></a>
+            <a href="/platform/setup/"><span class="icon">🧭</span><span class="label">Firma Kurulumu</span></a>
             <a href="{% url 'stokapp:hata_raporlari' %}"><span class="icon">⚠️</span><span class="label">Hata Raporları</span></a>
             <a href="{% url 'stokapp:veri_yedekleme' %}"><span class="icon">💾</span><span class="label">Veri Yedekleme</span></a>
             {% url 'stokapp:gelistirme_talep_listesi' as gelistirme_talep_href %}
@@ -894,7 +896,10 @@
             <a href="{% url 'stokapp:para_birimi_listesi' %}"><span class="icon">💱</span><span class="label">Para Birimleri</span></a>
             <a href="{% url 'stokapp:ayarlar_mobil' %}"><span class="icon">📱</span><span class="label">Mobil Uygulama</span></a>
             <a href="{% url 'stokapp:yazdirma_sablonlari_listesi' %}"><span class="icon">🖨️</span><span class="label">Yazdırma Şablonları</span></a>
-            <a href="{% url 'stokapp:ayarlar_abonelik' %}"><span class="icon">💳</span><span class="label">Abonelik</span></a>
+            <a href="/platform/subscription/"><span class="icon">💳</span><span class="label">Abonelik</span></a>
+            {% if user.is_staff %}
+            <a href="/admin/core/platformauditlog/"><span class="icon">📜</span><span class="label">Platform Audit Log</span></a>
+            {% endif %}
             <a href="{% url 'stokapp:veri_ice_aktarma' %}"><span class="icon">📥</span><span class="label">Verileri İçe Aktarma</span></a>
             <a href="{% url 'stokapp:ayarlar_tum_verileri_sil' %}"><span class="icon">🗑️</span><span class="label">Tüm Verileri Sil</span></a>
           </div>
@@ -916,6 +921,9 @@
           <div class="sidebar-user-menu-header">
             <strong>{{ user.get_full_name|default:user.username }}</strong>
             @{{ user.username }}
+            {% if request.company %}
+            <div style="margin-top:0.35rem;font-size:0.8rem;opacity:0.85;">{{ request.company.name }}</div>
+            {% endif %}
           </div>
           <form method="post" action="{% url 'logout' %}">
             {% csrf_token %}
