@@ -7,6 +7,7 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('accounts/', include('django.contrib.auth.urls')),
+    path('api/', include('core.urls')),
     path('stok/', include('stokapp.urls')),
     path('', RedirectView.as_view(url='/stok/dashboard/')),  # Giriş sonrası ana dashboard'a yönlendir
 ]

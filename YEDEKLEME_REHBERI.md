@@ -1,5 +1,7 @@
 # Yedekleme Rehberi
 
+> PostgreSQL (Render production) yedekleme için: [BACKUP_RESTORE.md](BACKUP_RESTORE.md)
+
 ## Klasör Kopyalama ile Yedekleme
 
 Proje klasörünü tamamen kopyaladığınızda aşağıdaki önemli dosyalar yedeklenir:

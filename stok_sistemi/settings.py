@@ -12,8 +12,13 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 import os
 from pathlib import Path
+from urllib.parse import quote_plus
 
+import dj_database_url
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
+
+from stok_sistemi.env_utils import env_flag, parse_csv_env
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -23,22 +28,45 @@ load_dotenv(BASE_DIR / ".env")
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-3$#t$2b!z3n)mxl0e(trox&b(2^rdjdeb@@gbd#e8cl6go2u+j'
+DEBUG = env_flag("DEBUG", "False")
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DEBUG", "False") == "True"
+SECRET_KEY = os.getenv("SECRET_KEY", "").strip()
+if not SECRET_KEY:
+    if DEBUG:
+        # Local development only — never use this in production.
+        SECRET_KEY = "django-insecure-dev-only-not-for-production"
+    else:
+        raise ImproperlyConfigured(
+            "SECRET_KEY environment variable is required when DEBUG is False."
+        )
 
-ALLOWED_HOSTS = os.getenv(
+ALLOWED_HOSTS = parse_csv_env(
     "ALLOWED_HOSTS",
-    "localhost,127.0.0.1,tekos-9155.onrender.com"
-).split(",")
+    "localhost,127.0.0.1,tekos-9155.onrender.com",
+)
 
-CSRF_TRUSTED_ORIGINS = [
+CSRF_TRUSTED_ORIGINS = parse_csv_env(
+    "CSRF_TRUSTED_ORIGINS",
     "https://tekos-9155.onrender.com",
-]
+)
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+SITE_URL = os.getenv("SITE_URL", "").strip()
+
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = "DENY"
+    SECURE_REFERRER_POLICY = "same-origin"
+    SECURE_SSL_REDIRECT = env_flag("SECURE_SSL_REDIRECT", "True")
+else:
+    SECURE_SSL_REDIRECT = env_flag("SECURE_SSL_REDIRECT", "False")
+
+SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "0"))
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env_flag("SECURE_HSTS_INCLUDE_SUBDOMAINS", "False")
+SECURE_HSTS_PRELOAD = env_flag("SECURE_HSTS_PRELOAD", "False")
 
 
 # Application definition
@@ -56,6 +84,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -93,32 +122,57 @@ WSGI_APPLICATION = 'stok_sistemi.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
+#
+# Priority: DATABASE_URL → TEKOS_POSTGRES_* (local clone) → SQLite
 
-# default: SQLite (deneme ortamı, orijinal PostgreSQL'den bağımsız).
-# postgres: isteğe bağlı .env ile TEKOS_POSTGRES_* tanımlanırsa kullanılabilir.
-_clone_pg_db = os.environ.get('TEKOS_POSTGRES_DB', '').strip()
-if _clone_pg_db:
+_database_url = os.getenv("DATABASE_URL", "").strip()
+_clone_pg_db = os.environ.get("TEKOS_POSTGRES_DB", "").strip()
+
+if _database_url:
     DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': _clone_pg_db,
-            'USER': os.environ.get('TEKOS_POSTGRES_USER', 'tekos_user'),
-            'PASSWORD': os.environ.get('TEKOS_POSTGRES_PASSWORD', ''),
-            'HOST': os.environ.get('TEKOS_POSTGRES_HOST', 'localhost'),
-            'PORT': os.environ.get('TEKOS_POSTGRES_PORT', '5432'),
-        },
-        'sqlite_backup': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
+        "default": dj_database_url.config(
+            default=_database_url,
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
+    }
+elif _clone_pg_db:
+    user = os.environ.get("TEKOS_POSTGRES_USER", "tekos_user")
+    password = os.environ.get("TEKOS_POSTGRES_PASSWORD", "")
+    host = os.environ.get("TEKOS_POSTGRES_HOST", "localhost")
+    port = os.environ.get("TEKOS_POSTGRES_PORT", "5432")
+    legacy_url = (
+        f"postgres://{quote_plus(user)}:{quote_plus(password)}"
+        f"@{host}:{port}/{_clone_pg_db}"
+    )
+    DATABASES = {
+        "default": dj_database_url.parse(
+            legacy_url,
+            conn_max_age=600,
+            conn_health_checks=True,
+        ),
+        "sqlite_backup": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
         },
     }
 else:
     DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        },
+        "default": dj_database_url.config(
+            default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
     }
+
+_default_db = DATABASES["default"]
+if (
+    _default_db.get("ENGINE") == "django.db.backends.postgresql"
+    and not DEBUG
+):
+    _options = _default_db.setdefault("OPTIONS", {})
+    if "sslmode" not in _options:
+        _options["sslmode"] = "require"
 
 
 # Password validation
@@ -173,6 +227,15 @@ STATICFILES_DIRS = [
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
+    },
+}
+
 # E-posta — klon/deneme ortamı (gerçek SMTP bilgisi burada tutulmaz; Genel Ayarlar veya .env)
 EMAIL_BACKEND = os.getenv(
     'EMAIL_BACKEND',
@@ -190,3 +253,41 @@ EMAIL_SUBJECT_PREFIX = os.getenv('EMAIL_SUBJECT_PREFIX', '[TEKOS] ')
 IMAP_SERVER = os.getenv("IMAP_SERVER")
 IMAP_PORT = int(os.getenv("IMAP_PORT", "993"))
 MAIL_ACCOUNTS_JSON = os.getenv("MAIL_ACCOUNTS_JSON", "[]")
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "simple": {
+            "format": "[{levelname}] {asctime} {name}: {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "simple",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
+    },
+    "loggers": {
+        "django.request": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+        "django.db.backends": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "django.security": {
+            "handlers": ["console"],
+            "level": "WARNING",
+            "propagate": False,
+        },
+    },
+}
