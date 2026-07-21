@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('stokapp', '0102_tekora_alert'),
+        ('stokapp', '0102_enable_pgvector_extension'),
     ]
 
     operations = [

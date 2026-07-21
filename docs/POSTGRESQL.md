@@ -24,13 +24,16 @@ Production Postgres için `conn_max_age=600`, `conn_health_checks=True`, `sslmod
 
 ## pgvector
 
-PostgreSQL’de bir kez:
+PostgreSQL’de extension, migration `0102_enable_pgvector_extension` ile
+`VectorField` tablolarından (`0103_tekoramemoryembedding`) **önce** açılır:
 
-```sql
-CREATE EXTENSION IF NOT EXISTS vector;
+```python
+from pgvector.django import VectorExtension
+# CREATE EXTENSION IF NOT EXISTS vector  (PostgreSQL only; SQLite no-op)
 ```
 
-Render Postgres’te superuser yetkisi yoksa dashboard / support ile extension açın. Extension yoksa TEKORA embedding özellikleri çalışmayabilir; ana ERP migration’ları etkilenmez.
+Render’da `CREATE EXTENSION` yetkisi yoksa dashboard’dan `vector` uzantısını
+manuel etkinleştirin. Extension yoksa TEKORA embedding migration’ı başarısız olur.
 
 ## Health / ops
 
