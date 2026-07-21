@@ -68,6 +68,23 @@ class HealthEndpointTests(TestCase):
         ):
             self.assertNotIn(needle.lower(), body.lower())
 
+    def test_database_connection_vendor(self):
+        from django.db import connection
+
+        connection.ensure_connection()
+        self.assertIn(connection.vendor, ("sqlite", "postgresql"))
+
+
+class ReportDatabaseCommandTests(TestCase):
+    def test_report_database_runs(self):
+        out = StringIO()
+        call_command("report_database", stdout=out)
+        text = out.getvalue()
+        self.assertIn("vendor=", text)
+        self.assertIn("connection=ok", text)
+        self.assertNotIn("PASSWORD", text)
+        self.assertNotIn("://", text)
+
 
 class CreateDefaultAdminCommandTests(TestCase):
     def test_skips_when_env_incomplete(self):

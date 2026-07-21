@@ -127,6 +127,17 @@ WSGI_APPLICATION = 'stok_sistemi.wsgi.application'
 
 _database_url = os.getenv("DATABASE_URL", "").strip()
 _clone_pg_db = os.environ.get("TEKOS_POSTGRES_DB", "").strip()
+_on_render = bool(
+    os.getenv("RENDER")
+    or os.getenv("RENDER_SERVICE_ID")
+    or os.getenv("RENDER_EXTERNAL_HOSTNAME")
+)
+
+if _on_render and not _database_url:
+    raise ImproperlyConfigured(
+        "DATABASE_URL is required on Render. "
+        "SQLite is not allowed for production deployments."
+    )
 
 if _database_url:
     DATABASES = {
