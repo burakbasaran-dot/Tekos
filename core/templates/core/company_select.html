@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Firma seç</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 28rem; margin: 3rem auto; padding: 0 1rem; }
+    label { display: block; margin: 0.5rem 0; }
+    button { margin-top: 1rem; padding: 0.5rem 1rem; }
+    .error { color: #b00020; }
+  </style>
+</head>
+<body>
+  <h1>Firma seçimi</h1>
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+  {% if companies %}
+  <form method="post">
+    {% csrf_token %}
+    {% for c in companies %}
+      <label>
+        <input type="radio" name="company_id" value="{{ c.pk }}"
+          {% if active_company and active_company.pk == c.pk %}checked{% endif %}
+          {% if forloop.first and not active_company %}checked{% endif %}
+          required>
+        {{ c.name }}
+      </label>
+    {% endfor %}
+    <button type="submit">Devam</button>
+  </form>
+  {% else %}
+  <p>Bağlı olduğunuz aktif firma yok.</p>
+  {% endif %}
+</body>
+</html>

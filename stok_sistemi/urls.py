@@ -4,10 +4,13 @@ from django.views.generic import RedirectView
 from django.conf import settings
 from django.conf.urls.static import static
 
+from core.urls import platform_urlpatterns
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('accounts/', include('django.contrib.auth.urls')),
     path('api/', include('core.urls')),
+    path('platform/', include((platform_urlpatterns, 'core'))),
     path('stok/', include('stokapp.urls')),
     path('', RedirectView.as_view(url='/stok/dashboard/')),  # Giriş sonrası ana dashboard'a yönlendir
 ]
