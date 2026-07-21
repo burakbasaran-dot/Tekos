@@ -864,6 +864,40 @@
         </div>
         {% endif %}
         
+        {% if platform_manage_menu %}
+        <!-- Yönetim - Collapsible -->
+        <div class="nav-section-collapsible">
+          <div class="nav-section-header" onclick="toggleYonetimMenu()">
+            <div class="nav-section-title">Yönetim</div>
+            <span class="nav-section-arrow" id="yonetimArrow">▶</span>
+          </div>
+          <div class="nav-section-content" id="yonetimContent">
+            <a href="/platform/companies/"><span class="icon">🏢</span><span class="label">Firma Yönetimi</span></a>
+            <a href="/platform/company/select/"><span class="icon">🔀</span><span class="label">Firma Seçimi</span></a>
+            <a href="{% url 'stokapp:kullanici_listesi' %}"><span class="icon">👤</span><span class="label">Kullanıcılar</span></a>
+            {% if rbac_yetkilendirme_menu %}
+            <a href="{% url 'stokapp:yetkilendirme_roller' %}"><span class="icon">🎭</span><span class="label">Roller</span></a>
+            <a href="{% url 'stokapp:yetkilendirme_kullanicilar' %}"><span class="icon">👥</span><span class="label">Kullanıcı Rolleri</span></a>
+            <a href="{% url 'stokapp:yetkilendirme_yetkiler' %}"><span class="icon">🔑</span><span class="label">Yetkiler</span></a>
+            {% endif %}
+            <a href="/platform/subscription/"><span class="icon">💳</span><span class="label">Lisans ve Abonelik</span></a>
+            <a href="/platform/demo-companies/"><span class="icon">🧪</span><span class="label">Demo Firmalar</span></a>
+            <a href="/platform/setup/"><span class="icon">🧭</span><span class="label">Müşteri Kurulumu</span></a>
+          </div>
+        </div>
+        <!-- Sistem - Collapsible -->
+        <div class="nav-section-collapsible">
+          <div class="nav-section-header" onclick="toggleSistemMenu()">
+            <div class="nav-section-title">Sistem</div>
+            <span class="nav-section-arrow" id="sistemArrow">▶</span>
+          </div>
+          <div class="nav-section-content" id="sistemContent">
+            <a href="/platform/system-health/"><span class="icon">💚</span><span class="label">Sistem Sağlığı</span></a>
+            <a href="/platform/audit-logs/"><span class="icon">📜</span><span class="label">Audit Log</span></a>
+          </div>
+        </div>
+        {% endif %}
+
         <!-- Ayarlar - Collapsible -->
         <div class="nav-section-collapsible">
           <div class="nav-section-header" onclick="toggleSettingsMenu()">
@@ -872,17 +906,17 @@
           </div>
           <div class="nav-section-content" id="settingsContent">
             <a href="{% url 'stokapp:genel_ayarlar' %}"><span class="icon">⚙️</span><span class="label">Genel Ayarlar</span></a>
-            <a href="/platform/company/select/"><span class="icon">🏢</span><span class="label">Firma Seçimi</span></a>
-            <a href="/platform/setup/"><span class="icon">🧭</span><span class="label">Firma Kurulumu</span></a>
             <a href="{% url 'stokapp:hata_raporlari' %}"><span class="icon">⚠️</span><span class="label">Hata Raporları</span></a>
             <a href="{% url 'stokapp:veri_yedekleme' %}"><span class="icon">💾</span><span class="label">Veri Yedekleme</span></a>
             {% url 'stokapp:gelistirme_talep_listesi' as gelistirme_talep_href %}
             {% include "stokapp/includes/nav_item.html" with nav_key="ayarlar.gelistirme_talepleri" href=gelistirme_talep_href icon="📝" label="Geliştirme Talepleri" %}
+            {% if not platform_manage_menu %}
             <a href="{% url 'stokapp:kullanici_listesi' %}"><span class="icon">👤</span><span class="label">Kullanıcılar</span></a>
             {% if rbac_yetkilendirme_menu %}
             <a href="{% url 'stokapp:yetkilendirme_roller' %}"><span class="icon">🎭</span><span class="label">Roller</span></a>
             <a href="{% url 'stokapp:yetkilendirme_kullanicilar' %}"><span class="icon">👥</span><span class="label">Kullanıcı Rolleri</span></a>
             <a href="{% url 'stokapp:yetkilendirme_yetkiler' %}"><span class="icon">🔑</span><span class="label">Yetkiler</span></a>
+            {% endif %}
             {% endif %}
             <a href="{% url 'stokapp:kategori_listesi' %}"><span class="icon">📁</span><span class="label">Kategoriler</span></a>
             <a href="{% url 'stokapp:operasyon_listesi' %}"><span class="icon">⚙️</span><span class="label">Operasyonlar</span></a>
@@ -896,10 +930,6 @@
             <a href="{% url 'stokapp:para_birimi_listesi' %}"><span class="icon">💱</span><span class="label">Para Birimleri</span></a>
             <a href="{% url 'stokapp:ayarlar_mobil' %}"><span class="icon">📱</span><span class="label">Mobil Uygulama</span></a>
             <a href="{% url 'stokapp:yazdirma_sablonlari_listesi' %}"><span class="icon">🖨️</span><span class="label">Yazdırma Şablonları</span></a>
-            <a href="/platform/subscription/"><span class="icon">💳</span><span class="label">Abonelik</span></a>
-            {% if user.is_staff %}
-            <a href="/admin/core/platformauditlog/"><span class="icon">📜</span><span class="label">Platform Audit Log</span></a>
-            {% endif %}
             <a href="{% url 'stokapp:veri_ice_aktarma' %}"><span class="icon">📥</span><span class="label">Verileri İçe Aktarma</span></a>
             <a href="{% url 'stokapp:ayarlar_tum_verileri_sil' %}"><span class="icon">🗑️</span><span class="label">Tüm Verileri Sil</span></a>
           </div>
@@ -980,6 +1010,34 @@
     function toggleSettingsMenu() {
       const content = document.getElementById('settingsContent');
       const arrow = document.getElementById('settingsArrow');
+      if (!content || !arrow) return;
+      if (content.classList.contains('expanded')) {
+        content.classList.remove('expanded');
+        arrow.classList.remove('expanded');
+      } else {
+        collapseOtherTopLevelSectionsExcept(content);
+        content.classList.add('expanded');
+        arrow.classList.add('expanded');
+      }
+    }
+
+    function toggleYonetimMenu() {
+      const content = document.getElementById('yonetimContent');
+      const arrow = document.getElementById('yonetimArrow');
+      if (!content || !arrow) return;
+      if (content.classList.contains('expanded')) {
+        content.classList.remove('expanded');
+        arrow.classList.remove('expanded');
+      } else {
+        collapseOtherTopLevelSectionsExcept(content);
+        content.classList.add('expanded');
+        arrow.classList.add('expanded');
+      }
+    }
+
+    function toggleSistemMenu() {
+      const content = document.getElementById('sistemContent');
+      const arrow = document.getElementById('sistemArrow');
       if (!content || !arrow) return;
       if (content.classList.contains('expanded')) {
         content.classList.remove('expanded');

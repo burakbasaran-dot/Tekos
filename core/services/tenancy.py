@@ -78,6 +78,19 @@ def resolve_company_from_request(request):
     return get_default_company_for_user(user)
 
 
+def user_can_manage_platform(user) -> bool:
+    """Superuser, staff, or active company owner/admin membership."""
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_superuser or user.is_staff:
+        return True
+    return CompanyMembership.objects.filter(
+        user=user,
+        is_active=True,
+        role__in=[CompanyMembership.ROLE_OWNER, CompanyMembership.ROLE_ADMIN],
+    ).exists()
+
+
 def ensure_default_company_bootstrap():
     """
     Create a default company and attach existing users if none exist.

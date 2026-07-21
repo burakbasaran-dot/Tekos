@@ -1,0 +1,34 @@
+{% extends "stokapp/base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block content %}
+<div class="card" style="max-width:640px;">
+  <nav style="font-size:0.85rem;color:#6b7280;margin-bottom:0.75rem;">
+    {% for label, href in breadcrumb %}
+      {% if href %}<a href="{{ href }}">{{ label }}</a>{% else %}<span>{{ label }}</span>{% endif %}
+      {% if not forloop.last %} / {% endif %}
+    {% endfor %}
+  </nav>
+  <h2 style="margin-top:0;">{{ page_title }}</h2>
+  <p>
+    Genel durum:
+    {% if overall_ok %}
+      <strong style="color:#059669;">Sağlıklı</strong>
+    {% else %}
+      <strong style="color:#b45309;">Dikkat</strong>
+    {% endif %}
+  </p>
+  <ul style="line-height:1.8;color:#374151;">
+    <li>Veritabanı bağlantısı: {% if db_ok %}OK{% else %}Hata ({{ db_error }}){% endif %}</li>
+    <li>Veritabanı türü: {{ vendor }} ({{ engine_label }})</li>
+    <li>Uygulanan migration sayısı: {{ migrations_applied }}</li>
+    <li>Bekleyen migration:
+      {% if migrations_pending == 0 %}Yok
+      {% elif migrations_pending < 0 %}Kontrol edilemedi
+      {% else %}{{ migrations_pending }}{% endif %}
+    </li>
+  </ul>
+  <p style="color:#6b7280;font-size:0.9rem;">Bu ekran gizli anahtar, bağlantı dizesi veya ortam değişkeni göstermez.</p>
+  <p><a href="/api/health/" class="btn btn-secondary">JSON health</a>
+     <a href="{% url 'stokapp:hata_raporlari' %}" class="btn btn-secondary">Hata raporları</a></p>
+</div>
+{% endblock %}

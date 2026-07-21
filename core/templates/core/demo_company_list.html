@@ -1,0 +1,23 @@
+{% extends "stokapp/base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block content %}
+<div class="card" style="max-width:960px;">
+  <nav style="font-size:0.85rem;color:#6b7280;margin-bottom:0.75rem;">
+    {% for label, href in breadcrumb %}
+      {% if href %}<a href="{{ href }}">{{ label }}</a>{% else %}<span>{{ label }}</span>{% endif %}
+      {% if not forloop.last %} / {% endif %}
+    {% endfor %}
+  </nav>
+  <h2 style="margin-top:0;">{{ page_title }}</h2>
+  <p style="color:#6b7280;">Yalnızca <code>is_demo=True</code> işaretli firmalar listelenir.</p>
+  {% if companies %}
+  <ul style="line-height:1.8;">
+    {% for c in companies %}
+      <li><strong>{{ c.name }}</strong> <code>{{ c.slug }}</code> — {% if c.is_active %}aktif{% else %}pasif{% endif %}</li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p style="color:#6b7280;">Kayıtlı demo firma yok.</p>
+  {% endif %}
+</div>
+{% endblock %}

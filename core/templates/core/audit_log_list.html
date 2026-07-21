@@ -1,0 +1,58 @@
+{% extends "stokapp/base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block content %}
+<div class="card" style="max-width:1100px;">
+  <nav style="font-size:0.85rem;color:#6b7280;margin-bottom:0.75rem;">
+    {% for label, href in breadcrumb %}
+      {% if href %}<a href="{{ href }}">{{ label }}</a>{% else %}<span>{{ label }}</span>{% endif %}
+      {% if not forloop.last %} / {% endif %}
+    {% endfor %}
+  </nav>
+  <h2 style="margin-top:0;">{{ page_title }}</h2>
+  <p style="color:#6b7280;">Kayıtlar salt okunurdur; bu ekrandan değiştirilemez.</p>
+  <form method="get" style="margin-bottom:1rem;">
+    <label>İşlem filtresi
+      <select name="action" onchange="this.form.submit()">
+        <option value="">Tümü</option>
+        {% for value, label in action_choices %}
+          <option value="{{ value }}" {% if action_filter == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+  </form>
+  {% if logs %}
+  <div class="table-responsive">
+    <table class="table" style="width:100%;border-collapse:collapse;font-size:0.9rem;">
+      <thead>
+        <tr style="text-align:left;border-bottom:1px solid #e5e7eb;">
+          <th style="padding:0.4rem;">Zaman</th>
+          <th style="padding:0.4rem;">İşlem</th>
+          <th style="padding:0.4rem;">Firma</th>
+          <th style="padding:0.4rem;">Kullanıcı</th>
+          <th style="padding:0.4rem;">Model</th>
+          <th style="padding:0.4rem;">Özet</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+        <tr style="border-bottom:1px solid #f3f4f6;">
+          <td style="padding:0.4rem;white-space:nowrap;">{{ log.created_at|date:"d.m.Y H:i" }}</td>
+          <td style="padding:0.4rem;">{{ log.get_action_display }}</td>
+          <td style="padding:0.4rem;">{{ log.company.name|default:"—" }}</td>
+          <td style="padding:0.4rem;">{{ log.user.username|default:"—" }}</td>
+          <td style="padding:0.4rem;">{{ log.model_name|default:"—" }}</td>
+          <td style="padding:0.4rem;">{{ log.object_repr|truncatechars:60 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p style="color:#9ca3af;font-size:0.85rem;">En fazla 200 kayıt gösterilir.</p>
+  {% else %}
+  <p style="color:#6b7280;">Gösterilecek audit kaydı yok.</p>
+  {% endif %}
+  {% if is_superuser %}
+  <p style="margin-top:1rem;"><a href="/admin/core/platformauditlog/" class="btn btn-secondary">Django Admin</a></p>
+  {% endif %}
+</div>
+{% endblock %}

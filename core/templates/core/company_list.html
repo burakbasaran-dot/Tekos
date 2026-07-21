@@ -1,0 +1,45 @@
+{% extends "stokapp/base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block content %}
+<div class="card" style="max-width:960px;">
+  <nav style="font-size:0.85rem;color:#6b7280;margin-bottom:0.75rem;">
+    {% for label, href in breadcrumb %}
+      {% if href %}<a href="{{ href }}">{{ label }}</a>{% else %}<span>{{ label }}</span>{% endif %}
+      {% if not forloop.last %} / {% endif %}
+    {% endfor %}
+  </nav>
+  <h2 style="margin-top:0;">{{ page_title }}</h2>
+  {% if companies %}
+  <div class="table-responsive">
+    <table class="table" style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr style="text-align:left;border-bottom:1px solid #e5e7eb;">
+          <th style="padding:0.5rem;">Ad</th>
+          <th style="padding:0.5rem;">Slug</th>
+          <th style="padding:0.5rem;">Aktif</th>
+          <th style="padding:0.5rem;">Kurulum</th>
+          <th style="padding:0.5rem;">Demo</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in companies %}
+        <tr style="border-bottom:1px solid #f3f4f6;">
+          <td style="padding:0.5rem;">{{ c.name }}</td>
+          <td style="padding:0.5rem;"><code>{{ c.slug }}</code></td>
+          <td style="padding:0.5rem;">{% if c.is_active %}Evet{% else %}Hayır{% endif %}</td>
+          <td style="padding:0.5rem;">{% if c.setup_completed %}Tamam{% else %}Eksik{% endif %}</td>
+          <td style="padding:0.5rem;">{% if c.is_demo %}Evet{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p style="color:#6b7280;">Görüntülenecek firma bulunamadı.</p>
+  {% endif %}
+  <p style="margin-top:1rem;">
+    <a href="/platform/company/select/" class="btn btn-secondary">Firma seç</a>
+    <a href="/platform/setup/" class="btn btn-secondary">Kurulum sihirbazı</a>
+  </p>
+</div>
+{% endblock %}

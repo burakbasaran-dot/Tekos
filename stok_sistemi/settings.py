@@ -115,6 +115,7 @@ TEMPLATES = [
                 'stokapp.context_processors.nav_visibility',
                 'stokapp.context_processors.system_ai_context',
                 'stokapp.context_processors.form_field_helps',
+                'core.context_processors.platform_menus',
             ],
         },
     },
