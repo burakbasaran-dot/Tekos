@@ -90,6 +90,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'core.middleware.TenantMiddleware',
+    'core.middleware_setup.SetupWizardMiddleware',
     'stokapp.rbac_middleware.RbacMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'stokapp.middleware.HataLogMiddleware',  # Hata loglama middleware'i

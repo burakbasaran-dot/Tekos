@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kurulum — {{ step_label }}</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 40rem; margin: 2rem auto; padding: 0 1rem; }
+    .steps { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 1.5rem; font-size: 0.85rem; }
+    .steps span { padding: 0.2rem 0.5rem; border-radius: 4px; background: #eee; }
+    .steps .active { background: #0b5fff; color: #fff; }
+    label { display: block; margin: 0.75rem 0 0.25rem; font-weight: 600; }
+    input, textarea, select { width: 100%; padding: 0.4rem; box-sizing: border-box; }
+    .actions { margin-top: 1.5rem; display: flex; gap: 0.5rem; }
+    .error { color: #b00020; }
+    .summary dt { font-weight: 600; margin-top: 0.5rem; }
+  </style>
+</head>
+<body>
+  <h1>Firma Kurulum Sihirbazı</h1>
+  <p>Adım {{ step }} / 7 — {{ step_label }}</p>
+  <div class="steps">
+    {% for num, label in step_labels.items %}
+      <span class="{% if num == step %}active{% endif %}">{{ num }}. {{ label }}</span>
+    {% endfor %}
+  </div>
+
+  {% for e in errors %}<p class="error">{{ e }}</p>{% endfor %}
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    {% if step == 1 %}
+      <label>Firma adı *</label>
+      <input name="name" value="{{ data.name|default:company.name }}" required>
+      <label>Kısa ad</label>
+      <input name="short_name" value="{{ data.short_name|default:'' }}">
+      <label>Vergi dairesi</label>
+      <input name="tax_office" value="{{ data.tax_office|default:'' }}">
+      <label>Vergi numarası</label>
+      <input name="tax_number" value="{{ data.tax_number|default:'' }}">
+      <label>Telefon</label>
+      <input name="phone" value="{{ data.phone|default:'' }}">
+      <label>E-posta</label>
+      <input type="email" name="email" value="{{ data.email|default:'' }}">
+      <label>Web sitesi</label>
+      <input name="website" value="{{ data.website|default:'' }}">
+      <label>Adres</label>
+      <textarea name="address" rows="3">{{ data.address|default:'' }}</textarea>
+
+    {% elif step == 2 %}
+      <label>Logo</label>
+      <input type="file" name="logo" accept="image/*">
+      {% if company.logo %}<p>Mevcut logo yüklü.</p>{% endif %}
+      <label>Tema</label>
+      <select name="theme">
+        <option value="default" {% if data.theme == 'default' or not data.theme %}selected{% endif %}>Varsayılan</option>
+        <option value="dark" {% if data.theme == 'dark' %}selected{% endif %}>Koyu</option>
+      </select>
+
+    {% elif step == 3 %}
+      <label>Departmanlar (satır başına bir)</label>
+      <textarea name="departments" rows="6">{{ default_departments }}</textarea>
+
+    {% elif step == 4 %}
+      <label>Depolar (satır başına bir)</label>
+      <textarea name="warehouses" rows="6">{{ default_warehouses }}</textarea>
+      <p><small>Depo adları sistem genelinde benzersizdir; mevcut isimler yeniden kullanılır.</small></p>
+
+    {% elif step == 5 %}
+      <p>İlk yönetici: <strong>{{ request.user.username }}</strong> (owner)</p>
+      <label>Ek kullanıcı daveti notu (opsiyonel)</label>
+      <textarea name="invite_note" rows="3">{{ data.invite_note|default:'' }}</textarea>
+      <p><small>E-posta daveti ileride eklenecek; şimdilik not olarak saklanır.</small></p>
+
+    {% elif step == 6 %}
+      <label>Para birimi</label>
+      <input name="currency" value="{{ data.currency|default:'TRY' }}">
+      <label>Saat dilimi</label>
+      <input name="timezone" value="{{ data.timezone|default:'Europe/Istanbul' }}">
+      <label>Dil</label>
+      <input name="language" value="{{ data.language|default:'tr' }}">
+      <label>Tarih formatı</label>
+      <input name="date_format" value="{{ data.date_format|default:'%d.%m.%Y' }}">
+      <label>Varsayılan KDV (%)</label>
+      <input name="default_vat" value="{{ data.default_vat|default:'20' }}">
+
+    {% elif step == 7 %}
+      <dl class="summary">
+        <dt>Firma</dt><dd>{{ data.name|default:company.name }}</dd>
+        <dt>Vergi</dt><dd>{{ data.tax_office|default:'—' }} / {{ data.tax_number|default:'—' }}</dd>
+        <dt>İletişim</dt><dd>{{ data.phone|default:'—' }} · {{ data.email|default:'—' }}</dd>
+        <dt>Departmanlar</dt><dd>{{ data.departments|join:', '|default:'(varsayılan)' }}</dd>
+        <dt>Depolar</dt><dd>{{ data.warehouses|join:', '|default:'(varsayılan)' }}</dd>
+        <dt>Para / dil</dt><dd>{{ data.currency|default:'TRY' }} · {{ data.language|default:'tr' }}</dd>
+      </dl>
+    {% endif %}
+
+    <div class="actions">
+      {% if step > 1 %}
+        <button type="submit" name="action" value="back">Geri</button>
+      {% endif %}
+      {% if step < 7 %}
+        <button type="submit" name="action" value="next">İleri</button>
+      {% else %}
+        <button type="submit" name="action" value="complete">Kurulumu tamamla</button>
+      {% endif %}
+    </div>
+  </form>
+</body>
+</html>
