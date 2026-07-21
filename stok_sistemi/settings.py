@@ -27,9 +27,18 @@ load_dotenv(BASE_DIR / ".env")
 SECRET_KEY = 'django-insecure-3$#t$2b!z3n)mxl0e(trox&b(2^rdjdeb@@gbd#e8cl6go2u+j'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv("DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.getenv(
+    "ALLOWED_HOSTS",
+    "localhost,127.0.0.1,tekos-9155.onrender.com"
+).split(",")
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://tekos-9155.onrender.com",
+]
+
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 
 # Application definition
