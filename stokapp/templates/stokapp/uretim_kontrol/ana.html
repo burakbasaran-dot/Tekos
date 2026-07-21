@@ -1,0 +1,155 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Üretim Kontrol{% endblock %}
+{% block content %}
+<style>
+.uk-wrap { max-width: 1200px; margin: 0 auto; }
+.uk-header { margin-bottom: 20px; }
+.uk-header h1 { margin: 0; font-size: 26px; }
+.uk-sub { color: #64748b; font-size: 14px; margin-top: 8px; max-width: 640px; }
+.uk-urun-combo { position: relative; margin-bottom: 16px; max-width: 640px; }
+.uk-urun-combo input.uk-urun-input {
+  width: 100%; padding: 12px 40px 12px 14px; border: 2px solid #e2e8f0; border-radius: 10px;
+  font-size: 15px; box-sizing: border-box;
+}
+.uk-urun-combo input.uk-urun-input:focus {
+  outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.15);
+}
+.uk-urun-combo .uk-urun-toggle {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; font-size: 12px; color: #64748b; cursor: pointer;
+}
+.uk-urun-dropdown {
+  display: none; position: absolute; left: 0; right: 0; top: calc(100% + 4px);
+  max-height: 280px; overflow-y: auto; background: #fff; border: 1px solid #e2e8f0;
+  border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.12); z-index: 100;
+}
+.uk-urun-dropdown.open { display: block; }
+.uk-urun-item { padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+.uk-urun-item:hover, .uk-urun-item.active { background: #eff6ff; }
+.uk-urun-item .kod { font-weight: 600; }
+.uk-urun-item .ad { font-size: 12px; color: #64748b; }
+.uk-urun-empty { padding: 16px; text-align: center; color: #94a3b8; font-size: 13px; }
+.uk-urun-hint { font-size: 12px; color: #64748b; margin: -8px 0 16px; }
+.uk-selected-pill {
+  display: none; align-items: center; gap: 8px; margin-bottom: 12px; padding: 8px 12px;
+  background: #eff6ff; border-radius: 8px; font-size: 13px; color: #1e40af; max-width: 640px;
+}
+.uk-selected-pill.visible { display: flex; }
+.uk-selected-pill button { margin-left: auto; background: none; border: none; color: #64748b; cursor: pointer; font-size: 18px; }
+.uk-toolbar {
+  display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 24px;
+  padding: 16px; background: #fff; border-radius: 12px; border: 1px solid #e2e8f0;
+}
+.uk-search-form { flex: 1; min-width: 200px; display: flex; gap: 8px; }
+.uk-search-form input[type="search"] {
+  flex: 1; padding: 10px 14px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 14px;
+}
+.uk-filter-chip {
+  display: inline-flex; padding: 10px 16px; border-radius: 10px; font-size: 13px; font-weight: 600;
+  text-decoration: none; border: 2px solid #e2e8f0; background: #fff; color: #475569;
+}
+.uk-filter-chip.active { background: #eff6ff; border-color: #3b82f6; color: #1d4ed8; }
+.uk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+.uk-product-card {
+  display: block; background: #fff; border-radius: 12px; padding: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.08); border: 2px solid transparent;
+  text-decoration: none; color: inherit; transition: all .2s;
+}
+.uk-product-card:hover { border-color: #3b82f6; transform: translateY(-2px); }
+.uk-product-card h3 { margin: 0 0 6px; font-size: 16px; }
+.uk-product-card p { margin: 0; font-size: 13px; color: #64748b; }
+.uk-badge { display: inline-block; margin-top: 12px; padding: 4px 10px; background: #eff6ff; color: #1d4ed8; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.uk-empty { text-align: center; padding: 48px 20px; background: #f8fafc; border-radius: 12px; color: #64748b; }
+.uk-gecmis-toolbar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; align-items: center; }
+.uk-gecmis-search {
+  flex: 1; min-width: 200px; padding: 10px 14px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 14px;
+}
+.uk-gecmis-select { padding: 10px 12px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 14px; }
+.uk-gecmis-table-wrap { overflow-x: auto; background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; }
+.uk-gecmis-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.uk-gecmis-table th {
+  background: #f8fafc; padding: 12px 14px; text-align: left; font-weight: 600; color: #475569;
+  border-bottom: 1px solid #e2e8f0; white-space: nowrap;
+}
+.uk-gecmis-table td { padding: 12px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+.uk-gecmis-table tr:last-child td { border-bottom: none; }
+.uk-meta { font-size: 12px; color: #64748b; }
+.uk-sonuc-badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-weight: 700; font-size: 12px; }
+.uk-sonuc-badge.KABUL { background: #dcfce7; color: #166534; }
+.uk-sonuc-badge.RED { background: #fef2f2; color: #b91c1c; }
+.uk-sonuc-badge.SARTLI { background: #fef9c3; color: #854d0e; }
+.uk-actions { white-space: nowrap; }
+.uk-actions .btn { margin-right: 4px; margin-bottom: 4px; }
+.uk-actions .uk-inline-form { display: inline-block; }
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+.btn-outline-secondary {
+  background: #fff; border: 1px solid #cbd5e1; color: #475569;
+}
+.btn-outline-secondary:hover { background: #f8fafc; border-color: #94a3b8; }
+</style>
+<div class="uk-wrap">
+  <div class="uk-header">
+    <h1>Üretim Kontrol</h1>
+    <p class="uk-sub">
+      {% if tab == 'gecmis' %}
+      Tamamlanan kontrol kayıtları ve sonuç raporları.
+      {% elif tab == 'arsiv' %}
+      Arşive taşınmış kontrol kayıtları.
+      {% else %}
+      Kontrol şablonlarını tanımlayın ve ölçüm kontrolü başlatın.
+      {% endif %}
+    </p>
+  </div>
+
+  {% include "stokapp/uretim_kontrol/_uk_tabs.html" %}
+
+  {% if tab == 'gecmis' or tab == 'arsiv' %}
+    {% include "stokapp/uretim_kontrol/_panel_oturum_listesi.html" %}
+  {% else %}
+    {% include "stokapp/uretim_kontrol/_panel_sablon_yonetim.html" %}
+
+    <section style="margin-top:8px;">
+      <h3 style="margin:0 0 8px;font-size:18px;">Kontrol başlat</h3>
+      <p style="color:#64748b;font-size:14px;margin:0 0 16px;">Şablonu tanımlı ürünleri seçerek bileşen bazında kontrol başlatın.</p>
+
+      <div class="uk-toolbar">
+        <form method="get" class="uk-search-form" action="">
+          <input type="hidden" name="tab" value="sablonlar">
+          <input type="search" name="q" value="{{ search_q }}" placeholder="Stok kodu veya ürün adı ara…" autocomplete="off">
+          {% if aktif_emir %}<input type="hidden" name="aktif_emir" value="1">{% endif %}
+          <button type="submit" class="btn btn-primary">Ara</button>
+          {% if search_q %}
+          <a href="?tab=sablonlar{% if aktif_emir %}&amp;aktif_emir=1{% endif %}" class="btn btn-secondary">Temizle</a>
+          {% endif %}
+        </form>
+        {% if aktif_emir %}
+        <a href="?tab=sablonlar{% if search_q %}&amp;q={{ search_q|urlencode }}{% endif %}" class="uk-filter-chip active">Aktif üretim emirleri ✕</a>
+        {% else %}
+        <a href="?tab=sablonlar&amp;aktif_emir=1{% if search_q %}&amp;q={{ search_q|urlencode }}{% endif %}" class="uk-filter-chip">Aktif üretim emirleri</a>
+        {% endif %}
+      </div>
+
+      {% if urunler %}
+      <div class="uk-grid">
+        {% for u in urunler %}
+        <a href="{% url 'stokapp:uretim_kontrol_urun' u.pk %}" class="uk-product-card">
+          <h3>{{ u.stok_kodu }}</h3>
+          <p>{{ u.ad }}</p>
+          <span class="uk-badge">{{ u.bilesen_sablon_sayisi }} bileşen şablonu</span>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="uk-empty">
+        {% if search_q or aktif_emir %}
+        <p>Arama veya filtreye uygun ürün bulunamadı.</p>
+        <a href="?tab=sablonlar" class="btn btn-secondary">Tümünü göster</a>
+        {% else %}
+        <p>Henüz kontrol şablonu tanımlı ürün yok. Yukarıdan şablon tanımlayın.</p>
+        {% endif %}
+      </div>
+      {% endif %}
+    </section>
+  {% endif %}
+</div>
+{% endblock %}

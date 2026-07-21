@@ -1,0 +1,382 @@
+{% extends "stokapp/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+{% include "stokapp/includes/tdk_form_styles.html" %}
+<style>
+  .talep-kalemler-wrap {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #f9fafb;
+    overflow: visible;
+  }
+  .talep-kalemler-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--border);
+    background: #fff;
+    border-radius: 12px 12px 0 0;
+  }
+  .talep-kalemler-toolbar h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .talep-kalemler-toolbar p {
+    margin: 4px 0 0;
+    font-size: 12px;
+    color: var(--muted);
+    max-width: 480px;
+    line-height: 1.45;
+  }
+  .talep-kalem-list {
+    padding: 16px 18px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .talep-kalem-card {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 2px 8px rgba(17, 24, 39, 0.04);
+    overflow: visible;
+  }
+  .talep-kalem-card__top {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 14px 16px;
+    border-bottom: 1px solid #f3f4f6;
+    flex-wrap: wrap;
+  }
+  .talep-kalem-card__badge {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+    color: #047857;
+    font-weight: 800;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .talep-kalem-card__main {
+    flex: 1;
+    min-width: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .talep-kalem-card__qty-row {
+    display: grid;
+    grid-template-columns: minmax(100px, 140px) minmax(120px, 200px);
+    gap: 12px;
+    max-width: 360px;
+  }
+  @media (max-width: 520px) {
+    .talep-kalem-card__qty-row { grid-template-columns: 1fr 1fr; max-width: none; }
+  }
+  .talep-kalem-field label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #6b7280;
+    margin-bottom: 6px;
+  }
+  .talep-kalem-card__actions label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #991b1b;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+  .talep-kalem-card__body {
+    padding: 14px 16px 16px;
+    background: #fafafa;
+    border-radius: 0 0 11px 11px;
+  }
+  .talep-kalem-card__grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px 16px;
+  }
+  @media (max-width: 640px) {
+    .talep-kalem-card__grid { grid-template-columns: 1fr; }
+  }
+  .talep-kalem-card .form-control,
+  .talep-kalem-card .form-select { width: 100%; }
+  .talep-kalem-card .errorlist { margin: 6px 0 0; padding-left: 18px; color: #dc2626; font-size: 12px; }
+  #btn-kalem-ekle {
+    border: 1px dashed var(--primary-d, #27ae60);
+    background: #ecfdf5;
+    color: #047857;
+    font-weight: 600;
+  }
+  #btn-kalem-ekle:hover { background: #d1fae5; border-style: solid; }
+</style>
+
+<div class="tdk-page">
+  <div class="tdk-header">
+    <div>
+      <h1>📝 {{ title }}</h1>
+      <p>Satın alma talebi bilgilerini ve ihtiyaç kalemlerini tek ekrandan oluşturun.</p>
+    </div>
+    <a href="{% url 'stokapp:talep_listesi' %}" class="btn btn-secondary">← Geri</a>
+  </div>
+
+  <form method="post" enctype="multipart/form-data" novalidate id="talep-form" class="tdk-form-card">
+    {% csrf_token %}
+
+    <section class="tdk-section">
+      <h2 class="tdk-section-title">
+        <span class="tdk-section-icon">📋</span>
+        Talep Bilgileri
+      </h2>
+      <div class="tdk-grid">
+        <div class="tdk-field tdk-has-help" data-help="Talebin oluşturulduğu tarih. Onay süreci ve raporlama için kullanılır.">
+          <label class="tdk-label required" for="{{ form.talep_tarihi.id_for_label }}">{{ form.talep_tarihi.label }}</label>
+          {{ form.talep_tarihi }}
+          {% if form.talep_tarihi.errors %}<div class="tdk-error">{{ form.talep_tarihi.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Talebi açan departman veya bölüm. Yönlendirme ve filtrelemede kullanılır.">
+          <label class="tdk-label" for="{{ form.departman.id_for_label }}">{{ form.departman.label }}</label>
+          {{ form.departman }}
+          {% if form.departman.errors %}<div class="tdk-error">{{ form.departman.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Talep türü/kategorisi. Satın alma ekibinin önceliklendirmesine yardımcı olur.">
+          <label class="tdk-label" for="{{ form.kategori.id_for_label }}">{{ form.kategori.label }}</label>
+          {{ form.kategori }}
+          {% if form.kategori.errors %}<div class="tdk-error">{{ form.kategori.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Aciliyet seviyesi. Onay ve satın alma sıralamasını etkiler.">
+          <label class="tdk-label" for="{{ form.oncelik.id_for_label }}">{{ form.oncelik.label }}</label>
+          {{ form.oncelik }}
+          {% if form.oncelik.errors %}<div class="tdk-error">{{ form.oncelik.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help full" data-help="Talebin kısa özeti. Listelerde hızlı tanıma sağlar.">
+          <label class="tdk-label" for="{{ form.baslik.id_for_label }}">{{ form.baslik.label }}</label>
+          {{ form.baslik }}
+          {% if form.baslik.errors %}<div class="tdk-error">{{ form.baslik.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Malzemenin ihtiyaç duyulduğu tarih. Yeni talepte talep tarihinden 2 gün sonra önerilir.">
+          <label class="tdk-label" for="{{ form.istenen_termin.id_for_label }}">{{ form.istenen_termin.label }}</label>
+          {{ form.istenen_termin }}
+          {% if form.istenen_termin.errors %}<div class="tdk-error">{{ form.istenen_termin.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help full" data-help="İhtiyaç nedeni ve genel açıklama. Onaylayıcı ve satın alma ekibi için detay bilgisi.">
+          <label class="tdk-label" for="{{ form.aciklama.id_for_label }}">{{ form.aciklama.label }}</label>
+          {{ form.aciklama }}
+          {% if form.aciklama.errors %}<div class="tdk-error">{{ form.aciklama.errors }}</div>{% endif %}
+        </div>
+      </div>
+    </section>
+
+    {{ formset.management_form }}
+
+    <section class="tdk-section">
+      <div class="talep-kalemler-wrap talep-form-kalemler">
+        <div class="talep-kalemler-toolbar">
+          <div>
+            <h3>Talep Kalemleri</h3>
+            <p>Her satırda talep ettiğiniz ürün veya malzemeyi belirtin; miktar ve birimi aynı satırda girin.</p>
+          </div>
+          <button type="button" id="btn-kalem-ekle" class="btn btn-secondary">+ Kalem Ekle</button>
+        </div>
+
+        <div id="kalem-rows-container" class="talep-kalem-list">
+          {% for f in formset %}
+          <article class="talep-kalem-card">
+            <div class="talep-kalem-card__top">
+              <div class="talep-kalem-card__badge" aria-hidden="true">
+                <span class="kalem-sira">{{ forloop.counter }}</span><span>.</span>
+              </div>
+              <div class="talep-kalem-card__main">
+                <div class="talep-kalem-field tdk-has-help" data-help="Talep edilen ürün veya malzeme adı. Boş kalemler kaydedilmez.">
+                  {{ f.id }}
+                  <label for="{{ f.kalem_adi.id_for_label }}">Kalem adı</label>
+                  {{ f.kalem_adi }}
+                  {% if f.non_field_errors %}<div class="tdk-error">{{ f.non_field_errors }}</div>{% endif %}
+                </div>
+                <div class="talep-kalem-card__qty-row">
+                  <div class="talep-kalem-field tdk-has-help" data-help="İhtiyaç duyulan miktar.">
+                    <label for="{{ f.miktar.id_for_label }}">Miktar</label>
+                    {{ f.miktar }}
+                  </div>
+                  <div class="talep-kalem-field tdk-has-help" data-help="Ölçü birimi (Adet, kg, m vb.).">
+                    <label for="{{ f.birim.id_for_label }}">Birim</label>
+                    {{ f.birim }}
+                  </div>
+                </div>
+              </div>
+              {% if f.instance.pk %}
+              <div class="talep-kalem-card__actions">
+                {{ f.DELETE }}
+                <label for="{{ f.DELETE.id_for_label }}">Bu kalemi sil</label>
+              </div>
+              {% endif %}
+            </div>
+            <div class="talep-kalem-card__body">
+              <div class="talep-kalem-field tdk-has-help" style="margin-bottom:14px;" data-help="Kalem hakkında ek açıklama veya teknik detay.">
+                <label for="{{ f.aciklama.id_for_label }}">Açıklama</label>
+                {{ f.aciklama }}
+              </div>
+              <div class="talep-kalem-card__grid">
+                <div class="talep-kalem-field tdk-has-help" data-help="Tercih edilen marka veya model bilgisi.">
+                  <label for="{{ f.marka_model_tercihi.id_for_label }}">Marka / model</label>
+                  {{ f.marka_model_tercihi }}
+                </div>
+                <div class="talep-kalem-field tdk-has-help" data-help="Malzemenin kullanılacağı yer, hat veya proje.">
+                  <label for="{{ f.kullanim_yeri.id_for_label }}">Kullanım yeri</label>
+                  {{ f.kullanim_yeri }}
+                </div>
+                <div class="talep-kalem-field tdk-has-help" data-help="Kalem takip durumu. Satın alma sürecinde güncellenir.">
+                  <label for="{{ f.durum.id_for_label }}">Kalem durumu</label>
+                  {{ f.durum }}
+                </div>
+                <div class="talep-kalem-field tdk-has-help" data-help="Dahili not; satın alma ekibi için ek referans.">
+                  <label for="{{ f.not_text.id_for_label }}">Not</label>
+                  {{ f.not_text }}
+                </div>
+              </div>
+              {% if f.errors %}<div class="tdk-error" style="margin-top:10px;">{{ f.errors }}</div>{% endif %}
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+      </div>
+
+      {% if formset.non_form_errors %}
+      <div class="tdk-error" style="margin-top:12px;">{{ formset.non_form_errors }}</div>
+      {% endif %}
+    </section>
+
+    <template id="kalem-empty-pair">
+      {% with f=formset.empty_form %}
+      <article class="talep-kalem-card">
+        <div class="talep-kalem-card__top">
+          <div class="talep-kalem-card__badge" aria-hidden="true">
+            <span class="kalem-sira"></span><span>.</span>
+          </div>
+          <div class="talep-kalem-card__main">
+            <div class="talep-kalem-field tdk-has-help" data-help="Talep edilen ürün veya malzeme adı. Boş kalemler kaydedilmez.">
+              {{ f.id }}
+              <label for="{{ f.kalem_adi.id_for_label }}">Kalem adı</label>
+              {{ f.kalem_adi }}
+            </div>
+            <div class="talep-kalem-card__qty-row">
+              <div class="talep-kalem-field tdk-has-help" data-help="İhtiyaç duyulan miktar.">
+                <label for="{{ f.miktar.id_for_label }}">Miktar</label>
+                {{ f.miktar }}
+              </div>
+              <div class="talep-kalem-field tdk-has-help" data-help="Ölçü birimi (Adet, kg, m vb.).">
+                <label for="{{ f.birim.id_for_label }}">Birim</label>
+                {{ f.birim }}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="talep-kalem-card__body">
+          <div class="talep-kalem-field tdk-has-help" style="margin-bottom:14px;" data-help="Kalem hakkında ek açıklama veya teknik detay.">
+            <label for="{{ f.aciklama.id_for_label }}">Açıklama</label>
+            {{ f.aciklama }}
+          </div>
+          <div class="talep-kalem-card__grid">
+            <div class="talep-kalem-field tdk-has-help" data-help="Tercih edilen marka veya model bilgisi.">
+              <label for="{{ f.marka_model_tercihi.id_for_label }}">Marka / model</label>
+              {{ f.marka_model_tercihi }}
+            </div>
+            <div class="talep-kalem-field tdk-has-help" data-help="Malzemenin kullanılacağı yer, hat veya proje.">
+              <label for="{{ f.kullanim_yeri.id_for_label }}">Kullanım yeri</label>
+              {{ f.kullanim_yeri }}
+            </div>
+            <div class="talep-kalem-field tdk-has-help" data-help="Kalem takip durumu. Satın alma sürecinde güncellenir.">
+              <label for="{{ f.durum.id_for_label }}">Kalem durumu</label>
+              {{ f.durum }}
+            </div>
+            <div class="talep-kalem-field tdk-has-help" data-help="Dahili not; satın alma ekibi için ek referans.">
+              <label for="{{ f.not_text.id_for_label }}">Not</label>
+              {{ f.not_text }}
+            </div>
+          </div>
+        </div>
+      </article>
+      {% endwith %}
+    </template>
+
+    <div class="tdk-footer">
+      <a href="{% url 'stokapp:talep_listesi' %}" class="btn btn-secondary">İptal</a>
+      {% if duzenle and talep %}
+      <a href="{% url 'stokapp:talep_detay' talep.pk %}" class="btn btn-secondary">Detaya Dön</a>
+      {% endif %}
+      <button type="submit" class="btn btn-primary">💾 Kaydet</button>
+    </div>
+  </form>
+</div>
+
+<script>
+(function() {
+    var prefix = "kalemler";
+    var totalEl = document.getElementById("id_" + prefix + "-TOTAL_FORMS");
+    var container = document.getElementById("kalem-rows-container");
+    var tmpl = document.getElementById("kalem-empty-pair");
+    if (!totalEl || !container || !tmpl) return;
+
+    function renumerateSira() {
+        var n = 0;
+        container.querySelectorAll(".talep-kalem-card .kalem-sira").forEach(function(span) {
+            n += 1;
+            span.textContent = String(n);
+        });
+    }
+
+    document.getElementById("btn-kalem-ekle").addEventListener("click", function() {
+        var idx = parseInt(totalEl.value, 10) || 0;
+        var html = tmpl.innerHTML.replace(/__prefix__/g, String(idx));
+        container.insertAdjacentHTML("beforeend", html);
+        totalEl.value = String(idx + 1);
+        renumerateSira();
+    });
+
+    renumerateSira();
+
+    {% if not duzenle %}
+    var tEl = document.getElementById("id_talep_tarihi");
+    var termEl = document.getElementById("id_istenen_termin");
+    function addDays(d, days) {
+        var x = new Date(d.getTime());
+        x.setDate(x.getDate() + days);
+        return x;
+    }
+    function toInputDate(dt) {
+        var y = dt.getFullYear();
+        var m = String(dt.getMonth() + 1).padStart(2, "0");
+        var day = String(dt.getDate()).padStart(2, "0");
+        return y + "-" + m + "-" + day;
+    }
+    if (tEl && termEl) {
+        tEl.addEventListener("change", function() {
+            if (!tEl.value) return;
+            var parts = tEl.value.split("-");
+            if (parts.length !== 3) return;
+            var d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+            if (isNaN(d.getTime())) return;
+            termEl.value = toInputDate(addDays(d, 2));
+        });
+    }
+    {% endif %}
+})();
+</script>
+{% endblock %}

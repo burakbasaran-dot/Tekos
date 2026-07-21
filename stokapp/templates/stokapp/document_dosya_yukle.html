@@ -1,0 +1,440 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Dosya Yükle - {{ document.title }}{% endblock %}
+{% block content %}
+<style>
+  .form-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+  .form-header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #111827;
+    margin: 0;
+  }
+  .form-header .subtitle {
+    margin: 8px 0 0 0;
+    color: #6b7280;
+    font-size: 14px;
+  }
+  
+  .form-section {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+  
+  .form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  
+  .form-field:last-child {
+    margin-bottom: 0;
+  }
+  
+  .form-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 4px;
+  }
+  
+  .form-label.required::after {
+    content: " *";
+    color: #e74c3c;
+  }
+  
+  .form-section input[type="text"],
+  .form-section input[type="file"],
+  .form-section textarea {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 14px;
+    background: #fff;
+    color: #111827;
+    transition: all 0.2s;
+    box-sizing: border-box;
+  }
+  
+  .form-section input[type="text"]:focus,
+  .form-section textarea:focus {
+    outline: none;
+    border-color: #22c55e;
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+  }
+  
+  .form-section input[type="file"] {
+    padding: 12px;
+    cursor: pointer;
+  }
+  
+  .form-section input[type="file"]:hover {
+    border-color: #22c55e;
+  }
+  
+  .form-section textarea {
+    resize: vertical;
+    min-height: 100px;
+  }
+  
+  .form-help {
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 4px;
+  }
+  
+  .form-error {
+    color: #dc3545;
+    font-size: 12px;
+    margin-top: 4px;
+  }
+  
+  .file-upload-area {
+    border: 2px dashed #e5e7eb;
+    border-radius: 12px;
+    padding: 40px;
+    text-align: center;
+    background: #f9fafb;
+    transition: all 0.3s;
+    cursor: pointer;
+  }
+  
+  .file-upload-area:hover {
+    border-color: #22c55e;
+    background: #f0fdf4;
+  }
+  
+  .file-upload-area.dragover {
+    border-color: #22c55e;
+    background: #f0fdf4;
+    box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.1);
+  }
+  
+  .file-upload-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+    color: #6b7280;
+  }
+  
+  .file-upload-text {
+    font-size: 16px;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 8px;
+  }
+  
+  .file-upload-hint {
+    font-size: 13px;
+    color: #6b7280;
+  }
+  
+  .selected-file {
+    margin-top: 16px;
+    padding: 12px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  
+  .selected-file-icon {
+    font-size: 24px;
+  }
+  
+  .selected-file-info {
+    flex: 1;
+  }
+  
+  .selected-file-name {
+    font-weight: 600;
+    color: #111827;
+    font-size: 14px;
+  }
+  
+  .selected-file-size {
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 2px;
+  }
+  
+  .selected-file-remove {
+    padding: 6px 12px;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  
+  .selected-file-remove:hover {
+    background: #c82333;
+  }
+  
+  .form-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding-top: 20px;
+    border-top: 2px solid #e5e7eb;
+    margin-top: 20px;
+  }
+  
+  .btn {
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+    border: none;
+  }
+  
+  .btn-primary {
+    background: #22c55e;
+    color: white;
+  }
+  
+  .btn-primary:hover {
+    background: #16a34a;
+  }
+  
+  .btn-secondary {
+    background: #6b7280;
+    color: white;
+  }
+  
+  .btn-secondary:hover {
+    background: #4b5563;
+  }
+  
+  .info-box {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 24px;
+  }
+  
+  .info-box-title {
+    font-weight: 600;
+    color: #1e40af;
+    margin-bottom: 8px;
+    font-size: 14px;
+  }
+  
+  .info-box-text {
+    font-size: 13px;
+    color: #1e40af;
+    line-height: 1.6;
+  }
+</style>
+
+<div class="card">
+    <div class="form-header">
+        <div>
+            <h1>📎 Dosya Yükle</h1>
+            <p class="subtitle">Belge: <strong>{{ document.title }}</strong></p>
+        </div>
+        <a href="{% url 'stokapp:document_detay' document.pk %}" class="btn btn-secondary">
+            ← Geri
+        </a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 15px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background: #fff3cd; color: #856404; border-left: 4px solid #ffc107;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    {% if document.files.count > 0 %}
+    <div class="info-box">
+        <div class="info-box-title">ℹ️ Versiyon Bilgisi</div>
+        <div class="info-box-text">
+            Bu belge için <strong>{{ document.files.count }}</strong> dosya versiyonu mevcut. Yeni bir dosya yüklediğinizde, 
+            bu dosya <strong>v{{ document.files.count|add:1 }}</strong> versiyonu olarak kaydedilecek ve önceki versiyonlar arşivlenecektir.
+            Yeni versiyon için <strong>değişiklik notu zorunludur</strong> (en az 5 karakter).
+        </div>
+    </div>
+    {% else %}
+    <div class="info-box">
+        <div class="info-box-title">ℹ️ İlk Dosya</div>
+        <div class="info-box-text">
+            Bu belge için ilk dosyayı yüklüyorsunuz. Bu dosya <strong>v1</strong> versiyonu olarak kaydedilecektir.
+            Değişiklik notu opsiyoneldir.
+        </div>
+    </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" id="fileUploadForm">
+        {% csrf_token %}
+        
+        <div class="form-section">
+            <div class="form-field">
+                <label class="form-label required">Dosya Seç</label>
+                <div class="file-upload-area" id="fileUploadArea">
+                    <input type="file" 
+                           name="{{ form.file.name }}" 
+                           id="id_file" 
+                           style="display: none;"
+                           required>
+                    <div class="file-upload-icon" id="uploadIcon">📁</div>
+                    <div class="file-upload-text" id="uploadText">Dosyayı seçmek için tıklayın veya sürükleyip bırakın</div>
+                    <div class="file-upload-hint">PDF, Word, Excel, resim veya diğer belge dosyaları</div>
+                </div>
+                <div id="selectedFileContainer" style="display: none;">
+                    <div class="selected-file">
+                        <div class="selected-file-icon">📄</div>
+                        <div class="selected-file-info">
+                            <div class="selected-file-name" id="selectedFileName"></div>
+                            <div class="selected-file-size" id="selectedFileSize"></div>
+                        </div>
+                        <button type="button" class="selected-file-remove" onclick="clearFile()">Kaldır</button>
+                    </div>
+                </div>
+                {% if form.file.errors %}
+                <div class="form-error">{{ form.file.errors }}</div>
+                {% endif %}
+                <div class="form-help">Maksimum dosya boyutu: 50 MB</div>
+            </div>
+            
+            <div class="form-field">
+                <label class="form-label{% if document.files.count > 0 %} required{% endif %}">Değişiklik Notu</label>
+                {{ form.change_note }}
+                {% if form.change_note.errors %}
+                <div class="form-error">{{ form.change_note.errors }}</div>
+                {% endif %}
+                <div class="form-help">
+                    {% if document.files.count > 0 %}
+                    Yeni versiyon için bu dosyada yapılan değişiklikleri açıklayın (en az 5 karakter zorunludur).
+                    {% else %}
+                    İlk dosya yüklemesi için not opsiyoneldir.
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-footer">
+            <a href="{% url 'stokapp:document_detay' document.pk %}" class="btn btn-secondary">❌ İptal</a>
+            <button type="submit" class="btn btn-primary">✅ Dosyayı Yükle</button>
+        </div>
+    </form>
+</div>
+
+<script>
+const fileInput = document.getElementById('id_file');
+const fileUploadArea = document.getElementById('fileUploadArea');
+const uploadIcon = document.getElementById('uploadIcon');
+const uploadText = document.getElementById('uploadText');
+const selectedFileContainer = document.getElementById('selectedFileContainer');
+const selectedFileName = document.getElementById('selectedFileName');
+const selectedFileSize = document.getElementById('selectedFileSize');
+
+// Dosya seçildiğinde
+fileInput.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        displaySelectedFile(file);
+    }
+});
+
+// Drag and drop
+fileUploadArea.addEventListener('click', function() {
+    fileInput.click();
+});
+
+fileUploadArea.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    fileUploadArea.classList.add('dragover');
+});
+
+fileUploadArea.addEventListener('dragleave', function() {
+    fileUploadArea.classList.remove('dragover');
+});
+
+fileUploadArea.addEventListener('drop', function(e) {
+    e.preventDefault();
+    fileUploadArea.classList.remove('dragover');
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        fileInput.files = files;
+        displaySelectedFile(files[0]);
+    }
+});
+
+function displaySelectedFile(file) {
+    selectedFileName.textContent = file.name;
+    
+    // Dosya boyutunu formatla
+    const fileSize = file.size;
+    let sizeText = '';
+    if (fileSize < 1024) {
+        sizeText = fileSize + ' B';
+    } else if (fileSize < 1048576) {
+        sizeText = (fileSize / 1024).toFixed(2) + ' KB';
+    } else {
+        sizeText = (fileSize / 1048576).toFixed(2) + ' MB';
+    }
+    selectedFileSize.textContent = sizeText;
+    
+    // Maksimum boyut kontrolü (50 MB)
+    if (fileSize > 50 * 1048576) {
+        alert('Dosya boyutu 50 MB\'dan büyük olamaz!');
+        clearFile();
+        return;
+    }
+    
+    selectedFileContainer.style.display = 'block';
+    fileUploadArea.style.display = 'none';
+}
+
+function clearFile() {
+    fileInput.value = '';
+    selectedFileContainer.style.display = 'none';
+    fileUploadArea.style.display = 'block';
+}
+
+// Form gönderilmeden önce kontrol
+document.getElementById('fileUploadForm').addEventListener('submit', function(e) {
+    const fileInput = document.getElementById('id_file');
+    const changeNote = document.querySelector('textarea[name="change_note"]').value.trim();
+    
+    if (!fileInput.files || fileInput.files.length === 0) {
+        e.preventDefault();
+        alert('Lütfen bir dosya seçin!');
+        return false;
+    }
+    
+    {% if document.files.count > 0 %}
+    if (changeNote.length < 5) {
+        e.preventDefault();
+        alert('Yeni versiyon için değişiklik notu zorunludur (en az 5 karakter).');
+        return false;
+    }
+    {% endif %}
+});
+</script>
+{% endblock %}

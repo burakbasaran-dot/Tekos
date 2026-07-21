@@ -1,0 +1,471 @@
+{% extends "stokapp/base.html" %}
+{% block title %}{{ system_ai_name }} - Onay Merkezi{% endblock %}
+{% block content %}
+<style>
+  .page-title { margin: 0 0 16px; font-size: 28px; font-weight: 700; }
+  .toolbar { display: grid; grid-template-columns: repeat(5, minmax(140px, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .toolbar select, .toolbar button, .toolbar input, .toolbar textarea { padding: 10px; border: 1px solid #d1d5db; border-radius: 10px; font: inherit; }
+  .stats { display: grid; grid-template-columns: repeat(5, minmax(120px, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .stat { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 10px; }
+  .stat .k { font-size: 12px; color: #6b7280; }
+  .stat .v { font-size: 22px; font-weight: 700; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+  .card-item { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 14px; cursor: pointer; }
+  .card-head { display:flex; align-items:center; gap:8px; }
+  .meta { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+  .badge { padding: 2px 8px; border-radius: 999px; font-size: 12px; border: 1px solid #d1d5db; background: #f9fafb; }
+  .risk-low { background: #ecfdf5; border-color: #34d399; }
+  .risk-medium { background: #fffbeb; border-color: #fbbf24; }
+  .risk-high { background: #fff7ed; border-color: #fb923c; }
+  .risk-critical { background: #fef2f2; border-color: #f87171; }
+  .status-pending { background: #eff6ff; border-color: #60a5fa; }
+  .status-approved { background: #eef2ff; border-color: #818cf8; }
+  .status-rejected { background: #fef2f2; border-color: #f87171; }
+  .status-executed { background: #ecfdf5; border-color: #34d399; }
+  .status-failed { background: #fff7ed; border-color: #fb923c; }
+  .muted { color: #6b7280; font-size: 13px; }
+  .modal { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4); display: none; align-items: center; justify-content: center; padding: 16px; z-index: 30; }
+  .modal-content { background: #fff; width: min(980px, 100%); max-height: 90vh; overflow: auto; border-radius: 14px; border: 1px solid #d1d5db; padding: 16px; }
+  .actions { display: flex; gap: 10px; margin-top: 10px; }
+  .btn-danger { background: #dc2626; color: #fff; border: 0; }
+  .btn-success { background: #16a34a; color: #fff; border: 0; }
+  .btn-warn { background: #f59e0b; color: #111827; border: 0; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+</style>
+
+<h1 class="page-title">{{ system_ai_name }} - Onay Merkezi</h1>
+<p class="muted" style="margin: 0 0 14px;">{{ system_ai_name }} tarafından oluşturulan önerileri inceleyip onaylayın.</p>
+
+<form class="toolbar" method="get">
+  <select name="status">
+    <option value="">Durum filtresi</option>
+    {% for value, label in statuses %}
+      <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <select name="action_type">
+    <option value="">İşlem tipi filtresi</option>
+    {% for value, label in action_types %}
+      <option value="{{ value }}" {% if filters.action_type == value %}selected{% endif %}>{{ value }}</option>
+    {% endfor %}
+  </select>
+  <select name="risk_level">
+    <option value="">Risk filtresi</option>
+    {% for value, label in risk_levels %}
+      <option value="{{ value }}" {% if filters.risk_level == value %}selected{% endif %}>{{ value }}</option>
+    {% endfor %}
+  </select>
+  <select name="source">
+    <option value="">Kaynak filtresi</option>
+    {% for value, label in sources %}
+      <option value="{{ value }}" {% if filters.source == value %}selected{% endif %}>{{ value }}</option>
+    {% endfor %}
+  </select>
+  <button class="btn btn-secondary" type="submit">Filtrele</button>
+</form>
+
+<div class="stats">
+  <div class="stat"><div class="k">Bekleyen onaylar</div><div class="v">{{ status_counts.pending }}</div></div>
+  <div class="stat"><div class="k">Onaylananlar</div><div class="v">{{ status_counts.approved }}</div></div>
+  <div class="stat"><div class="k">Reddedilenler</div><div class="v">{{ status_counts.rejected }}</div></div>
+  <div class="stat"><div class="k">İşleme alınanlar</div><div class="v">{{ status_counts.executed }}</div></div>
+  <div class="stat"><div class="k">Hatalı işlemler</div><div class="v">{{ status_counts.failed }}</div></div>
+</div>
+
+<div style="margin-bottom: 12px;">
+  <button class="btn btn-secondary" id="simulateEmailBtn">Test Siparişi Oluştur</button>
+  <button class="btn btn-secondary" id="seedBtn">Demo Kayıt Ekle</button>
+  <button class="btn btn-warn" id="refreshPendingBtn" type="button">Yeniden analiz et (bekleyen + hatalı)</button>
+  <button class="btn btn-secondary" id="bulkApproveBtn">Toplu Onayla</button>
+  <button class="btn btn-secondary" id="bulkRejectBtn">Toplu Reddet</button>
+</div>
+
+<div class="cards" id="approvalCards">
+  {% for req in requests %}
+    <div class="card-item" onclick="openDetail('{{ req.id }}')">
+      <div class="card-head">
+        <input type="checkbox" class="bulk-check" value="{{ req.id }}" onclick="event.stopPropagation();">
+        <div style="font-weight: 700;">{{ req.title }}</div>
+      </div>
+      <div class="meta">
+        <span class="badge">{{ req.action_type }}</span>
+        <span class="badge">{{ req.source }}</span>
+        <span class="badge risk-{{ req.risk_level }}">{{ req.risk_level }}</span>
+        <span class="badge status-{{ req.status }}">{{ req.status }}</span>
+      </div>
+      <div class="muted"><b>{{ system_ai_name }} önerisi:</b> {{ req.ai_summary|truncatechars:180 }}</div>
+      <div class="muted" style="margin-top:4px;">
+        {% if req.payload.detected_items and req.payload.detected_items.0.product_code %}
+          <strong>{{ req.payload.detected_items.0.product_code }}</strong> / {{ req.payload.detected_items.0.quantity|default:"?" }} adet
+          {% if req.payload.detected_items|length > 1 %}
+            <span style="color:#9ca3af;">(+{{ req.payload.detected_items|length|add:"-1" }} satır)</span>
+          {% endif %}
+          {% if req.payload.detected_items.0.currency or req.payload.detected_items.0.unit_price %}
+            · {{ req.payload.detected_items.0.currency|default:"-" }} · birim {{ req.payload.detected_items.0.unit_price|default:"-" }}
+          {% endif %}
+        {% elif req.payload.detected_items and req.payload.detected_items.0.product_name %}
+          {{ req.payload.detected_items.0.product_name|truncatechars:40 }} / {{ req.payload.detected_items.0.quantity|default:"?" }} adet
+          {% if req.payload.detected_items|length > 1 %}
+            <span style="color:#9ca3af;">(+{{ req.payload.detected_items|length|add:"-1" }} satır)</span>
+          {% endif %}
+        {% elif req.payload.type == "bulk_purchase_request" and req.payload.items %}
+          <strong>Toplu TEKORA:</strong> {{ req.payload.items|length }} kalem
+          {% if req.payload.items.0.product_code %}
+            · ör. {{ req.payload.items.0.product_code }}
+          {% endif %}
+        {% else %}
+          Ürün/adet tespit edilemedi, manuel kontrol gerekli
+        {% endif %}
+      </div>
+      <div class="muted" style="margin-top:4px;">
+        {% if req.payload.stock_checks and req.payload.stock_checks.0.status == "insufficient" %}
+          Stok durumu: Yetersiz{% if req.payload.stock_checks.0.missing_quantity %} | Eksik miktar: {{ req.payload.stock_checks.0.missing_quantity }} adet{% endif %}
+        {% elif req.payload.stock_checks and req.payload.stock_checks.0.status == "sufficient" %}
+          Stok durumu: Yeterli
+        {% elif req.payload.stock_checks and req.payload.stock_checks.0.status == "product_not_found" %}
+          Ürün stok sisteminde bulunamadı
+        {% endif %}
+      </div>
+      {% if req.payload.created_purchase_request_id %}
+        <div class="muted" style="margin-top:4px;">Satın alma talebi oluşturuldu</div>
+      {% endif %}
+      <div class="muted" style="margin-top:8px;">{{ req.created_at|date:"d.m.Y H:i" }}</div>
+    </div>
+  {% empty %}
+    <div class="card-item">Filtreye uygun kayıt bulunamadı.</div>
+  {% endfor %}
+</div>
+
+<div id="detailModal" class="modal">
+  <div class="modal-content">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h3 style="margin:0;">Onay Detayı</h3>
+      <button class="btn btn-secondary" onclick="closeDetail()">Kapat</button>
+    </div>
+    <div id="detailBody" style="margin-top:12px;"></div>
+  </div>
+</div>
+
+<script>
+  const csrfToken = "{{ csrf_token }}";
+  const systemAiName = "{{ system_ai_name }}";
+  const approvalReqRoot = "{% url 'stokapp:approval_requests_collection_api' %}".replace(/\/$/, "");
+  const apiUrls = {
+    collection: "{% url 'stokapp:approval_requests_collection_api' %}",
+    bulkApprove: "{% url 'stokapp:approval_requests_bulk_approve_api' %}",
+    bulkReject: "{% url 'stokapp:approval_requests_bulk_reject_api' %}",
+    seedDemo: "{% url 'stokapp:approval_request_seed_demo_api' %}",
+    simulateEmail: "{% url 'stokapp:simulate_email_order_api' %}",
+    detailBase: "{% url 'stokapp:approval_requests_collection_api' %}",
+    refreshPending: `${approvalReqRoot}/refresh-pending-email`,
+    refreshAnalysis: (id) => `${approvalReqRoot}/${id}/refresh-analysis`,
+  };
+  let activeId = null;
+  let currentPayload = null;
+
+  function escapeHtml(str) {
+    return String(str || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function renderBulkPurchaseTable(payload) {
+    if (!payload || payload.type !== "bulk_purchase_request" || !Array.isArray(payload.items)) return "";
+    const items = payload.items;
+    if (!items.length) return "";
+    const rows = items.map((it, idx) => `
+      <tr>
+        <td style="border:1px solid #e5e7eb;padding:8px;">${idx + 1}</td>
+        <td style="border:1px solid #e5e7eb;padding:8px;">${escapeHtml(it.product_code)}</td>
+        <td style="border:1px solid #e5e7eb;padding:8px;">${escapeHtml(it.product_name)}</td>
+        <td style="border:1px solid #e5e7eb;padding:8px;text-align:right;">${escapeHtml(it.current_stock)}</td>
+        <td style="border:1px solid #e5e7eb;padding:8px;text-align:right;">${escapeHtml(it.critical_level)}</td>
+        <td style="border:1px solid #e5e7eb;padding:8px;text-align:right;">${escapeHtml(it.suggested_quantity)}</td>
+        <td style="border:1px solid #e5e7eb;padding:8px;">${escapeHtml(it.severity)}</td>
+      </tr>`).join("");
+    return `
+      <div style="margin-top:12px;"><b>Toplu satınalma önerisi (${items.length} kalem)</b></div>
+      <div style="overflow:auto;margin-top:8px;">
+      <table style="width:100%;border-collapse:collapse;font-size:14px;">
+        <thead><tr>
+          <th style="border:1px solid #e5e7eb;padding:8px;">#</th>
+          <th style="border:1px solid #e5e7eb;padding:8px;">Kod</th>
+          <th style="border:1px solid #e5e7eb;padding:8px;">Ürün</th>
+          <th style="border:1px solid #e5e7eb;padding:8px;text-align:right;">Mevcut stok</th>
+          <th style="border:1px solid #e5e7eb;padding:8px;text-align:right;">Kritik seviye</th>
+          <th style="border:1px solid #e5e7eb;padding:8px;text-align:right;">Önerilen satınalma</th>
+          <th style="border:1px solid #e5e7eb;padding:8px;">Önem</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>`;
+  }
+
+  function appendApprovalCard(data) {
+    const cards = document.getElementById("approvalCards");
+    if (!cards) return;
+    const item = document.createElement("div");
+    item.className = "card-item";
+    item.setAttribute("onclick", `openDetail('${data.id}')`);
+    const summary = (data.ai_summary || "").length > 180 ? `${data.ai_summary.slice(0, 180)}...` : (data.ai_summary || "-");
+    const createdAt = data.created_at ? new Date(data.created_at).toLocaleString("tr-TR") : "-";
+    let detectedInfo = "Ürün/adet tespit edilemedi, manuel kontrol gerekli";
+    const detectedItems = (data.payload && data.payload.detected_items) ? data.payload.detected_items : [];
+    const bulkItems = (data.payload && data.payload.type === "bulk_purchase_request" && Array.isArray(data.payload.items))
+      ? data.payload.items
+      : [];
+    if (bulkItems.length) {
+      detectedInfo = `Toplu TEKORA: ${bulkItems.length} kalem`;
+      if (bulkItems[0].product_code) {
+        detectedInfo += ` · ör. ${bulkItems[0].product_code}`;
+      }
+    } else if (detectedItems.length && detectedItems[0].product_code) {
+      const qty = (detectedItems[0].quantity === null || detectedItems[0].quantity === undefined) ? "?" : detectedItems[0].quantity;
+      detectedInfo = `${detectedItems[0].product_code} / ${qty} adet`;
+      if (detectedItems.length > 1) {
+        detectedInfo += ` (+${detectedItems.length - 1} satır)`;
+      }
+      const cur = detectedItems[0].currency;
+      const up = detectedItems[0].unit_price;
+      if (cur || (up !== undefined && up !== null)) {
+        detectedInfo += ` · ${cur || "-"} · birim ${up !== undefined && up !== null ? up : "-"}`;
+      }
+    } else if (detectedItems.length && detectedItems[0].product_name) {
+      const qty = (detectedItems[0].quantity === null || detectedItems[0].quantity === undefined) ? "?" : detectedItems[0].quantity;
+      const nm = String(detectedItems[0].product_name || "").slice(0, 40);
+      detectedInfo = `${nm} / ${qty} adet`;
+      if (detectedItems.length > 1) {
+        detectedInfo += ` (+${detectedItems.length - 1} satır)`;
+      }
+    }
+    let stockInfo = "";
+    const stockChecks = (data.payload && data.payload.stock_checks) ? data.payload.stock_checks : [];
+    if (stockChecks.length) {
+      const first = stockChecks[0];
+      if (first.status === "insufficient") {
+        const missing = (first.missing_quantity === null || first.missing_quantity === undefined) ? "?" : first.missing_quantity;
+        stockInfo = `Stok durumu: Yetersiz | Eksik miktar: ${missing} adet`;
+      } else if (first.status === "sufficient") {
+        stockInfo = "Stok durumu: Yeterli";
+      } else if (first.status === "product_not_found") {
+        stockInfo = "Ürün stok sisteminde bulunamadı";
+      }
+    }
+    const purchaseRequestInfo = (data.payload && data.payload.created_purchase_request_id)
+      ? "Satın alma talebi oluşturuldu"
+      : "";
+    item.innerHTML = `
+      <div class="card-head">
+        <input type="checkbox" class="bulk-check" value="${escapeHtml(data.id)}" onclick="event.stopPropagation();">
+        <div style="font-weight: 700;">${escapeHtml(data.title)}</div>
+      </div>
+      <div class="meta">
+        <span class="badge">${escapeHtml(data.action_type)}</span>
+        <span class="badge">${escapeHtml(data.source)}</span>
+        <span class="badge risk-${escapeHtml(data.risk_level)}">${escapeHtml(data.risk_level)}</span>
+        <span class="badge status-${escapeHtml(data.status)}">${escapeHtml(data.status)}</span>
+      </div>
+      <div class="muted"><b>${escapeHtml(systemAiName)} önerisi:</b> ${escapeHtml(summary)}</div>
+      <div class="muted" style="margin-top:4px;">${escapeHtml(detectedInfo)}</div>
+      <div class="muted" style="margin-top:4px;">${escapeHtml(stockInfo)}</div>
+      <div class="muted" style="margin-top:4px;">${escapeHtml(purchaseRequestInfo)}</div>
+      <div class="muted" style="margin-top:8px;">${escapeHtml(createdAt)}</div>
+    `;
+    cards.prepend(item);
+  }
+
+  function closeDetail() {
+    document.getElementById("detailModal").style.display = "none";
+  }
+
+  async function openDetail(id) {
+    activeId = id;
+    const res = await fetch(`${apiUrls.detailBase}${id}`);
+    const data = await res.json();
+    currentPayload = data.payload || {};
+    document.getElementById("detailBody").innerHTML = `
+      <div class="two-col">
+        <div><b>Başlık:</b> ${data.title}</div>
+        <div><b>İşlem Tipi:</b> ${data.action_type}</div>
+        <div><b>Kaynak:</b> ${data.source}</div>
+        <div><b>Risk:</b> ${data.risk_level}</div>
+        <div><b>Durum:</b> ${data.status}</div>
+        <div><b>Oluşturulma:</b> ${data.created_at || "-"}</div>
+      </div>
+      <hr>
+      <div><b>${systemAiName} Açıklaması</b><br>${data.description || "-"}</div>
+      <div style="margin-top:10px;"><b>${systemAiName} Önerisi</b><br>${data.ai_summary || "-"}</div>
+      ${renderBulkPurchaseTable(currentPayload)}
+      <div style="margin-top:10px;"><b>Önerilen İşlem / JSON Payload</b></div>
+      <textarea id="payloadEditor" rows="16" style="width:100%;">${JSON.stringify(currentPayload, null, 2)}</textarea>
+      <div class="actions">
+        <button class="btn btn-secondary" onclick="refreshCurrentAnalysis()">Analizi yenile</button>
+        <button class="btn btn-success" onclick="approveCurrent()">Onayla</button>
+        <button class="btn btn-danger" onclick="rejectCurrent()">Reddet</button>
+        <button class="btn btn-warn" onclick="saveEdit()">Düzenle</button>
+      </div>
+    `;
+    document.getElementById("detailModal").style.display = "flex";
+  }
+
+  async function refreshCurrentAnalysis() {
+    if (!activeId) return;
+    const res = await fetch(apiUrls.refreshAnalysis(activeId), {
+      method: "POST",
+      headers: { "X-CSRFToken": csrfToken },
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert(data.error || "Analiz yenilenemedi.");
+      return;
+    }
+    if (data.skipped) {
+      alert(`Atlandı: ${data.reason || "bilinmiyor"}`);
+      return;
+    }
+    if (data.reset_to_pending) {
+      alert("Analiz güncellendi; kayıt tekrar onay bekliyor durumuna alındı.");
+    } else {
+      alert("Analiz güncellendi.");
+    }
+    await openDetail(activeId);
+  }
+
+  async function approveCurrent() {
+    if (!activeId) return;
+    if (!confirm("Bu işlem gerçekten çalıştırılacak. Onaylıyor musunuz?")) return;
+    const res = await fetch(`${apiUrls.detailBase}${activeId}/approve`, { method: "POST", headers: { "X-CSRFToken": csrfToken } });
+    if (!res.ok) {
+      alert("Onay sırasında hata oluştu.");
+      return;
+    }
+    alert("İşlem onaylandı ve çalıştırıldı.");
+    location.reload();
+  }
+
+  async function rejectCurrent() {
+    if (!activeId) return;
+    const rejectReason = prompt("Red sebebi giriniz:");
+    if (!rejectReason) return;
+    const res = await fetch(`${apiUrls.detailBase}${activeId}/reject`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+      body: JSON.stringify({ reject_reason: rejectReason })
+    });
+    if (!res.ok) {
+      alert("Red sırasında hata oluştu.");
+      return;
+    }
+    alert("Kayıt reddedildi.");
+    location.reload();
+  }
+
+  async function saveEdit() {
+    if (!activeId) return;
+    let payloadObj = {};
+    try {
+      payloadObj = JSON.parse(document.getElementById("payloadEditor").value || "{}");
+    } catch (e) {
+      alert("JSON geçersiz.");
+      return;
+    }
+    const res = await fetch(`${apiUrls.detailBase}${activeId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+      body: JSON.stringify({ payload: payloadObj })
+    });
+    if (!res.ok) {
+      alert("Düzenleme kaydedilemedi.");
+      return;
+    }
+    alert("Kayıt düzenlendi ve pending durumda bırakıldı.");
+    location.reload();
+  }
+
+  document.getElementById("refreshPendingBtn").addEventListener("click", async function () {
+    if (!confirm("Onay bekleyen ve hatalı durumdaki e-posta sipariş kayıtları güncel kurallarla yeniden analiz edilsin mi? (Hatalı kayıtlar tekrar onay bekliyor olur.)")) return;
+    const res = await fetch(apiUrls.refreshPending, {
+      method: "POST",
+      headers: { "X-CSRFToken": csrfToken },
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert(data.error || "Toplu yenileme başarısız.");
+      return;
+    }
+    const fr = data.failed_reset_to_pending != null ? data.failed_reset_to_pending : 0;
+    alert(`Güncellenen: ${data.updated}, hatalıdan bekliyora alınan: ${fr}, atlanan: ${data.skipped}, hata: ${(data.errors || []).length}`);
+    location.reload();
+  });
+
+  document.getElementById("seedBtn").addEventListener("click", async function () {
+    const res = await fetch(apiUrls.seedDemo, { method: "POST", headers: { "X-CSRFToken": csrfToken } });
+    if (!res.ok) {
+      alert(`${systemAiName} demo kaydı eklenemedi.`);
+      return;
+    }
+    location.reload();
+  });
+
+  document.getElementById("simulateEmailBtn").addEventListener("click", async function () {
+    const res = await fetch(apiUrls.simulateEmail, {
+      method: "POST",
+      headers: { "X-CSRFToken": csrfToken }
+    });
+    if (!res.ok) {
+    alert(`${systemAiName} sipariş algılama simülasyonu başarısız.`);
+      return;
+    }
+    const data = await res.json();
+    appendApprovalCard(data);
+    alert(`${systemAiName} sipariş algıladı ve öneri oluşturdu.`);
+  });
+
+  function selectedIds() {
+    return Array.from(document.querySelectorAll(".bulk-check:checked")).map((x) => x.value);
+  }
+
+  document.getElementById("bulkApproveBtn").addEventListener("click", async function () {
+    const ids = selectedIds();
+    if (!ids.length) {
+      alert("Önce en az bir kayıt seçin.");
+      return;
+    }
+    if (!confirm(`${ids.length} kayıt onaylanıp çalıştırılacak. Devam edilsin mi?`)) return;
+    const res = await fetch(apiUrls.bulkApprove, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+      body: JSON.stringify({ ids })
+    });
+    if (!res.ok) {
+      alert("Toplu onay sırasında hata oluştu.");
+      return;
+    }
+    alert("Toplu onay tamamlandı.");
+    location.reload();
+  });
+
+  document.getElementById("bulkRejectBtn").addEventListener("click", async function () {
+    const ids = selectedIds();
+    if (!ids.length) {
+      alert("Önce en az bir kayıt seçin.");
+      return;
+    }
+    const rejectReason = prompt("Toplu red sebebi giriniz:");
+    if (!rejectReason) return;
+    const res = await fetch(apiUrls.bulkReject, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-CSRFToken": csrfToken },
+      body: JSON.stringify({ ids, reject_reason: rejectReason })
+    });
+    if (!res.ok) {
+      alert("Toplu red sırasında hata oluştu.");
+      return;
+    }
+    alert("Toplu red tamamlandı.");
+    location.reload();
+  });
+</script>
+{% endblock %}

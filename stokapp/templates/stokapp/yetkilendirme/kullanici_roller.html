@@ -1,0 +1,23 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Rol ata — {{ hedef_user.username }}{% endblock %}
+{% block content %}
+<div class="card" style="padding:22px;max-width:640px;">
+  <h1 style="margin:0 0 8px;">{{ hedef_user.get_full_name|default:hedef_user.username }}</h1>
+  <p style="color:#64748b;margin-bottom:20px;">@{{ hedef_user.username }}</p>
+  <form method="post">{% csrf_token %}
+    <p style="font-weight:600;margin-bottom:8px;">Roller (çoklu seçim)</p>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      {% for r in roller %}
+      <label style="display:flex;align-items:center;gap:10px;">
+        <input type="checkbox" name="rol" value="{{ r.pk }}" {% if r.pk in atanmis %}checked{% endif %}/>
+        <span><strong>{{ r.ad }}</strong> <span style="color:#94a3b8;font-size:12px;">({{ r.slug }})</span></span>
+      </label>
+      {% endfor %}
+    </div>
+    <div style="margin-top:22px;display:flex;gap:10px;">
+      <button type="submit" class="btn btn-primary">Kaydet</button>
+      <a href="{% url 'stokapp:yetkilendirme_kullanicilar' %}" class="btn btn-secondary">İptal</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

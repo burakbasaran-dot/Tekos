@@ -1,0 +1,28 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Ar-Ge Dosyalar{% endblock %}
+{% block content %}
+<div class="card">
+  <h2 style="margin-top:0;">📎 Ar-Ge — Dosyalar</h2>
+  <p style="color:#6b7280;">Dosya yükleme proje detayındaki <strong>Dosyalar</strong> sekmesinden yapılır.</p>
+  <form method="get" style="margin-bottom:14px;">
+    <label>Proje ID: <input type="number" name="proje" value="{{ proje_id|default:'' }}" style="padding:6px 10px;border-radius:6px;border:1px solid #ddd;"></label>
+    <button type="submit" class="btn btn-secondary">Süz</button>
+  </form>
+  <table>
+    <thead><tr><th>Proje</th><th>Tip</th><th>Açıklama</th><th>Tarih</th><th></th></tr></thead>
+    <tbody>
+      {% for d in dosyalar %}
+      <tr>
+        <td><a href="{% url 'stokapp:arge_proje_detay' d.proje.pk %}?tab=dosyalar">{{ d.proje.proje_kodu }}</a></td>
+        <td>{{ d.get_dosya_tipi_display }}</td>
+        <td>{{ d.aciklama|truncatechars:40|default:"—" }}</td>
+        <td>{{ d.uploaded_at|date:"d.m.Y H:i" }}</td>
+        <td><a href="{% url 'stokapp:arge_dosya_indir' d.pk %}" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;">İndir</a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="5" style="text-align:center;color:#6b7280;">Kayıt yok.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

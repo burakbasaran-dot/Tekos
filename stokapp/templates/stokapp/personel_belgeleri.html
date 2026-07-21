@@ -1,0 +1,59 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Personel Belgeleri - {{ personel.ad }} {{ personel.soyad }}{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <a href="{% url 'stokapp:personel_listesi' %}" class="btn" style="background-color: #6b7280; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px;">← Geri</a>
+            <h2 style="margin: 0;">{{ personel.ad }} {{ personel.soyad }} - {% if arsivli %}Arşivlenmiş Belgeler{% else %}Personel Belgeleri{% endif %}</h2>
+        </div>
+        <div style="display:flex; gap:10px;">
+            {% if not arsivli %}
+            <a href="{% url 'stokapp:personel_belgeleri' personel.pk %}?arsivli=true" class="btn" style="background-color: #6b7280; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px;">📦 Arşivlenmiş Belgeler</a>
+            {% else %}
+            <a href="{% url 'stokapp:personel_belgeleri' personel.pk %}" class="btn" style="background-color: #3b82f6; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px;">📋 Aktif Belgeler</a>
+            {% endif %}
+            <a href="{% url 'stokapp:personel_belgesi_ekle' personel.pk %}" class="btn btn-primary" style="background-color: #22c55e; border-color: #22c55e; padding: 8px 16px;">+ Yeni Belge Ekle</a>
+        </div>
+    </div>
+
+    <table style="width: 100%; border-collapse: collapse; background: white;">
+        <thead>
+            <tr style="border-bottom: 2px solid #e5e7eb;">
+                <th style="padding: 12px; text-align: left; font-weight: 600; color: #fff;">Belge Adı</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600; color: #fff;">Belge No</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600; color: #fff;">Dosya</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600; color: #fff;">Yenileme</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600; color: #fff;">Hatırlatma</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600; color: #fff;">İşlemler</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for belge in belgeler %}
+            <tr style="border-bottom: 1px solid #e5e7eb;">
+                <td style="padding: 12px;"><strong>{{ belge.belge_adi }}</strong></td>
+                <td style="padding: 12px;">{{ belge.belge_no|default:"-" }}</td>
+                <td style="padding: 12px;">
+                    {% if belge.belge_dosyasi %}
+                    <a href="{{ belge.belge_dosyasi.url }}" target="_blank" style="color:#2563eb; text-decoration:none;">📄 Dosya Aç</a>
+                    {% else %}-{% endif %}
+                </td>
+                <td style="padding: 12px;">{% if belge.yenileme_gerekli %}{{ belge.yenileme_tarihi|date:"d.m.Y"|default:"-" }}{% else %}-{% endif %}</td>
+                <td style="padding: 12px;">{% if belge.yenileme_gerekli %}{{ belge.hatirlatma_gun_once|default:"-" }} gün{% else %}-{% endif %}</td>
+                <td style="padding: 12px;">
+                    <a href="{% url 'stokapp:personel_belgesi_duzenle' belge.pk %}" class="btn" style="background-color: #3b82f6; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; margin-right: 5px; font-size: 13px;">✏️ Düzenle</a>
+                    {% if not belge.arsivlendi %}
+                    <a href="{% url 'stokapp:personel_belgesi_arsivle' belge.pk %}" class="btn" style="background-color: #f59e0b; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; margin-right: 5px; font-size: 13px;">📦 Arşivle</a>
+                    {% endif %}
+                    <a href="{% url 'stokapp:personel_belgesi_sil' belge.pk %}{% if arsivli %}?arsivli=true{% endif %}" class="btn" style="background-color: #ef4444; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px;">🗑️ Sil</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" style="text-align:center; padding:30px; color:#6b7280;">{% if arsivli %}Arşivde belge yok.{% else %}Henüz belge bulunmuyor.{% endif %}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

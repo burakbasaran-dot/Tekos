@@ -1,0 +1,754 @@
+{% extends "stokapp/base.html" %}
+{% load currency_filters %}
+{% load l10n %}
+{% block title %}Sipariş Düzenle - {{ siparis.siparis_numarasi }}{% endblock %}
+{% block content %}
+{% include "stokapp/includes/tdk_form_styles.html" %}
+
+<div class="tdk-page">
+    <div class="tdk-header">
+        <div>
+            <h1>✏️ Sipariş Düzenle</h1>
+            <p>{{ siparis.siparis_numarasi }} — müşteri, kalemler ve özet bilgilerini güncelleyin.</p>
+        </div>
+        <a href="{% url 'stokapp:siparis_listesi' %}" class="btn btn-secondary">← Geri</a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="tdk-alert {% if message.tags == 'error' %}tdk-alert-error{% elif message.tags == 'warning' %}tdk-alert-warning{% else %}tdk-alert-success{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post" id="siparisForm" class="tdk-form-card" enctype="multipart/form-data">
+        {% csrf_token %}
+        <input type="hidden" name="kalemler" id="kalemlerInput">
+
+        <section class="tdk-section">
+            <h2 class="tdk-section-title">
+                <span class="tdk-section-icon">👤</span>
+                Sipariş Bilgileri
+            </h2>
+            <div class="tdk-grid">
+                <div class="tdk-field full">
+                    <label class="tdk-label required" for="{{ form.musteri.id_for_label }}">{{ form.musteri.label }}</label>
+                    {{ form.musteri }}
+                    {% if form.musteri.errors %}<div class="tdk-error">{{ form.musteri.errors }}</div>{% endif %}
+                </div>
+                <div class="tdk-field">
+                    <label class="tdk-label" for="{{ form.siparis_numarasi.id_for_label }}">{{ form.siparis_numarasi.label }}</label>
+                    {{ form.siparis_numarasi }}
+                    {% if form.siparis_numarasi.errors %}<div class="tdk-error">{{ form.siparis_numarasi.errors }}</div>{% endif %}
+                </div>
+                <div class="tdk-field">
+                    <label class="tdk-label" for="{{ form.etiketler.id_for_label }}">{{ form.etiketler.label }}</label>
+                    {{ form.etiketler }}
+                </div>
+                <div class="tdk-field">
+                    <label class="tdk-label" for="{{ form.olusturulma_tarihi.id_for_label }}">{{ form.olusturulma_tarihi.label }}</label>
+                    {{ form.olusturulma_tarihi }}
+                </div>
+                <div class="tdk-field">
+                    <label class="tdk-label" for="{{ form.tamamlanma_tarihi.id_for_label }}">{{ form.tamamlanma_tarihi.label }}</label>
+                    {{ form.tamamlanma_tarihi }}
+                </div>
+                <div class="tdk-field full">
+                    <label class="tdk-label" for="{{ form.aciklama.id_for_label }}">{{ form.aciklama.label }}</label>
+                    {{ form.aciklama }}
+                </div>
+                <div class="tdk-field full">
+                    <label class="tdk-label" for="{{ form.siparis_mektubu.id_for_label }}">{{ form.siparis_mektubu.label }}</label>
+                    {{ form.siparis_mektubu }}
+                    <div class="tdk-help">Opsiyonel. Yeni dosya yüklerseniz mevcut dosyanın üzerine yazılır.</div>
+                    {% if siparis.siparis_mektubu %}
+                        <div class="tdk-help">
+                            Mevcut dosya:
+                            <a href="{{ siparis.siparis_mektubu.url }}" target="_blank" style="color:#2563eb; font-weight:600;">{{ siparis.siparis_mektubu.name|cut:"siparis_mektuplari/" }}</a>
+                        </div>
+                    {% endif %}
+                    {% if form.siparis_mektubu.errors %}<div class="tdk-error">{{ form.siparis_mektubu.errors }}</div>{% endif %}
+                </div>
+            </div>
+        </section>
+
+        <section class="tdk-section">
+            <div class="tdk-section-head">
+                <h2 class="tdk-section-title">
+                    <span class="tdk-section-icon green">📦</span>
+                    Ürünler
+                </h2>
+                <button type="button" onclick="ekleUrun()" class="btn btn-primary">+ Ürün Ekle</button>
+            </div>
+            <div class="tdk-table-wrap">
+                <table id="urunTablosu" class="tdk-table">
+                    <thead>
+                        <tr>
+                            <th>Stok Kodu</th>
+                            <th>Ürün</th>
+                            <th>Miktar</th>
+                            <th>Birim Fiyat</th>
+                            <th>İndirim (%)</th>
+                            <th>Toplam</th>
+                            <th>İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody id="urunTablosuBody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="tdk-section">
+            <h2 class="tdk-section-title">
+                <span class="tdk-section-icon amber">💰</span>
+                Özet ve Durum
+            </h2>
+            <div class="tdk-ozet-grid">
+                <div class="tdk-field">
+                    <label class="tdk-label" for="{{ form.para_birimi.id_for_label }}">{{ form.para_birimi.label }}</label>
+                    {{ form.para_birimi }}
+                </div>
+                <div class="tdk-field">
+                    <label class="tdk-label" for="{{ form.siparis_durumu.id_for_label }}">{{ form.siparis_durumu.label }}</label>
+                    {{ form.siparis_durumu }}
+                </div>
+                <div class="tdk-field">
+                    <label class="tdk-label" for="vergiOrani">Vergi Oranı (%)</label>
+                    <input type="number" id="vergiOrani" value="20" step="0.01" min="0" max="100" class="form-control">
+                </div>
+            </div>
+            <div class="tdk-ozet-box" style="margin-top: 18px; max-width: 420px; margin-left: auto;">
+                <h4>Tutar Özeti</h4>
+                <div class="tdk-ozet-row">
+                    <span>Ara Toplam</span>
+                    <strong id="araToplam">0,00 <span id="paraBirimiGoster">USD</span></strong>
+                </div>
+                <div class="tdk-ozet-row">
+                    <span>Vergi (<span id="vergiOraniGoster">20</span>%)</span>
+                    <strong id="vergi">0,00 <span id="paraBirimiGoster2">USD</span></strong>
+                </div>
+                <div class="tdk-ozet-row">
+                    <span>Toplam</span>
+                    <strong id="toplam">0,00 <span id="paraBirimiGoster3">USD</span></strong>
+                </div>
+            </div>
+        </section>
+
+        <div class="tdk-footer">
+            <a href="{% url 'stokapp:siparis_listesi' %}" class="btn btn-secondary">İptal</a>
+            <button type="submit" class="btn btn-primary">💾 Güncelle</button>
+        </div>
+    </form>
+</div>
+
+<script>
+let urunSayaci = 0;
+const stokItems = [
+    {% for item in stok_items %}
+    {
+        id: {{ item.pk }}, 
+        stok_kodu: "{{ item.stok_kodu|escapejs }}",
+        ad: "{{ item.ad|escapejs }}", 
+        birim: {% if item.birim %}"{{ item.birim|escapejs }}"{% else %}"Adet"{% endif %}, 
+        satis_fiyati: {{ item.satis_fiyati|default:0|unlocalize }},
+        alis_fiyati: {{ item.alis_fiyati|default:0|unlocalize }},
+        fiyat: {% if item.satis_fiyati and item.satis_fiyati > 0 %}{{ item.satis_fiyati|unlocalize }}{% else %}{{ item.alis_fiyati|default:0|unlocalize }}{% endif %}
+    },
+    {% endfor %}
+];
+
+function toJsNumber(val) {
+    if (val === null || val === undefined || val === "") return 0;
+    if (typeof val === "number") return Number.isFinite(val) ? val : 0;
+    const n = parseFloat(String(val).replace(",", "."));
+    return Number.isFinite(n) ? n : 0;
+}
+
+async function fetchStokFiyat(stokId) {
+    try {
+        const resp = await fetch(`/stok/api/stok-fiyat/${stokId}/`, {
+            headers: { "X-Requested-With": "XMLHttpRequest" },
+        });
+        const payload = await resp.json();
+        if (!resp.ok || !payload.success) return null;
+        return toJsNumber(payload.effective_fiyat);
+    } catch (e) {
+        return null;
+    }
+}
+
+// Para birimi formatı (12.532,40 formatı)
+function formatCurrency(value) {
+    if (value === null || value === undefined || isNaN(value)) return "0,00";
+    
+    const num = Math.abs(parseFloat(value));
+    const isNegative = parseFloat(value) < 0;
+    
+    // İki ondalık basamakla formatla
+    const formatted = num.toFixed(2);
+    const parts = formatted.split('.');
+    const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.'); // Binlik ayırıcı
+    const decimalPart = parts[1];
+    
+    const result = `${integerPart},${decimalPart}`;
+    return isNegative ? `-${result}` : result;
+}
+
+// Miktar formatı (tam sayı ise .00 göstermeyebilir)
+function formatMiktar(value) {
+    if (value === null || value === undefined || value === '') return '';
+    
+    const num = parseFloat(value);
+    if (isNaN(num)) return '';
+    
+    // Tam sayı ise .00 gösterme, değilse 2 ondalık göster
+    if (num % 1 === 0) {
+        return num.toString();
+    } else {
+        return num.toFixed(2).replace('.', ',');
+    }
+}
+
+function getParaBirimi() {
+    const paraBirimiSelect = document.getElementById('id_para_birimi');
+    if (paraBirimiSelect && paraBirimiSelect.value) {
+        // Seçilen option'dan para birimi kodunu al
+        const selectedOption = paraBirimiSelect.options[paraBirimiSelect.selectedIndex];
+        // Format: "₺ Türk Lirası (TL)" -> "TL" çıkar
+        const text = selectedOption.text;
+        const match = text.match(/\(([^)]+)\)/);
+        return match ? match[1] : paraBirimiSelect.value;
+    }
+    return 'USD'; // Varsayılan
+}
+
+function updateParaBirimiGoster() {
+    const paraBirimi = getParaBirimi();
+    document.querySelectorAll('#paraBirimiGoster, #paraBirimiGoster2, #paraBirimiGoster3').forEach(el => {
+        el.textContent = paraBirimi;
+    });
+    
+    // Tablodaki para birimlerini güncelle
+    document.querySelectorAll('.fiyat-para-birimi, .toplam-para-birimi').forEach(el => {
+        el.textContent = paraBirimi;
+    });
+}
+
+function ekleUrun() {
+    const tbody = document.getElementById('urunTablosuBody');
+    const row = document.createElement('tr');
+    row.id = `urunRow_${urunSayaci}`;
+    
+    row.innerHTML = `
+        <td style="padding: 10px; position: relative;">
+            <input type="text" class="form-control stok-kodu-search" data-index="${urunSayaci}" placeholder="Stok kodu ara..." style="width: 100%;" autocomplete="off">
+            <input type="hidden" class="stok-item-id" data-index="${urunSayaci}" value="">
+            <div class="urun-dropdown" data-index="${urunSayaci}" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-radius: 4px; max-height: 200px; overflow-y: auto; z-index: 1000; box-shadow: 0 2px 8px rgba(0,0,0,0.15); margin-top: 2px;"></div>
+        </td>
+        <td style="padding: 10px; position: relative;">
+            <input type="text" class="form-control urun-ad-search" data-index="${urunSayaci}" placeholder="Ürün adı ara..." style="width: 100%;" autocomplete="off">
+            <div class="urun-dropdown" data-index="${urunSayaci}" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-radius: 4px; max-height: 200px; overflow-y: auto; z-index: 1000; box-shadow: 0 2px 8px rgba(0,0,0,0.15); margin-top: 2px;"></div>
+        </td>
+        <td style="padding: 10px;">
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <input type="number" class="form-control miktar-input" data-index="${urunSayaci}" step="0.01" min="0" placeholder="0" style="width: 100px;">
+                <span class="birim-span" data-index="${urunSayaci}" style="color: #6b7280; font-size: 14px;">-</span>
+            </div>
+        </td>
+        <td style="padding: 10px;">
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <input type="number" class="form-control fiyat-input" data-index="${urunSayaci}" step="0.01" min="0" placeholder="0.00" style="width: 120px;">
+                <span class="fiyat-para-birimi" style="color: #6b7280; font-size: 14px;">${getParaBirimi()}</span>
+            </div>
+        </td>
+        <td style="padding: 10px;">
+            <input type="number" class="form-control indirim-input" data-index="${urunSayaci}" step="0.01" min="0" max="100" placeholder="0.00" style="width: 100px;">
+        </td>
+        <td style="padding: 10px;">
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <span class="toplam-span" data-index="${urunSayaci}">0,00</span>
+                <span class="toplam-para-birimi" style="color: #6b7280; font-size: 14px;">${getParaBirimi()}</span>
+            </div>
+        </td>
+        <td style="padding: 10px;">
+            <button type="button" onclick="silUrun(${urunSayaci})" class="btn" style="background-color: #ef4444; color: white; padding: 4px 8px;">🗑️</button>
+        </td>
+    `;
+    
+    tbody.appendChild(row);
+    
+    // Event listener'ları ekle
+    const stokKoduInput = row.querySelector('.stok-kodu-search');
+    const urunAdInput = row.querySelector('.urun-ad-search');
+    const stokItemIdInput = row.querySelector('.stok-item-id');
+    const miktar = row.querySelector('.miktar-input');
+    const fiyat = row.querySelector('.fiyat-input');
+    const indirim = row.querySelector('.indirim-input');
+    const birimSpan = row.querySelector('.birim-span');
+    const dropdowns = row.querySelectorAll('.urun-dropdown');
+    const stokKoduDropdown = dropdowns[0];
+    const urunAdDropdown = dropdowns[1];
+
+    const currentIndex = urunSayaci;
+
+    function filtreleUrunler(searchTerm, dropdown, isStokKodu) {
+        if (!searchTerm || searchTerm.length < 1) {
+            dropdown.innerHTML = '';
+            dropdown.style.display = 'none';
+            return;
+        }
+
+        const term = searchTerm.toLowerCase();
+        const filtered = stokItems.filter(item => {
+            if (isStokKodu) {
+                return item.stok_kodu.toLowerCase().includes(term) || item.ad.toLowerCase().includes(term);
+            }
+            return item.ad.toLowerCase().includes(term) || item.stok_kodu.toLowerCase().includes(term);
+        });
+
+        if (filtered.length === 0) {
+            dropdown.innerHTML = '<div style="padding: 10px; color: #666; text-align: center;">Ürün bulunamadı</div>';
+            dropdown.style.display = 'block';
+            return;
+        }
+
+        dropdown.innerHTML = '';
+        filtered.forEach(item => {
+            const div = document.createElement('div');
+            div.className = 'urun-dropdown-item';
+            div.style.cssText = 'padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #eee;';
+            div.onmouseover = function() { this.style.backgroundColor = '#f3f4f6'; };
+            div.onmouseout = function() { this.style.backgroundColor = 'white'; };
+
+            const stokKoduText = document.createTextNode(item.stok_kodu);
+            const adText = document.createTextNode(' - ' + item.ad);
+            const strong = document.createElement('strong');
+            strong.appendChild(stokKoduText);
+            div.appendChild(strong);
+            div.appendChild(adText);
+
+            div.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                if (typeof window.selectUrun === 'function') {
+                    window.selectUrun(currentIndex, item.id, item.stok_kodu, item.ad, item.fiyat, item.birim || 'Adet');
+                }
+                return false;
+            }, true);
+
+            dropdown.appendChild(div);
+        });
+
+        dropdown.style.display = 'block';
+    }
+
+    stokKoduInput.addEventListener('input', function() {
+        filtreleUrunler(this.value, stokKoduDropdown, true);
+        if (!this.value) {
+            stokItemIdInput.value = '';
+            urunAdInput.value = '';
+            stokKoduDropdown.style.display = 'none';
+            urunAdDropdown.style.display = 'none';
+        }
+    });
+
+    urunAdInput.addEventListener('input', function() {
+        filtreleUrunler(this.value, urunAdDropdown, false);
+        if (!this.value) {
+            stokItemIdInput.value = '';
+            stokKoduInput.value = '';
+            urunAdDropdown.style.display = 'none';
+            stokKoduDropdown.style.display = 'none';
+        }
+    });
+
+    if (typeof window.selectUrun !== 'function') {
+        window.selectUrun = async function(index, itemId, stokKodu, urunAd, urunFiyat, urunBirim) {
+            const row = document.getElementById(`urunRow_${index}`);
+            if (!row) {
+                return;
+            }
+
+            const stokKoduInput = row.querySelector('.stok-kodu-search');
+            const urunAdInput = row.querySelector('.urun-ad-search');
+            const stokItemIdInput = row.querySelector('.stok-item-id');
+            const fiyatInput = row.querySelector('.fiyat-input');
+            const birimSpan = row.querySelector('.birim-span');
+            const dropdowns = row.querySelectorAll('.urun-dropdown');
+            const stokKoduDropdown = dropdowns[0];
+            const urunAdDropdown = dropdowns[1];
+
+            if (!stokItemIdInput || !stokKoduInput || !urunAdInput) {
+                return;
+            }
+
+            stokItemIdInput.value = itemId;
+            stokKoduInput.value = stokKodu;
+            urunAdInput.value = urunAd;
+
+            if (stokKoduDropdown) stokKoduDropdown.style.display = 'none';
+            if (urunAdDropdown) urunAdDropdown.style.display = 'none';
+
+            if (fiyatInput) {
+                const localPrice = toJsNumber(urunFiyat);
+                if (localPrice > 0) {
+                    fiyatInput.value = localPrice.toFixed(2);
+                } else {
+                    fiyatInput.value = '';
+                }
+                const serverPrice = await fetchStokFiyat(itemId);
+                if (serverPrice !== null) {
+                    fiyatInput.value = serverPrice > 0 ? serverPrice.toFixed(2) : '';
+                }
+            }
+
+            if (birimSpan) {
+                if (urunBirim && urunBirim !== '-' && urunBirim !== '') {
+                    birimSpan.textContent = urunBirim;
+                } else {
+                    birimSpan.textContent = 'Adet';
+                }
+            }
+
+            const miktarInput = row.querySelector('.miktar-input');
+            if (miktarInput && miktarInput.value && parseFloat(miktarInput.value) > 0) {
+                hesaplaToplam(index);
+            }
+        };
+    }
+    
+    // Miktar değiştiğinde toplamı hesapla
+    miktar.addEventListener('input', function() {
+        formatMiktarInput(this);
+        // Ürün seçilmiş ve birim fiyat varsa toplamı hesapla
+        if (stokItemIdInput.value && fiyat.value && parseFloat(this.value) > 0) {
+            hesaplaToplam(urunSayaci);
+        } else {
+            // Miktar yoksa veya ürün/fiyat yoksa toplamı sıfırla
+            row.querySelector('.toplam-span').textContent = '0,00';
+            hesaplaGenelToplam();
+        }
+    });
+    
+    miktar.addEventListener('blur', function() {
+        formatMiktarInput(this);
+        // Ürün seçilmiş ve birim fiyat varsa toplamı hesapla
+        if (stokItemIdInput.value && fiyat.value && parseFloat(this.value) > 0) {
+            hesaplaToplam(urunSayaci);
+        } else {
+            // Miktar yoksa veya ürün/fiyat yoksa toplamı sıfırla
+            row.querySelector('.toplam-span').textContent = '0,00';
+            hesaplaGenelToplam();
+        }
+    });
+    
+    miktar.addEventListener('change', function() {
+        formatMiktarInput(this);
+        // Ürün seçilmiş ve birim fiyat varsa toplamı hesapla
+        if (stokItemIdInput.value && fiyat.value && parseFloat(this.value) > 0) {
+            hesaplaToplam(urunSayaci);
+        } else {
+            // Miktar yoksa veya ürün/fiyat yoksa toplamı sıfırla
+            row.querySelector('.toplam-span').textContent = '0,00';
+            hesaplaGenelToplam();
+        }
+    });
+    
+    // Birim fiyat değiştiğinde toplamı hesapla
+    fiyat.addEventListener('input', function() {
+        formatFiyatInput(this);
+        // Ürün seçilmiş ve miktar varsa toplamı hesapla
+        if (stokItemIdInput.value && miktar.value && parseFloat(miktar.value) > 0 && parseFloat(this.value) > 0) {
+            hesaplaToplam(urunSayaci);
+        } else {
+            // Fiyat yoksa veya ürün/miktar yoksa toplamı sıfırla
+            row.querySelector('.toplam-span').textContent = '0,00';
+            hesaplaGenelToplam();
+        }
+    });
+    
+    fiyat.addEventListener('blur', function() {
+        formatFiyatInput(this);
+        // Ürün seçilmiş ve miktar varsa toplamı hesapla
+        if (stokItemIdInput.value && miktar.value && parseFloat(miktar.value) > 0 && parseFloat(this.value) > 0) {
+            hesaplaToplam(urunSayaci);
+        } else {
+            // Fiyat yoksa veya ürün/miktar yoksa toplamı sıfırla
+            row.querySelector('.toplam-span').textContent = '0,00';
+            hesaplaGenelToplam();
+        }
+    });
+    
+    fiyat.addEventListener('change', function() {
+        formatFiyatInput(this);
+        // Ürün seçilmiş ve miktar varsa toplamı hesapla
+        if (stokItemIdInput.value && miktar.value && parseFloat(miktar.value) > 0 && parseFloat(this.value) > 0) {
+            hesaplaToplam(urunSayaci);
+        } else {
+            // Fiyat yoksa veya ürün/miktar yoksa toplamı sıfırla
+            row.querySelector('.toplam-span').textContent = '0,00';
+            hesaplaGenelToplam();
+        }
+    });
+    
+    // İndirim değiştiğinde toplamı hesapla
+    indirim.addEventListener('input', function() {
+        // Ürün seçilmiş, miktar ve fiyat varsa toplamı hesapla
+        if (stokItemIdInput.value && miktar.value && fiyat.value && 
+            parseFloat(miktar.value) > 0 && parseFloat(fiyat.value) > 0) {
+            hesaplaToplam(urunSayaci);
+        }
+    });
+    
+    indirim.addEventListener('blur', function() {
+        // Ürün seçilmiş, miktar ve fiyat varsa toplamı hesapla
+        if (stokItemIdInput.value && miktar.value && fiyat.value && 
+            parseFloat(miktar.value) > 0 && parseFloat(fiyat.value) > 0) {
+            hesaplaToplam(urunSayaci);
+        }
+    });
+    
+    indirim.addEventListener('change', function() {
+        // Ürün seçilmiş, miktar ve fiyat varsa toplamı hesapla
+        if (stokItemIdInput.value && miktar.value && fiyat.value && 
+            parseFloat(miktar.value) > 0 && parseFloat(fiyat.value) > 0) {
+            hesaplaToplam(urunSayaci);
+        }
+    });
+    
+    urunSayaci++;
+}
+
+function formatMiktarInput(input) {
+    const value = input.value;
+    if (value === '') return;
+    
+    const num = parseFloat(value);
+    if (!isNaN(num)) {
+        // Tam sayı ise .00 gösterme
+        if (num % 1 === 0) {
+            input.value = num.toString();
+        } else {
+            input.value = num.toFixed(2);
+        }
+    }
+}
+
+function formatFiyatInput(input) {
+    const value = input.value;
+    if (value === '') return;
+    
+    const num = parseFloat(value);
+    if (!isNaN(num)) {
+        input.value = num.toFixed(2);
+    }
+}
+
+function silUrun(index) {
+    const row = document.getElementById(`urunRow_${index}`);
+    if (row) {
+        row.remove();
+        hesaplaGenelToplam();
+    }
+}
+
+function hesaplaToplam(index) {
+    const row = document.getElementById(`urunRow_${index}`);
+    if (!row) return;
+    
+    const miktarInput = row.querySelector('.miktar-input');
+    const fiyatInput = row.querySelector('.fiyat-input');
+    const indirimInput = row.querySelector('.indirim-input');
+    const toplamSpan = row.querySelector('.toplam-span');
+    
+    if (!miktarInput || !fiyatInput || !indirimInput || !toplamSpan) return;
+    
+    const miktar = parseFloat(miktarInput.value) || 0;
+    const fiyat = parseFloat(fiyatInput.value) || 0;
+    const indirim = parseFloat(indirimInput.value) || 0;
+    
+    // Eğer miktar veya fiyat 0 ise, toplamı 0 yap
+    if (miktar <= 0 || fiyat <= 0) {
+        toplamSpan.textContent = '0,00';
+        hesaplaGenelToplam();
+        return;
+    }
+    
+    // Hesaplama: (miktar × birim_fiyat) × (1 - indirim/100)
+    // Önce ara toplamı hesapla
+    const araToplam = miktar * fiyat;
+    
+    // İndirim tutarını hesapla (yüzde olarak)
+    const indirimTutari = araToplam * (indirim / 100);
+    
+    // Toplam = Ara Toplam - İndirim Tutarı
+    const toplam = araToplam - indirimTutari;
+    
+    // Toplamı formatla ve göster
+    const formattedToplam = formatCurrency(Math.max(0, toplam)); // Negatif değerleri engelle
+    toplamSpan.textContent = formattedToplam;
+    
+    // Genel toplamı güncelle
+    hesaplaGenelToplam();
+}
+
+function hesaplaGenelToplam() {
+    let araToplam = 0;
+    const rows = document.querySelectorAll('[id^="urunRow_"]');
+    
+    rows.forEach(row => {
+        const toplamText = row.querySelector('.toplam-span').textContent.replace(/\./g, '').replace(',', '.');
+        araToplam += parseFloat(toplamText) || 0;
+    });
+    
+    const vergiOrani = parseFloat(document.getElementById('vergiOrani').value) || 20;
+    const vergi = araToplam * (vergiOrani / 100);
+    const toplam = araToplam + vergi;
+    
+    document.getElementById('araToplam').innerHTML = formatCurrency(araToplam) + ' <span id="paraBirimiGoster">' + getParaBirimi() + '</span>';
+    document.getElementById('vergi').innerHTML = formatCurrency(vergi) + ' <span id="paraBirimiGoster2">' + getParaBirimi() + '</span>';
+    document.getElementById('toplam').innerHTML = formatCurrency(toplam) + ' <span id="paraBirimiGoster3">' + getParaBirimi() + '</span>';
+    document.getElementById('vergiOraniGoster').textContent = vergiOrani;
+}
+
+// Mevcut kalemler
+const mevcutKalemler = [
+    {% for kalem in mevcut_kalemler %}
+    {
+        stok_item: {{ kalem.stok_item.pk }},
+        stok_kodu: "{{ kalem.stok_item.stok_kodu|escapejs }}",
+        stok_ad: "{{ kalem.stok_item.ad|escapejs }}",
+        birim: {% if kalem.stok_item.birim %}"{{ kalem.stok_item.birim|escapejs }}"{% else %}"Adet"{% endif %},
+        miktar: {{ kalem.miktar }},
+        birim_fiyat: {{ kalem.birim_fiyat }},
+        indirim_yuzdesi: {{ kalem.indirim_yuzdesi|default:0 }},
+        aciklama: "{{ kalem.aciklama|default:""|escapejs }}"
+    },
+    {% endfor %}
+];
+
+// Para birimi değiştiğinde güncelle
+document.addEventListener('DOMContentLoaded', function() {
+    const paraBirimiSelect = document.getElementById('id_para_birimi');
+    if (paraBirimiSelect) {
+        paraBirimiSelect.style.width = '100%';
+        paraBirimiSelect.style.minWidth = '150px';
+        paraBirimiSelect.addEventListener('change', function() {
+            updateParaBirimiGoster();
+            hesaplaGenelToplam();
+        });
+    }
+    
+    // Vergi oranı değiştiğinde güncelle
+    const vergiOraniInput = document.getElementById('vergiOrani');
+    if (vergiOraniInput) {
+        vergiOraniInput.addEventListener('input', hesaplaGenelToplam);
+        vergiOraniInput.addEventListener('change', hesaplaGenelToplam);
+    }
+    
+    // Mevcut kalemleri yükle
+    mevcutKalemler.forEach(kalem => {
+        // Stok item bilgilerini bul
+        const stokItem = stokItems.find(item => item.id === kalem.stok_item) || {
+            id: kalem.stok_item,
+            stok_kodu: kalem.stok_kodu,
+            ad: kalem.stok_ad,
+            fiyat: kalem.birim_fiyat,
+            birim: kalem.birim || 'Adet'
+        };
+        
+        // Yeni satır oluştur
+        ekleUrun();
+        const rows = document.querySelectorAll('[id^="urunRow_"]');
+        const lastRow = rows[rows.length - 1];
+        if (!lastRow) return;
+        
+        const index = parseInt(lastRow.id.replace('urunRow_', ''));
+        
+        // selectUrun fonksiyonunu kullanarak ürünü seç
+        if (typeof window.selectUrun === 'function') {
+            window.selectUrun(index, stokItem.id, stokItem.stok_kodu, stokItem.ad, stokItem.fiyat, stokItem.birim || 'Adet');
+        }
+        
+        // Miktar, fiyat ve indirim değerlerini set et
+        const miktarInput = lastRow.querySelector('.miktar-input');
+        const fiyatInput = lastRow.querySelector('.fiyat-input');
+        const indirimInput = lastRow.querySelector('.indirim-input');
+        
+        if (miktarInput) {
+            miktarInput.value = kalem.miktar;
+        }
+        if (fiyatInput) {
+            fiyatInput.value = kalem.birim_fiyat;
+        }
+        if (indirimInput) {
+            indirimInput.value = kalem.indirim_yuzdesi || 0;
+        }
+        
+        // Toplamı hesapla
+        if (typeof hesaplaToplam === 'function') {
+            hesaplaToplam(index);
+        }
+    });
+    
+    updateParaBirimiGoster();
+    hesaplaGenelToplam();
+});
+
+document.getElementById('siparisForm').addEventListener('submit', function(e) {
+    const kalemler = [];
+    const rows = document.querySelectorAll('[id^="urunRow_"]');
+    const vergiOrani = parseFloat(document.getElementById('vergiOrani').value) || 20;
+    
+    rows.forEach(row => {
+        const stokItemIdInput = row.querySelector('.stok-item-id');
+        const miktarInput = row.querySelector('.miktar-input');
+        const fiyatInput = row.querySelector('.fiyat-input');
+        const indirimInput = row.querySelector('.indirim-input');
+        
+        if (!stokItemIdInput || !miktarInput || !fiyatInput) return;
+        
+        const stokItemId = stokItemIdInput.value;
+        const miktar = miktarInput.value;
+        const fiyat = fiyatInput.value;
+        const indirim = indirimInput ? indirimInput.value : 0;
+        
+        if (stokItemId && miktar && fiyat) {
+            kalemler.push({
+                stok_item: parseInt(stokItemId),
+                miktar: miktar,
+                birim_fiyat: fiyat,
+                indirim_yuzdesi: indirim || 0,
+                aciklama: ''
+            });
+        }
+    });
+    
+    if (kalemler.length === 0) {
+        e.preventDefault();
+        alert('Lütfen en az bir ürün ekleyin.');
+        return false;
+    }
+    
+    document.getElementById('kalemlerInput').value = JSON.stringify(kalemler);
+    
+    // Vergi oranını da gönder (gerekirse)
+    const vergiOraniInput = document.createElement('input');
+    vergiOraniInput.type = 'hidden';
+    vergiOraniInput.name = 'vergi_orani';
+    vergiOraniInput.value = vergiOrani;
+    this.appendChild(vergiOraniInput);
+});
+</script>
+
+<style>
+#id_para_birimi {
+    width: 100% !important;
+    min-width: 150px !important;
+    padding: 8px 12px !important;
+    font-size: 14px !important;
+}
+</style>
+{% endblock %}

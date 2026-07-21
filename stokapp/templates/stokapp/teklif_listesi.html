@@ -1,0 +1,301 @@
+{% extends "stokapp/base.html" %}
+{% load currency_filters %}
+{% block title %}Teklifler{% endblock %}
+{% block content %}
+<style>
+    .tf-modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 1000; align-items: center; justify-content: center; }
+    .tf-modal-bg.tf-open { display: flex; }
+    .tf-modal { background: #fff; border-radius: 12px; padding: 24px; max-width: 480px; width: 92%; max-height: 90vh; overflow: auto; box-shadow: 0 20px 50px rgba(0,0,0,.2); }
+    .rapor-kart { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px 16px; text-align: center; }
+    .rapor-kart strong { display: block; font-size: 20px; color: #111827; }
+    .rapor-kart span { font-size: 12px; color: #6b7280; }
+</style>
+
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap:wrap; gap:10px;">
+        <h2 style="margin: 0;">Teklifler</h2>
+        <div style="display: flex; gap: 10px;">
+            {% if rbac_god or 'teklif.ekle' in rbac_kodlar %}<a href="{% url 'stokapp:teklif_ekle' %}" class="btn btn-primary" style="padding: 8px 16px;">+ Yeni Teklif</a>{% endif %}
+            <a href="{% url 'stokapp:siparis_listesi' %}" class="btn btn-secondary" style="padding: 8px 16px;">← Siparişler</a>
+        </div>
+    </div>
+
+    <div class="tekos-tab-buttons">
+        <a href="?tab=tum" class="tekos-tab-btn tab-detail{% if tab == 'tum' %} is-active{% endif %}">
+            <span class="tab-icon" aria-hidden="true">📋</span>
+            <span>Tüm Teklifler</span>
+            <span class="tab-count">{{ counts.tum }}</span>
+        </a>
+        <a href="?tab=cevap_bekliyor" class="tekos-tab-btn tab-pending{% if tab == 'cevap_bekliyor' %} is-active{% endif %}">
+            <span class="tab-icon" aria-hidden="true">⏳</span>
+            <span>Bekleyen</span>
+            <span class="tab-count">{{ counts.cevap_bekliyor }}</span>
+        </a>
+        <a href="?tab=onaylanan" class="tekos-tab-btn tab-approved{% if tab == 'onaylanan' %} is-active{% endif %}">
+            <span class="tab-icon" aria-hidden="true">✅</span>
+            <span>Onaylanan</span>
+            <span class="tab-count">{{ counts.onaylanan }}</span>
+        </a>
+        <a href="?tab=red_edilen" class="tekos-tab-btn tab-rejected{% if tab == 'red_edilen' %} is-active{% endif %}">
+            <span class="tab-icon" aria-hidden="true">❌</span>
+            <span>Reddedilen</span>
+            <span class="tab-count">{{ counts.red_edilen }}</span>
+        </a>
+        <a href="?tab=raporlar" class="tekos-tab-btn tab-open-items{% if tab == 'raporlar' %} is-active{% endif %}">
+            <span class="tab-icon" aria-hidden="true">📊</span>
+            <span>Teklif Raporları</span>
+        </a>
+    </div>
+
+    {% if tab == 'raporlar' %}
+    <form method="get" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap:10px; margin-bottom:16px; align-items:end;">
+        <input type="hidden" name="tab" value="raporlar" />
+        <div>
+            <label style="font-size:11px; font-weight:600;">Başlangıç</label>
+            <input type="date" name="tarih_baslangic" value="{{ request.GET.tarih_baslangic }}" style="width:100%; padding:8px; border:1px solid #d1d5db; border-radius:8px;" />
+        </div>
+        <div>
+            <label style="font-size:11px; font-weight:600;">Bitiş</label>
+            <input type="date" name="tarih_bitis" value="{{ request.GET.tarih_bitis }}" style="width:100%; padding:8px; border:1px solid #d1d5db; border-radius:8px;" />
+        </div>
+        <div>
+            <label style="font-size:11px; font-weight:600;">Müşteri</label>
+            <select name="musteri" style="width:100%; padding:8px; border-radius:8px;">
+                <option value="">Tümü</option>
+                {% for m in musteriler %}
+                <option value="{{ m.pk }}" {% if request.GET.musteri == m.pk|stringformat:"s" %}selected{% endif %}>{{ m.ad }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="font-size:11px; font-weight:600;">Durum</label>
+            <select name="durum_filtre" style="width:100%; padding:8px; border-radius:8px;">
+                <option value="">Tümü</option>
+                {% for code, lbl in durum_secenekleri %}
+                <option value="{{ code }}" {% if request.GET.durum_filtre == code %}selected{% endif %}>{{ lbl }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="font-size:11px; font-weight:600;">Sorumlu</label>
+            <select name="olusturan" style="width:100%; padding:8px; border-radius:8px;">
+                <option value="">Tümü</option>
+                {% for u in olusturanlar %}
+                <option value="{{ u.pk }}" {% if request.GET.olusturan == u.pk|stringformat:"s" %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="font-size:11px; font-weight:600;">Para birimi</label>
+            <input type="text" name="para_birimi" maxlength="3" value="{{ request.GET.para_birimi }}" placeholder="TRY" style="width:100%; padding:8px; border-radius:8px;" />
+        </div>
+        <button type="submit" class="btn btn-primary">Uygula</button>
+    </form>
+
+    <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap:12px; margin-bottom:20px;">
+        <div class="rapor-kart"><span>Toplam teklif</span><strong>{{ rapor_toplam }}</strong></div>
+        <div class="rapor-kart"><span>Onaylanan</span><strong>{{ rapor_onay }}</strong></div>
+        <div class="rapor-kart"><span>Reddedilen</span><strong>{{ rapor_red }}</strong></div>
+        <div class="rapor-kart"><span>Bekleyen</span><strong>{{ rapor_bekleyen }}</strong></div>
+        <div class="rapor-kart"><span>Onay oranı %</span><strong>{{ rapor_oran_onay }}</strong></div>
+        <div class="rapor-kart"><span>Red oranı %</span><strong>{{ rapor_oran_red }}</strong></div>
+        <div class="rapor-kart"><span>Toplam tutar</span><strong>{{ rapor_tutar_toplam|currency }}</strong></div>
+        <div class="rapor-kart"><span>Onaylı tutar</span><strong>{{ rapor_tutar_onay|currency }}</strong></div>
+    </div>
+
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:24px;">
+        <div class="card" style="padding:16px;">
+            <h3 style="margin:0 0 12px; font-size:14px;">Durum dağılımı</h3>
+            <canvas id="chartTeklifDurum" height="220"></canvas>
+        </div>
+        <div class="card" style="padding:16px;">
+            <h3 style="margin:0 0 12px; font-size:14px;">Red sebepleri</h3>
+            <canvas id="chartTeklifRed" height="220"></canvas>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+    (function(){
+      const lblS = {{ chart_status_labels_json|safe }};
+      const datS = {{ chart_status_data_json|safe }};
+      const lblR = {{ chart_red_labels_json|safe }};
+      const datR = {{ chart_red_data_json|safe }};
+      const navy = '#1e3a5f';
+      if (typeof Chart !== 'undefined') {
+        new Chart(document.getElementById('chartTeklifDurum'), {
+          type: 'bar',
+          data: {
+            labels: lblS,
+            datasets: [{ label: 'Adet', data: datS, backgroundColor: [navy, '#dc2626', '#64748b'] }]
+          },
+          options: { responsive: true, plugins: { legend: { display: false } } }
+        });
+        new Chart(document.getElementById('chartTeklifRed'), {
+          type: 'doughnut',
+          data: {
+            labels: lblR.length ? lblR : ['Veri yok'],
+            datasets: [{ data: lblR.length ? datR : [1], backgroundColor: ['#1e3a5f','#3b82f6','#64748b','#94a3b8','#cbd5e1','#e2e8f0','#fca5a5','#ef4444','#991b1b'] }]
+          },
+          options: { responsive: true }
+        });
+      }
+    })();
+    </script>
+
+    {% else %}
+
+    <table style="width: 100%; border-collapse: collapse; background: white; margin-bottom: 20px; font-size: 11px;">
+        <thead>
+            <tr style="background-color: #f9fafb; border-bottom: 2px solid #e5e7eb;">
+                <th style="padding: 12px; text-align: left;">Teklif No</th>
+                <th style="padding: 12px; text-align: left;">Teklif Adı</th>
+                <th style="padding: 12px; text-align: left;">Müşteri</th>
+                <th style="padding: 12px; text-align: left;">Kaynak Sipariş</th>
+                <th style="padding: 12px; text-align: right;">Toplam</th>
+                <th style="padding: 12px;">Para</th>
+                <th style="padding: 12px;">Düzenleme</th>
+                <th style="padding: 12px;">Durum</th>
+                {% if tab == 'red_edilen' %}
+                <th style="padding: 12px;">Red sebebi</th>
+                {% endif %}
+                <th style="padding: 12px;">İşlemler</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for t in teklifler %}
+            <tr style="border-bottom: 1px solid #e5e7eb;">
+                <td style="padding: 12px;"><strong>{{ t.teklif_no }}</strong></td>
+                <td style="padding: 12px;">{% if t.ad %}{{ t.ad }}{% else %}<span class="muted">{{ t.teklif_no }}</span>{% endif %}</td>
+                <td style="padding: 12px;">
+                    {% if t.musteri %}{{ t.musteri.ad }}{% else %}{{ t.musteri_adi|default:"—" }}{% endif %}
+                </td>
+                <td style="padding: 12px;">
+                    {% if t.kaynak_siparis %}
+                    <a href="{% url 'stokapp:siparis_detay' t.kaynak_siparis.pk %}" style="color:#3b82f6;">{{ t.kaynak_siparis.siparis_numarasi }}</a>
+                    {% else %}—{% endif %}
+                </td>
+                <td style="padding: 12px; text-align: right;">{% if t.para_birimi == "MIX" %}—{% else %}{{ t.toplam_tutar|currency }}{% endif %}</td>
+                <td style="padding: 12px;">{% if t.para_birimi == "MIX" %}Çoklu{% else %}{{ t.para_birimi }}{% endif %}</td>
+                <td style="padding: 12px;">{{ t.duzenleme_tarihi|date:"d.m.Y" }}</td>
+                <td style="padding: 12px;">
+                    <span style="padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 600;
+                        {% if t.durum == 'accepted' %}background:#d1fae5;color:#065f46;
+                        {% elif t.durum == 'rejected' %}background:#fee2e2;color:#991b1b;
+                        {% elif t.durum == 'sent' %}background:#e0f2fe;color:#0369a1;
+                        {% else %}background:#f3f4f6;color:#374151;{% endif %}">
+                        {% if t.durum == 'draft' %}Taslak
+                        {% elif t.durum == 'sent' %}Gönderildi
+                        {% elif t.durum == 'accepted' %}Onaylandı
+                        {% elif t.durum == 'rejected' %}Reddedildi
+                        {% else %}{{ t.durum }}{% endif %}
+                    </span>
+                </td>
+                {% if tab == 'red_edilen' %}
+                <td style="padding:12px; font-size:11px;">
+                    {% if t.red_sebebi %}{{ t.get_red_sebebi_display }}{% else %}Belirtilmemiş{% endif %}
+                </td>
+                {% endif %}
+                <td style="padding: 12px;">
+                    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                        <a href="{% url 'stokapp:teklif_detay' t.pk %}" class="btn" style="background:#64748b;color:#fff;padding:6px 10px;border-radius:4px;text-decoration:none;font-size:12px;">Detay</a>
+                        {% if t.durum == 'draft' %}
+                        {% if rbac_god or 'teklif.duzenle' in rbac_kodlar %}<a href="{% url 'stokapp:teklif_duzenle' t.pk %}" class="btn" style="background:#3b82f6;color:#fff;padding:6px 10px;border-radius:4px;text-decoration:none;font-size:12px;">Düzenle</a>{% endif %}
+                        {% endif %}
+                        {% if t.durum == 'draft' %}
+                        {% if rbac_god or 'teklif.duzenle' in rbac_kodlar %}<form method="post" action="{% url 'stokapp:teklif_gonder' t.pk %}" style="display:inline;">{% csrf_token %}
+                            <button type="submit" class="btn" style="background:#0ea5e9;color:#fff;padding:6px 10px;border:none;border-radius:4px;font-size:12px;cursor:pointer;">Gönder</button>
+                        </form>{% endif %}
+                        {% endif %}
+                        {% if t.durum == 'draft' or t.durum == 'sent' %}
+                        {% if rbac_god or 'teklif.onayla' in rbac_kodlar %}<button type="button" class="btn teklif-onay-open" style="background:#22c55e;color:#fff;padding:6px 10px;border:none;border-radius:4px;font-size:12px;cursor:pointer;" data-pk="{{ t.pk }}">Onayla</button>
+                        <button type="button" class="btn teklif-red-open" style="background:#ef4444;color:#fff;padding:6px 10px;border:none;border-radius:4px;font-size:12px;cursor:pointer;" data-pk="{{ t.pk }}">Reddet</button>{% endif %}
+                        {% endif %}
+                        {% if rbac_god or 'teklif.goruntule' in rbac_kodlar %}<a href="{% url 'stokapp:teklif_pdf_indir' t.pk %}" target="_blank" class="btn" style="background:#1e3a5f;color:#fff;padding:6px 10px;border-radius:4px;text-decoration:none;font-size:12px;">PDF</a>{% endif %}
+                        {% if rbac_god or 'teklif.sil' in rbac_kodlar %}<a href="{% url 'stokapp:teklif_sil' t.pk %}" class="btn" style="background:#9ca3af;color:#fff;padding:6px 10px;border-radius:4px;text-decoration:none;font-size:12px;" title="Siparişe dönüşmüş teklif silinemez">Sil</a>{% endif %}
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="{% if tab == 'red_edilen' %}10{% else %}9{% endif %}" style="text-align:center;padding:40px;color:#6b7280;">Bu sekmede teklif yok.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div style="display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 20px;">
+        {% if teklifler.has_previous %}
+        <a href="?tab={{ tab }}&page=1" style="padding: 8px 12px; text-decoration: none; color: #6b7280;">&lt;&lt;</a>
+        <a href="?tab={{ tab }}&page={{ teklifler.previous_page_number }}" style="padding: 8px 12px; text-decoration: none; color: #6b7280;">&lt;</a>
+        {% endif %}
+        <span style="padding: 8px 12px; background-color: #f3f4f6; border-radius: 4px; color: #374151; font-weight: 600;">
+            {{ teklifler.number }} / {{ teklifler.paginator.num_pages }}
+        </span>
+        {% if teklifler.has_next %}
+        <a href="?tab={{ tab }}&page={{ teklifler.next_page_number }}" style="padding: 8px 12px; text-decoration: none; color: #6b7280;">&gt;</a>
+        <a href="?tab={{ tab }}&page={{ teklifler.paginator.num_pages }}" style="padding: 8px 12px; text-decoration: none; color: #6b7280;">&gt;&gt;</a>
+        {% endif %}
+    </div>
+
+    <div style="display: flex; justify-content: flex-end; margin-top: 16px;">
+        <div style="background-color: #f9fafb; padding: 16px 20px; border-radius: 8px; min-width: 260px;">
+            <div style="display: flex; justify-content: space-between; font-size: 15px; font-weight: 600;">
+                <span>Liste toplamı (KDV dahil):</span>
+                <strong>{{ genel_toplam|currency }}</strong>
+            </div>
+        </div>
+    </div>
+
+    {% endif %}
+</div>
+
+<div id="tfRedModal" class="tf-modal-bg">
+    <div class="tf-modal">
+        <h3 style="margin-top:0;">Teklifi reddet</h3>
+        <form id="tfRedForm" method="post" action="">
+            {% csrf_token %}
+            <label style="font-weight:600; font-size:13px;">Red sebebi</label>
+            <select name="red_sebebi" required style="width:100%; padding:10px; margin:8px 0 12px; border-radius:8px;">
+                <option value="">— Seçin —</option>
+                {% for code, lbl in red_sebep_secenekleri %}
+                <option value="{{ code }}">{{ lbl }}</option>
+                {% endfor %}
+            </select>
+            <div id="tfRedDigerWrap" style="display:none; margin-bottom:12px;">
+                <label style="font-weight:600; font-size:13px;">Diğer açıklama (isteğe bağlı)</label>
+                <textarea name="red_sebebi_diger_aciklama" rows="3" style="width:100%; padding:10px; border-radius:8px;"></textarea>
+            </div>
+            <label style="font-weight:600; font-size:13px;">Red notu (isteğe bağlı)</label>
+            <textarea name="red_notu" rows="2" style="width:100%; padding:10px; margin-bottom:12px; border-radius:8px;"></textarea>
+            <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <button type="button" class="btn btn-secondary" id="tfRedCancel">Vazgeç</button>
+                <button type="submit" class="btn btn-primary" style="background:#dc2626;">Reddet</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+(function(){
+  var RED_TMPL = "{% url 'stokapp:teklif_reddet' 987654321 %}".replace('987654321', '__PK__');
+  var modal = document.getElementById('tfRedModal');
+  var form = document.getElementById('tfRedForm');
+  var sel = form.querySelector('[name=red_sebebi]');
+  var digerWrap = document.getElementById('tfRedDigerWrap');
+  document.querySelectorAll('.teklif-red-open').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var pk = btn.getAttribute('data-pk');
+      form.action = RED_TMPL.replace('__PK__', pk);
+      modal.classList.add('tf-open');
+    });
+  });
+  document.getElementById('tfRedCancel').addEventListener('click', function(){ modal.classList.remove('tf-open'); });
+  modal.addEventListener('click', function(e){ if(e.target === modal) modal.classList.remove('tf-open'); });
+  sel.addEventListener('change', function(){
+    digerWrap.style.display = sel.value === 'DIGER' ? 'block' : 'none';
+  });
+})();
+</script>
+{% include "stokapp/includes/teklif_onay_modal.html" with teklif_onay_error_redirect="list" %}
+{% endblock %}

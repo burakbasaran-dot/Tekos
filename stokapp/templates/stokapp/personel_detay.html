@@ -1,0 +1,38 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Personel Detay - {{ personel.ad }} {{ personel.soyad }}{% endblock %}
+{% block content %}
+<div class="card" style="border: none; box-shadow: 0 15px 35px rgba(15, 23, 42, 0.08); border-radius: 18px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:22px; gap:12px; flex-wrap:wrap;">
+        <div style="display:flex; align-items:center; gap:12px;">
+            <a href="{% url 'stokapp:personel_listesi' %}" style="padding:8px 12px; border-radius:8px; background:#e5e7eb; color:#374151; text-decoration:none;">← Geri</a>
+            <h2 style="margin:0;">{{ personel.ad }} {{ personel.soyad }}</h2>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <a href="{% url 'stokapp:personel_duzenle' personel.pk %}" style="padding:8px 12px; border-radius:8px; background:#2563eb; color:#fff; text-decoration:none;">✏️ Düzenle</a>
+            <a href="{% url 'stokapp:personel_belgeleri' personel.pk %}" style="padding:8px 12px; border-radius:8px; background:#7c3aed; color:#fff; text-decoration:none;">📁 Personel Belgeleri</a>
+        </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:220px 1fr; gap:24px;">
+        <div>
+            {% if personel.fotograf %}
+                <img src="{{ personel.fotograf.url }}" alt="{{ personel }}" style="width:220px; height:220px; object-fit:cover; border-radius:14px;">
+            {% else %}
+                <div style="width:220px; height:220px; border-radius:14px; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#4f46e5,#06b6d4); color:#fff; font-size:60px;">👤</div>
+            {% endif %}
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:14px;">
+            <div style="padding:14px; background:#f8fafc; border-radius:10px;"><strong>Personel No:</strong> {{ personel.personel_no|default:"-" }}</div>
+            <div style="padding:14px; background:#f8fafc; border-radius:10px;"><strong>Sicil No:</strong> {{ personel.sicil_no|default:"-" }}</div>
+            <div style="padding:14px; background:#f8fafc; border-radius:10px;"><strong>TC Kimlik No:</strong> {{ personel.tc_kimlik_no|default:"-" }}</div>
+            <div style="padding:14px; background:#f8fafc; border-radius:10px;"><strong>Telefon:</strong> {{ personel.telefon|default:"-" }}</div>
+            <div style="padding:14px; background:#f8fafc; border-radius:10px;"><strong>E-Mail:</strong> {{ personel.email|default:"-" }}</div>
+            <div style="padding:14px; background:#f8fafc; border-radius:10px;"><strong>Saatlik Ücret:</strong> {{ personel.saatlik_ucret|floatformat:2 }} TRY</div>
+            <div style="padding:14px; background:#f8fafc; border-radius:10px;"><strong>Görev:</strong> {{ personel.gorev|default:"-" }}</div>
+            <div style="padding:14px; background:#f8fafc; border-radius:10px;"><strong>Doğum Tarihi:</strong> {{ personel.dogum_tarihi|date:"d.m.Y"|default:"-" }}</div>
+            <div style="padding:14px; background:#f8fafc; border-radius:10px; grid-column:1 / -1;"><strong>Adres:</strong> {{ personel.adres|default:"-" }}</div>
+        </div>
+    </div>
+</div>
+{% endblock %}

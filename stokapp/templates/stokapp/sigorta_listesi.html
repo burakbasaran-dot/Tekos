@@ -1,0 +1,113 @@
+{% extends "stokapp/base.html" %}
+{% load static %}
+{% block title %}{{ sayfa_basligi }}{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <a href="{% url 'stokapp:dashboard' %}" class="btn" style="background-color: #6b7280; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px;">
+                ← Geri
+            </a>
+            <h2 style="margin: 0;">{{ sayfa_basligi }}</h2>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            {% if not arsivli %}
+            <a href="{% url 'stokapp:sigorta_listesi' %}?arsivli=true" class="btn" style="background-color: #6b7280; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px;">
+                📦 Arşivlenmiş Poliçeler
+            </a>
+            {% else %}
+            <a href="{% url 'stokapp:sigorta_listesi' %}" class="btn" style="background-color: #3b82f6; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px;">
+                📋 Aktif Poliçeler
+            </a>
+            {% endif %}
+            <a href="{% url 'stokapp:sigorta_ekle' %}" class="btn btn-primary" style="background-color: #22c55e; border-color: #22c55e; padding: 8px 16px;">
+                + Yeni Varlık Ekle
+            </a>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 15px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background: #fff3cd; color: #856404; border-left: 4px solid #ffc107;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <table style="width: 100%; border-collapse: collapse; background: white;">
+        <thead>
+            <tr style="background-color: #f9fafb; border-bottom: 2px solid #e5e7eb;">
+                <th style="padding: 12px; text-align: left; font-weight: 600; color: #fff;">Varlık Adı</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600; color: #fff;">Kimlik No</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600; color: #fff;">Açıklama</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600; color: #fff;">Varlık Türü</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600; color: #fff;">Poliçe No</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600; color: #fff;">Başlangıç</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600; color: #fff;">Bitiş</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600; color: #fff;">Firma</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600; color: #fff;">Prim Bedeli</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600; color: #fff;">Ödeme Bilgisi</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600; color: #fff;">İşlemler</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for sigorta in sigortalar %}
+            <tr style="border-bottom: 1px solid #e5e7eb; {% if sigorta.suresi_doldu and not sigorta.arsivlendi %}background-color: #fef2f2;{% endif %}">
+                <td style="padding: 12px;">
+                    <strong>{{ sigorta.varlik_adi }}</strong>
+                    {% if sigorta.suresi_doldu and not sigorta.arsivlendi %}
+                    <span style="color: #ef4444; font-size: 12px; margin-left: 8px;">⚠️ Süresi Doldu</span>
+                    {% endif %}
+                </td>
+                <td style="padding: 12px;">{{ sigorta.varlik_kimlik_no|default:"-" }}</td>
+                <td style="padding: 12px;">{{ sigorta.varlik_aciklama|truncatewords:10|default:"-" }}</td>
+                <td style="padding: 12px;">{{ sigorta.get_varlik_turu_display }}</td>
+                <td style="padding: 12px;">{{ sigorta.police_no }}</td>
+                <td style="padding: 12px;">{{ sigorta.police_baslangic_tarihi|date:"d.m.Y" }}</td>
+                <td style="padding: 12px;">
+                    {{ sigorta.police_bitis_tarihi|date:"d.m.Y" }}
+                    {% if sigorta.suresi_doldu and not sigorta.arsivlendi %}
+                    <span style="color: #ef4444;">⚠️</span>
+                    {% endif %}
+                </td>
+                <td style="padding: 12px;">{{ sigorta.police_duzenleyen_firma }}</td>
+                <td style="padding: 12px;">{{ sigorta.police_prim_bedeli|floatformat:2 }} TRY</td>
+                <td style="padding: 12px;">{{ sigorta.odeme_hesap_kart|default:"-" }}</td>
+                <td style="padding: 12px;">
+                    <a href="{% url 'stokapp:sigorta_duzenle' sigorta.pk %}" 
+                       class="btn" 
+                       style="background-color: #3b82f6; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; margin-right: 5px; font-size: 13px;">
+                        ✏️ Düzenle
+                    </a>
+                    {% if not sigorta.arsivlendi %}
+                    <a href="{% url 'stokapp:sigorta_arsivle' sigorta.pk %}" 
+                       class="btn" 
+                       style="background-color: #f59e0b; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; margin-right: 5px; font-size: 13px;">
+                        📦 Arşivle
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'stokapp:sigorta_sil' sigorta.pk %}{% if arsivli %}?arsivli=true{% endif %}" 
+                       class="btn" 
+                       style="background-color: #ef4444; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px;">
+                        🗑️ Sil
+                    </a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="11" style="text-align: center; padding: 40px; color: #6b7280;">
+                    {% if arsivli %}
+                    Henüz arşivlenmiş sigorta poliçesi bulunmuyor.
+                    {% else %}
+                    Henüz sigorta poliçesi bulunmuyor. <a href="{% url 'stokapp:sigorta_ekle' %}">İlk poliçeyi oluşturun</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

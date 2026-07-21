@@ -1,0 +1,252 @@
+<style>
+  .tdk-page { max-width: 1180px; margin: 0 auto; }
+  .tdk-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .tdk-header h1 {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .tdk-header p {
+    margin: 6px 0 0;
+    font-size: 14px;
+    color: var(--muted);
+  }
+  .tdk-form-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(17, 24, 39, 0.06);
+    overflow: visible;
+  }
+  .tdk-section {
+    padding: 24px 28px;
+    border-bottom: 1px solid var(--border);
+  }
+  .tdk-section:last-of-type { border-bottom: none; }
+  .tdk-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  .tdk-section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+  .tdk-section-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    background: #eff6ff;
+    color: #2563eb;
+  }
+  .tdk-section-icon.green { background: #ecfdf5; color: #059669; }
+  .tdk-section-icon.amber { background: #fffbeb; color: #d97706; }
+  .tdk-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px;
+  }
+  .tdk-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+  }
+  .tdk-grid .full,
+  .tdk-grid-3 .full { grid-column: 1 / -1; }
+  @media (max-width: 768px) {
+    .tdk-grid, .tdk-grid-3 { grid-template-columns: 1fr; }
+  }
+  .tdk-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .tdk-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .tdk-label.required::after {
+    content: " *";
+    color: #ef4444;
+  }
+  .tdk-help {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.45;
+  }
+  .tdk-field input[type="text"],
+  .tdk-field input[type="email"],
+  .tdk-field input[type="number"],
+  .tdk-field input[type="date"],
+  .tdk-field input[type="file"],
+  .tdk-field select,
+  .tdk-field textarea,
+  .tdk-field .form-control {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 14px;
+    background: #fff;
+    color: var(--ink);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    box-sizing: border-box;
+  }
+  .tdk-field textarea { min-height: 100px; resize: vertical; font-family: inherit; }
+  .tdk-field input:focus,
+  .tdk-field select:focus,
+  .tdk-field textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.12);
+  }
+  .tdk-error {
+    font-size: 12px;
+    color: #dc3545;
+  }
+  .tdk-alert {
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    border-radius: 10px;
+    font-size: 14px;
+  }
+  .tdk-alert-error { background: #fef2f2; color: #991b1b; border-left: 4px solid #ef4444; }
+  .tdk-alert-warning { background: #fffbeb; color: #92400e; border-left: 4px solid #f59e0b; }
+  .tdk-alert-success { background: #ecfdf5; color: #166534; border-left: 4px solid #22c55e; }
+  .tdk-table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .tdk-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    background: #fff;
+  }
+  .tdk-table thead th {
+    padding: 12px 10px;
+    text-align: left;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .tdk-table tbody td {
+    padding: 10px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+  }
+  .tdk-table tbody tr:last-child td { border-bottom: none; }
+  .tdk-table tbody tr:hover td { background: #fafafa; }
+  .tdk-ozet-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .tdk-ozet-grid { grid-template-columns: 1fr; }
+  }
+  .tdk-ozet-box {
+    padding: 18px 20px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  }
+  .tdk-ozet-box h4 {
+    margin: 0 0 14px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .tdk-ozet-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 0;
+    font-size: 14px;
+    color: #475569;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .tdk-ozet-row:last-child {
+    border-bottom: none;
+    padding-top: 12px;
+    margin-top: 4px;
+    font-size: 17px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+  .tdk-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 20px 28px;
+    background: #f9fafb;
+    border-top: 1px solid var(--border);
+  }
+  .tdk-ilgililer-wrap > div {
+    margin-top: 0 !important;
+  }
+  .tdk-ilgililer-wrap > div > div:first-child h3 {
+    display: none;
+  }
+  .tdk-ilgililer-wrap > div > div:first-child {
+    justify-content: flex-end !important;
+    margin-bottom: 8px !important;
+  }
+  .tdk-ilgililer-wrap #ilgiliTable,
+  .tdk-ilgililer-wrap #tedarikciIlgiliTable {
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+  .tdk-ilgililer-scroll {
+    width: 100%;
+    overflow-x: auto;
+  }
+  .tdk-ilgililer-wrap #ilgiliTable thead th,
+  .tdk-ilgililer-wrap #tedarikciIlgiliTable thead th {
+    background: #f8fafc;
+    color: #475569;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--border);
+  }
+  .tdk-ilgililer-wrap .form-control {
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+</style>

@@ -1,0 +1,61 @@
+{% extends "stokapp/base.html" %}
+{% load currency_filters %}
+{% block title %}Maliyet Sil - {{ siparis.siparis_numarasi }}{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="margin: 0;">Maliyet Sil: {{ siparis.siparis_numarasi }}</h2>
+        <a href="{% url 'stokapp:siparis_maliyetleri' siparis.pk %}" class="btn btn-secondary" style="padding: 8px 16px;">← Geri</a>
+    </div>
+    
+    <div style="background-color: #fee2e2; padding: 20px; border-radius: 8px; border-left: 4px solid #dc2626; margin-bottom: 20px;">
+        <p style="margin: 0; color: #991b1b; font-weight: 600; font-size: 16px;">
+            ⚠️ Bu maliyeti silmek istediğinizden emin misiniz?
+        </p>
+    </div>
+    
+    <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+        <h3 style="margin: 0 0 20px 0;">Maliyet Bilgileri</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Maliyet Tipi</label>
+                <div style="font-size: 16px; color: #111827;">
+                    <span style="padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;
+                        {% if maliyet.maliyet_tipi == 'MALZEME' %}background-color: #3b82f6; color: white;{% else %}background-color: #f59e0b; color: white;{% endif %}">
+                        {{ maliyet.get_maliyet_tipi_display }}
+                    </span>
+                </div>
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Açıklama</label>
+                <div style="font-size: 16px; color: #111827;">{{ maliyet.aciklama }}</div>
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Miktar</label>
+                <div style="font-size: 16px; color: #111827;">{{ maliyet.miktar }} {{ maliyet.birim }}</div>
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Birim Fiyat</label>
+                <div style="font-size: 16px; color: #111827;">{{ maliyet.birim_fiyat|currency }} {{ maliyet.para_birimi }}</div>
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Toplam</label>
+                <div style="font-size: 18px; font-weight: 600; color: #1e40af;">{{ maliyet.toplam|currency }} {{ maliyet.para_birimi }}</div>
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Kayıt Tarihi</label>
+                <div style="font-size: 16px; color: #111827;">{{ maliyet.kayit_tarihi|date:"d.m.Y" }}</div>
+            </div>
+        </div>
+    </div>
+    
+    <form method="post">
+        {% csrf_token %}
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 30px; padding-top: 20px; border-top: 2px solid #e5e7eb;">
+            <a href="{% url 'stokapp:siparis_maliyetleri' siparis.pk %}" class="btn btn-secondary" style="padding: 10px 20px;">İptal</a>
+            <button type="submit" class="btn" style="background-color: #dc2626; color: white; padding: 10px 20px;">Evet, Sil</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

@@ -1,0 +1,396 @@
+{% comment %}
+Reusable "Dosya Konumu" tree-picker for CNC programs.
+Requires: form variable with `dosya_konumu` field.
+Uses elements: #id_machine_type (select) and #id_dosya_konumu (select).
+JS dynamically populates dosya_konumu options from CNC dosya ağacı API based on
+the currently selected machine_type.
+{% endcomment %}
+
+<style>
+.dk-picker {
+    margin-top: 4px;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background: #f8fafc;
+    padding: 12px 14px;
+}
+.dk-picker .dk-row {
+    display: flex; gap: 10px; align-items: center;
+}
+.dk-picker .dk-row select {
+    flex: 1;
+}
+.dk-picker .dk-actions {
+    display: flex; gap: 8px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+}
+.dk-picker .dk-actions button,
+.dk-picker .dk-actions a {
+    background: white; border: 1px solid #e5e7eb;
+    padding: 6px 12px; border-radius: 6px; cursor: pointer;
+    font-size: 12px; color: #374151; text-decoration: none;
+}
+.dk-picker .dk-actions button:hover,
+.dk-picker .dk-actions a:hover { background: #eff6ff; border-color: #3b82f6; }
+.dk-picker .dk-empty {
+    color: #92400e; font-size: 12px;
+    padding: 8px 10px; background: #fef3c7;
+    border-radius: 6px; margin-top: 8px;
+    display: none;
+}
+.dk-picker .dk-current {
+    color: #1e40af; font-size: 12px;
+    background: #eff6ff;
+    padding: 6px 10px; border-radius: 6px;
+    margin-top: 8px;
+    font-family: monospace;
+    display: none;
+}
+
+/* Tree picker modal */
+.dk-modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+    display: none; align-items: center; justify-content: center; z-index: 9999;
+}
+.dk-modal-backdrop.open { display: flex; }
+.dk-modal {
+    background: white; border-radius: 12px;
+    width: 92%; max-width: 540px;
+    max-height: 80vh; display: flex; flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+}
+.dk-modal-header {
+    padding: 16px 20px; border-bottom: 1px solid #e5e7eb;
+    display: flex; justify-content: space-between; align-items: center;
+}
+.dk-modal-header h3 { margin: 0; font-size: 16px; }
+.dk-modal-header .x {
+    background: transparent; border: none; cursor: pointer;
+    font-size: 22px; color: #6b7280;
+}
+.dk-modal-body {
+    padding: 14px 20px; overflow-y: auto; flex: 1;
+}
+.dk-modal-footer {
+    padding: 12px 20px; border-top: 1px solid #e5e7eb;
+    display: flex; justify-content: flex-end; gap: 10px;
+}
+.dk-modal-footer button {
+    padding: 8px 16px; border-radius: 8px; border: none;
+    cursor: pointer; font-weight: 600; font-size: 13px;
+}
+.dk-modal-footer .save { background: #22c55e; color: white; }
+.dk-modal-footer .cancel { background: #6b7280; color: white; }
+
+.dk-tree { font-size: 14px; }
+.dk-tree-node { margin: 1px 0; }
+.dk-tree-row {
+    display: flex; align-items: center; gap: 6px;
+    padding: 5px 8px; border-radius: 6px; cursor: pointer;
+    user-select: none;
+}
+.dk-tree-row:hover { background: #f8fafc; }
+.dk-tree-row.selected { background: #eff6ff; outline: 2px solid #3b82f6; }
+.dk-tree-toggle {
+    width: 18px; flex: 0 0 18px;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #6b7280; font-size: 11px;
+    transition: transform 0.18s ease;
+}
+.dk-tree-toggle.expanded { transform: rotate(90deg); }
+.dk-tree-toggle.empty { visibility: hidden; }
+.dk-tree-icon { font-size: 16px; }
+.dk-tree-name { flex: 1; }
+.dk-tree-children { margin-left: 18px; border-left: 1px dashed #d1d5db; padding-left: 6px; }
+.dk-tree-children.collapsed { display: none; }
+
+.dk-tree-empty {
+    text-align: center; padding: 30px 10px; color: #6b7280;
+}
+</style>
+
+<div>
+    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #111827;">
+        {{ form.dosya_konumu.label }}
+    </label>
+    <div class="dk-picker">
+        {{ form.dosya_konumu }}
+        <div class="dk-current" id="dkCurrentPath"></div>
+        <div class="dk-empty" id="dkEmpty">
+            ⚠️ Bu makine tipi için henüz hiç klasör tanımlı değil.
+            <a href="{% url 'stokapp:cnc_dosya_agaci_listesi' %}" target="_blank" style="color: #92400e; font-weight: 600; text-decoration: underline;">
+                CNC Dosya Ağacı'ndan klasör oluştur
+            </a>
+        </div>
+        <div class="dk-actions">
+            <button type="button" id="dkPickBtn">📂 Ağaçtan Seç</button>
+            <button type="button" id="dkClearBtn">✖️ Temizle</button>
+            <a href="{% url 'stokapp:cnc_dosya_agaci_listesi' %}" target="_blank">⚙️ Klasörleri Yönet</a>
+        </div>
+        {% if form.dosya_konumu.errors %}
+        <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.dosya_konumu.errors }}</div>
+        {% endif %}
+        <small style="color: #6b7280; font-size: 12px; margin-top: 8px; display: block;">
+            CNC programının hafıza kartı/makine hafızasındaki konumunu seçin. Listede yoksa "Klasörleri Yönet" ile ekleyebilirsiniz.
+        </small>
+    </div>
+</div>
+
+<!-- Tree picker modal -->
+<div class="dk-modal-backdrop" id="dkModal">
+    <div class="dk-modal">
+        <div class="dk-modal-header">
+            <h3>📂 Dosya Konumu Seç</h3>
+            <button type="button" class="x" onclick="window.dkPicker.closeModal()">×</button>
+        </div>
+        <div class="dk-modal-body" id="dkModalBody">
+            <div class="dk-tree-empty">Yükleniyor...</div>
+        </div>
+        <div class="dk-modal-footer">
+            <button type="button" class="cancel" onclick="window.dkPicker.closeModal()">İptal</button>
+            <button type="button" class="save" id="dkConfirmBtn" disabled onclick="window.dkPicker.confirmSelection()">✅ Seç</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const machineSelect = document.getElementById('id_machine_type');
+    const locationSelect = document.getElementById('id_dosya_konumu');
+    if (!machineSelect || !locationSelect) return;
+
+    const URL_TREE = "{% url 'stokapp:cnc_dosya_agaci_api_tree' %}";
+
+    const STATE = {
+        tree: [],
+        flatById: {},
+        selectedId: locationSelect.value || null,
+        selectedTempId: null,  // modaldaki geçici seçim
+    };
+
+    function flatten(nodes, acc) {
+        nodes.forEach(n => {
+            acc[n.id] = n;
+            if (n.children && n.children.length) flatten(n.children, acc);
+        });
+    }
+
+    function loadTree(machineType) {
+        if (!machineType) {
+            STATE.tree = []; STATE.flatById = {};
+            populateSelect(); refreshUI();
+            return;
+        }
+        return fetch(URL_TREE + '?machine_type=' + encodeURIComponent(machineType))
+            .then(r => r.json())
+            .then(data => {
+                STATE.tree = data.tree || [];
+                STATE.flatById = {};
+                flatten(STATE.tree, STATE.flatById);
+                populateSelect();
+                refreshUI();
+            }).catch(err => {
+                console.error(err);
+            });
+    }
+
+    function populateSelect() {
+        const previousValue = locationSelect.value;
+        // Korumamız gereken seçim: STATE.selectedId
+        locationSelect.innerHTML = '';
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = '— Seçiniz —';
+        locationSelect.appendChild(placeholder);
+
+        const ids = Object.keys(STATE.flatById);
+        if (ids.length === 0) {
+            // hiç klasör yok
+        } else {
+            // Düzleştirilmiş seçenek listesi: indented full path
+            ids.sort((a, b) => {
+                const A = STATE.flatById[a].full_path.toLowerCase();
+                const B = STATE.flatById[b].full_path.toLowerCase();
+                return A < B ? -1 : (A > B ? 1 : 0);
+            });
+            ids.forEach(id => {
+                const n = STATE.flatById[id];
+                const opt = document.createElement('option');
+                opt.value = n.id;
+                opt.textContent = '📁 ' + n.full_path;
+                locationSelect.appendChild(opt);
+            });
+        }
+
+        // Mevcut seçimi geri koy
+        const desired = STATE.selectedId || previousValue;
+        if (desired && STATE.flatById[desired]) {
+            locationSelect.value = desired;
+            STATE.selectedId = desired;
+        } else {
+            locationSelect.value = '';
+            STATE.selectedId = null;
+        }
+    }
+
+    function refreshUI() {
+        const empty = document.getElementById('dkEmpty');
+        const cur = document.getElementById('dkCurrentPath');
+        const ids = Object.keys(STATE.flatById);
+        empty.style.display = (machineSelect.value && ids.length === 0) ? 'block' : 'none';
+        if (STATE.selectedId && STATE.flatById[STATE.selectedId]) {
+            cur.style.display = 'block';
+            cur.textContent = '📂 ' + STATE.flatById[STATE.selectedId].full_path;
+        } else {
+            cur.style.display = 'none';
+        }
+    }
+
+    // Modal: ağaç görünümü
+    function openModal() {
+        if (!machineSelect.value) {
+            alert('Lütfen önce Makine Tipi seçin.');
+            return;
+        }
+        STATE.selectedTempId = STATE.selectedId;
+        document.getElementById('dkModal').classList.add('open');
+        renderModalTree();
+        document.getElementById('dkConfirmBtn').disabled = !STATE.selectedTempId;
+    }
+
+    function closeModal() {
+        document.getElementById('dkModal').classList.remove('open');
+        STATE.selectedTempId = null;
+    }
+
+    function renderModalTree() {
+        const body = document.getElementById('dkModalBody');
+        body.innerHTML = '';
+        if (!STATE.tree || STATE.tree.length === 0) {
+            body.innerHTML = `
+                <div class="dk-tree-empty">
+                    📁 Bu makine tipi için klasör tanımlı değil.<br>
+                    <a href="{% url 'stokapp:cnc_dosya_agaci_listesi' %}" target="_blank"
+                       style="color: #3b82f6; font-weight: 600;">Klasör oluştur →</a>
+                </div>`;
+            return;
+        }
+        const root = document.createElement('div');
+        root.className = 'dk-tree';
+        STATE.tree.forEach(n => root.appendChild(renderModalNode(n, true)));
+        body.appendChild(root);
+    }
+
+    function renderModalNode(node, defaultExpanded) {
+        const wrap = document.createElement('div');
+        wrap.className = 'dk-tree-node';
+
+        const row = document.createElement('div');
+        row.className = 'dk-tree-row' + (STATE.selectedTempId == node.id ? ' selected' : '');
+        row.dataset.id = node.id;
+
+        const hasChildren = node.children && node.children.length > 0;
+        const toggle = document.createElement('span');
+        toggle.className = 'dk-tree-toggle ' + (hasChildren ? '' : 'empty') + (defaultExpanded ? ' expanded' : '');
+        toggle.textContent = '▶';
+        if (hasChildren) {
+            toggle.addEventListener('click', e => {
+                e.stopPropagation();
+                const children = wrap.querySelector('.dk-tree-children');
+                if (children) {
+                    children.classList.toggle('collapsed');
+                    toggle.classList.toggle('expanded');
+                }
+            });
+        }
+        row.appendChild(toggle);
+
+        const icon = document.createElement('span');
+        icon.className = 'dk-tree-icon';
+        icon.textContent = hasChildren ? '📁' : '📄';
+        row.appendChild(icon);
+
+        const nm = document.createElement('span');
+        nm.className = 'dk-tree-name';
+        nm.textContent = node.name;
+        row.appendChild(nm);
+
+        row.addEventListener('click', () => {
+            // Önceki seçili işaretini kaldır
+            document.querySelectorAll('#dkModalBody .dk-tree-row.selected').forEach(r => r.classList.remove('selected'));
+            row.classList.add('selected');
+            STATE.selectedTempId = node.id;
+            document.getElementById('dkConfirmBtn').disabled = false;
+        });
+        // Çift tıklama = seç + onayla
+        row.addEventListener('dblclick', () => {
+            STATE.selectedTempId = node.id;
+            confirmSelection();
+        });
+
+        wrap.appendChild(row);
+        if (hasChildren) {
+            const childrenDiv = document.createElement('div');
+            childrenDiv.className = 'dk-tree-children' + (defaultExpanded ? '' : ' collapsed');
+            node.children.forEach(c => childrenDiv.appendChild(renderModalNode(c, true)));
+            wrap.appendChild(childrenDiv);
+        }
+        return wrap;
+    }
+
+    function confirmSelection() {
+        if (!STATE.selectedTempId) return;
+        STATE.selectedId = STATE.selectedTempId;
+        // Seçili pk'yi <select> içine kalıcı bir option olarak yaz
+        if (!locationSelect.querySelector(`option[value="${STATE.selectedId}"]`)) {
+            const n = STATE.flatById[STATE.selectedId];
+            if (n) {
+                const opt = document.createElement('option');
+                opt.value = n.id;
+                opt.textContent = '📁 ' + n.full_path;
+                locationSelect.appendChild(opt);
+            }
+        }
+        locationSelect.value = STATE.selectedId;
+        refreshUI();
+        closeModal();
+    }
+
+    function clearSelection() {
+        STATE.selectedId = null;
+        locationSelect.value = '';
+        refreshUI();
+    }
+
+    document.getElementById('dkPickBtn').addEventListener('click', openModal);
+    document.getElementById('dkClearBtn').addEventListener('click', clearSelection);
+
+    // Escape: modal kapansın
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') closeModal();
+    });
+    document.getElementById('dkModal').addEventListener('click', e => {
+        if (e.target.id === 'dkModal') closeModal();
+    });
+
+    // Makine tipi değiştiğinde ağacı yeniden yükle
+    machineSelect.addEventListener('change', () => {
+        STATE.selectedId = null;  // farklı makine tipinde önceki seçim geçersiz
+        loadTree(machineSelect.value);
+    });
+
+    // Sayfa açılışında: select içinde mevcut bir değer varsa onu sakla,
+    // sonra makine tipine göre ağacı yükle.
+    locationSelect.addEventListener('change', () => {
+        STATE.selectedId = locationSelect.value || null;
+        refreshUI();
+    });
+
+    if (machineSelect.value) {
+        loadTree(machineSelect.value);
+    }
+
+    window.dkPicker = { openModal, closeModal, confirmSelection, clearSelection };
+})();
+</script>

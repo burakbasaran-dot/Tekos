@@ -1,0 +1,6 @@
+
+# stokapp/urls.py dosyanızda en üste ekleyin:
+from .views_detay import stok_detay
+
+# urlpatterns içine (uygun bir yere) ekleyin:
+path('detay/<int:pk>/', stok_detay, name='stok_detay'),

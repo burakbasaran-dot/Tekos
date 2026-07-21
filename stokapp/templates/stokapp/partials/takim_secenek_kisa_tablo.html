@@ -1,0 +1,42 @@
+<section class="card">
+  <h3>{{ title }}</h3>
+  <form method="post" class="add-row" style="grid-template-columns:1fr 120px;">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="add">
+    <input type="hidden" name="kind" value="{{ kind }}">
+    <input type="text" name="name" placeholder="Yeni kayıt adı" required>
+    <button type="submit" class="btn btn-secondary">Ekle</button>
+  </form>
+  <div class="table-wrap">
+    <table{% if table_class %} class="{{ table_class }}"{% endif %}>
+      <thead><tr><th>Ad</th><th>İşlem</th></tr></thead>
+      <tbody>
+        {% for item in items %}
+          <tr>
+            <td>
+              <form method="post" class="inline-form">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="update">
+                <input type="hidden" name="kind" value="{{ kind }}">
+                <input type="hidden" name="id" value="{{ item.id }}">
+                <input type="text" name="name" value="{{ item.name }}" required>
+            </td>
+            <td class="actions">
+                <button type="submit" class="btn btn-secondary">Güncelle</button>
+              </form>
+              <form method="post" onsubmit="return confirm('Silinsin mi?');">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="kind" value="{{ kind }}">
+                <input type="hidden" name="id" value="{{ item.id }}">
+                <button type="submit" class="btn btn-secondary">Sil</button>
+              </form>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="2">Kayıt yok.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>

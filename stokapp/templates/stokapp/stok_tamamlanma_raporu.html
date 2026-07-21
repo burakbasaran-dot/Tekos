@@ -1,0 +1,217 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Stok Tamamlanma Raporu{% endblock %}
+{% block content %}
+<style>
+    .tam-rapor { margin: 0 auto; }
+    .ozet-kartlar {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+    .ozet-kart {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 14px 16px;
+        text-align: center;
+    }
+    .ozet-kart .sayi { font-size: 24px; font-weight: 700; color: #111827; }
+    .ozet-kart .etiket { font-size: 12px; color: #6b7280; margin-top: 4px; }
+    .filtre-bar {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 14px 16px;
+        margin-bottom: 16px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: flex-end;
+    }
+    .filtre-bar label { font-size: 12px; color: #4b5563; display: block; margin-bottom: 4px; }
+    .filtre-bar select, .filtre-bar input[type="text"] {
+        padding: 7px 10px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 13px;
+    }
+    .eksik-ozet {
+        background: #fffbeb;
+        border: 1px solid #fde68a;
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-size: 12px;
+        margin-bottom: 16px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 16px;
+        align-items: center;
+    }
+    .eksik-ozet span { color: #92400e; }
+    .rapor-table-wrap { overflow-x: auto; background: white; border-radius: 10px; border: 1px solid #e5e7eb; }
+    .rapor-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 900px; }
+    .rapor-table th, .rapor-table td { border-bottom: 1px solid #e5e7eb; padding: 8px 10px; text-align: center; }
+    .rapor-table th {
+        background: #f3f4f6 !important;
+        color: #991b1b !important;
+        font-weight: 700;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        border-bottom: 2px solid #d1d5db;
+    }
+    .rapor-table td { color: #111827; background: #fff; }
+    .rapor-table td.stok-kod, .rapor-table th.stok-kod { text-align: left; white-space: nowrap; }
+    .rapor-table td.urun-ad { text-align: left; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .durum-var { color: #059669; font-weight: 700; }
+    .durum-eksik { color: #dc2626; font-weight: 700; }
+    .durum-opsiyonel { color: #2563eb; font-weight: 700; }
+    .yuzde-bar {
+        display: inline-block;
+        min-width: 42px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-weight: 600;
+        font-size: 11px;
+    }
+    .yuzde-tam { background: #d1fae5; color: #065f46; }
+    .yuzde-orta { background: #fef3c7; color: #92400e; }
+    .yuzde-dusuk { background: #fee2e2; color: #991b1b; }
+    .stok-link { color: #2563eb; text-decoration: none; font-weight: 600; }
+    .stok-link:hover { text-decoration: underline; }
+</style>
+
+<div class="tam-rapor">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+        <h1 style="margin:0;">📊 Stok Tamamlanma Raporu</h1>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            {% with qs=request.GET.urlencode %}
+            <a href="{% url 'stokapp:stok_tamamlanma_raporu_export_pdf' %}{% if qs %}?{{ qs }}{% endif %}" class="btn btn-secondary" style="text-decoration:none; padding:8px 14px;">📄 PDF</a>
+            <a href="{% url 'stokapp:stok_tamamlanma_raporu_export_excel' %}{% if qs %}?{{ qs }}{% endif %}" class="btn btn-secondary" style="text-decoration:none; padding:8px 14px;">📊 Excel</a>
+            {% endwith %}
+            <a href="{% url 'stokapp:stok_tamamlanma_ayarlari' %}" class="btn btn-secondary" style="text-decoration:none; padding:8px 14px;">⚙️ Kurallar</a>
+            <a href="{% url 'stokapp:stok_listesi' %}" class="btn btn-secondary" style="text-decoration:none; padding:8px 14px;">← Stok Listesi</a>
+        </div>
+    </div>
+
+    <div class="ozet-kartlar">
+        <div class="ozet-kart">
+            <div class="sayi">{{ ozet.toplam }}</div>
+            <div class="etiket">Listelenen Stok</div>
+        </div>
+        <div class="ozet-kart">
+            <div class="sayi" style="color:#059669;">{{ ozet.tam }}</div>
+            <div class="etiket">Tam Tamamlanmış</div>
+        </div>
+        <div class="ozet-kart">
+            <div class="sayi" style="color:#dc2626;">{{ ozet.eksik }}</div>
+            <div class="etiket">Eksik Var</div>
+        </div>
+        <div class="ozet-kart">
+            <div class="sayi">%{{ ozet.tam_yuzde }}</div>
+            <div class="etiket">Tamamlanma Oranı</div>
+        </div>
+    </div>
+
+    <form method="get" class="filtre-bar">
+        <div>
+            <label>Stok Tipi</label>
+            <select name="tip">
+                <option value="TUMU" {% if filtreler.tip == 'TUMU' %}selected{% endif %}>Tümü</option>
+                <option value="HAM_MADDE" {% if filtreler.tip == 'HAM_MADDE' %}selected{% endif %}>Ham Madde</option>
+                <option value="YARI_MAMUL" {% if filtreler.tip == 'YARI_MAMUL' %}selected{% endif %}>Yarı Mamül</option>
+                <option value="URUN" {% if filtreler.tip == 'URUN' %}selected{% endif %}>Ürün</option>
+            </select>
+        </div>
+        <div>
+            <label>Eksik Alan</label>
+            <select name="eksik_alan">
+                <option value="">Hepsi</option>
+                {% for alan in alan_tanimlari %}
+                <option value="{{ alan.key }}" {% if filtreler.eksik_alan == alan.key %}selected{% endif %}>{{ alan.label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label>Sıralama</label>
+            <select name="sort">
+                <option value="yuzde_asc" {% if filtreler.sort == 'yuzde_asc' %}selected{% endif %}>Tamamlanma ↑ (eksik önce)</option>
+                <option value="yuzde_desc" {% if filtreler.sort == 'yuzde_desc' %}selected{% endif %}>Tamamlanma ↓</option>
+                <option value="stok_kodu" {% if filtreler.sort == 'stok_kodu' %}selected{% endif %}>Stok Kodu</option>
+            </select>
+        </div>
+        <div>
+            <label>Arama</label>
+            <input type="text" name="q" value="{{ filtreler.q }}" placeholder="Stok kodu veya ad…">
+        </div>
+        <div>
+            <label style="display:flex; align-items:center; gap:6px; cursor:pointer; margin-top:18px;">
+                <input type="checkbox" name="sadece_eksik" value="1" {% if filtreler.sadece_eksik %}checked{% endif %}>
+                Yalnızca eksikler
+            </label>
+        </div>
+        <button type="submit" class="btn btn-primary" style="padding:8px 16px;">Filtrele</button>
+    </form>
+
+    {% if eksik_ozet_list %}
+    <div class="eksik-ozet">
+        <strong style="color:#92400e;">Alan bazında eksik (filtrelenmiş liste):</strong>
+        {% for ozet in eksik_ozet_list %}
+        <span>{{ ozet.label }}: <strong>{{ ozet.sayi }}</strong></span>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="rapor-table-wrap">
+        <table class="rapor-table">
+            <thead>
+                <tr>
+                    <th class="stok-kod">Stok Kodu</th>
+                    <th class="stok-kod">Ürün</th>
+                    <th>Tip</th>
+                    <th>%</th>
+                    {% for alan in gosterilecek_alanlar %}
+                    <th title="{{ alan.label }}">{{ alan.label|truncatechars:12 }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for satir in satirlar %}
+                {% with stok=satir.stok durum=satir.durum %}
+                <tr>
+                    <td class="stok-kod">
+                        <a href="{% url 'stokapp:stok_ekle' stok.pk %}" class="stok-link">{{ stok.stok_kodu }}</a>
+                    </td>
+                    <td class="urun-ad" title="{{ stok.ad }}">{{ stok.ad }}</td>
+                    <td>{{ durum.stok_tipi }}</td>
+                    <td>
+                        {% if durum.yuzde == 100 %}
+                        <span class="yuzde-bar yuzde-tam">%{{ durum.yuzde }}</span>
+                        {% elif durum.yuzde >= 50 %}
+                        <span class="yuzde-bar yuzde-orta">%{{ durum.yuzde }}</span>
+                        {% else %}
+                        <span class="yuzde-bar yuzde-dusuk">%{{ durum.yuzde }}</span>
+                        {% endif %}
+                    </td>
+                    {% for hucre in satir.alan_hucreleri %}
+                    <td>
+                        {% if hucre == 'var' %}<span class="durum-var">✓</span>
+                        {% elif hucre == 'eksik' %}<span class="durum-eksik">✗</span>
+                        {% else %}<span class="durum-opsiyonel" title="Opsiyonel">O</span>{% endif %}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endwith %}
+                {% empty %}
+                <tr>
+                    <td colspan="20" style="text-align:center; padding:40px; color:#6b7280;">
+                        Filtrelere uygun kayıt bulunamadı.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

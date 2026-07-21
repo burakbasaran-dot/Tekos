@@ -1,0 +1,1209 @@
+{% extends "stokapp/base.html" %}
+{% load currency_filters %}
+{% block title %}Satın Almalar{% endblock %}
+{% block content %}
+{% csrf_token %}
+<div id="csrf-token" style="display: none;">{% csrf_token %}</div>
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="margin: 0;">Satın Almalar</h2>
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            {% if tab != 'teslim_bekleyen_kalemler' %}
+            <form method="get" style="display:flex; gap:8px; align-items:center;">
+                <input type="hidden" name="tab" value="{{ tab }}">
+                {% if tedarikci_filtre_id %}
+                <input type="hidden" name="tedarikci" value="{{ tedarikci_filtre_id }}">
+                {% endif %}
+                {% if teslim_durumu %}
+                <input type="hidden" name="teslim_durumu" value="{{ teslim_durumu }}">
+                {% endif %}
+                <select name="sort" style="padding:8px; border:1px solid #e5e7eb; border-radius:8px;">
+                    <option value="no" {% if sort_field == 'no' %}selected{% endif %}>Satın Alma No</option>
+                    <option value="tedarikci" {% if sort_field == 'tedarikci' %}selected{% endif %}>Tedarikçi</option>
+                    <option value="toplam" {% if sort_field == 'toplam' %}selected{% endif %}>Toplam</option>
+                    <option value="olusturma" {% if sort_field == 'olusturma' %}selected{% endif %}>Oluşturulma Tarihi</option>
+                    <option value="tamamlanma" {% if sort_field == 'tamamlanma' %}selected{% endif %}>Tamamlanma Tarihi</option>
+                </select>
+                <select name="dir" style="padding:8px; border:1px solid #e5e7eb; border-radius:8px;">
+                    <option value="asc" {% if sort_dir == 'asc' %}selected{% endif %}>Artan</option>
+                    <option value="desc" {% if sort_dir == 'desc' %}selected{% endif %}>Azalan</option>
+                </select>
+                <button type="submit" class="btn btn-secondary" style="padding: 8px 12px;">Sırala</button>
+            </form>
+            {% endif %}
+            <button class="btn btn-secondary" style="padding: 8px 16px;">📥 Export</button>
+            <a href="{% url 'stokapp:rfq_olustur' %}" class="btn btn-primary" style="padding: 8px 16px; background:#22c55e;">📨 Yeni Tedarikçi Teklif Talebi</a>
+            <a href="{% url 'stokapp:satinalma_ekle' %}" class="btn btn-primary" style="padding: 8px 16px;">+ Yeni Satınalma</a>
+        </div>
+    </div>
+    
+    <!-- Sekmeler -->
+    <div class="tekos-tab-buttons">
+        <a href="?tab=taslaklar{% if tedarikci_filtre_id %}&tedarikci={{ tedarikci_filtre_id }}{% endif %}"
+           class="tekos-tab-btn tab-draft{% if tab == 'taslaklar' %} is-active{% endif %}">
+            <span class="tab-icon" aria-hidden="true">📝</span>
+            <span>Tedarikçi Teklif Talebi Taslakları</span>
+            <span class="tab-count">{{ counts.taslaklar }}</span>
+        </a>
+        <a href="?tab=teklif_bekleyen{% if tedarikci_filtre_id %}&tedarikci={{ tedarikci_filtre_id }}{% endif %}"
+           class="tekos-tab-btn tab-pending{% if tab == 'teklif_bekleyen' %} is-active{% endif %}">
+            <span class="tab-icon" aria-hidden="true">⏳</span>
+            <span>Teklif Bekleyenler</span>
+            <span class="tab-count">{{ counts.teklif_bekleyen }}</span>
+        </a>
+        <a href="?tab=degerlendirmede{% if tedarikci_filtre_id %}&tedarikci={{ tedarikci_filtre_id }}{% endif %}"
+           class="tekos-tab-btn tab-eval{% if tab == 'degerlendirmede' %} is-active{% endif %}">
+            <span class="tab-icon" aria-hidden="true">⚖️</span>
+            <span>Değerlendirmede</span>
+            <span class="tab-count">{{ counts.degerlendirmede }}</span>
+        </a>
+        <a href="?tab=teslim_bekleyen_kalemler{% if tedarikci_filtre_id %}&tedarikci={{ tedarikci_filtre_id }}{% endif %}"
+           class="tekos-tab-btn tab-delivery-items{% if tab == 'teslim_bekleyen_kalemler' %} is-active{% endif %}">
+            <span class="tab-icon" aria-hidden="true">📦</span>
+            <span>Teslimat Bekleyen Kalemler</span>
+            <span class="tab-count">{{ counts.teslim_bekleyen_kalemler }}</span>
+        </a>
+        <a href="?tab=satin_alma{% if tedarikci_filtre_id %}&tedarikci={{ tedarikci_filtre_id }}{% endif %}"
+           class="tekos-tab-btn tab-delivery{% if tab == 'satin_alma' %} is-active{% endif %}">
+            <span class="tab-icon" aria-hidden="true">🛒</span>
+            <span>Teslimat Bekleyen Satınalmalar</span>
+            <span class="tab-count">{{ counts.satin_alma }}</span>
+        </a>
+        <a href="?tab=teslimat_tamamlanan{% if tedarikci_filtre_id %}&tedarikci={{ tedarikci_filtre_id }}{% endif %}"
+           class="tekos-tab-btn tab-delivered{% if tab == 'teslimat_tamamlanan' %} is-active{% endif %}">
+            <span class="tab-icon" aria-hidden="true">✅</span>
+            <span>Teslimatı Tamamlanan Siparişler</span>
+            <span class="tab-count">{{ counts.teslimat_tamamlanan }}</span>
+        </a>
+        <a href="?tab=fason_siparis{% if tedarikci_filtre_id %}&tedarikci={{ tedarikci_filtre_id }}{% endif %}"
+           class="tekos-tab-btn tab-fason{% if tab == 'fason_siparis' %} is-active{% endif %}">
+            <span class="tab-icon" aria-hidden="true">🏭</span>
+            <span>Fason Sipariş</span>
+            <span class="tab-count">{{ counts.fason_siparis }}</span>
+        </a>
+    </div>
+    {% if tedarikci_filtre %}
+    <div style="margin-bottom: 16px; padding: 10px 12px; background: #eff6ff; border: 1px solid #bfdbfe; color: #1e3a8a; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+        <span><strong>Tedarikçi filtresi:</strong> {{ tedarikci_filtre.ad }}</span>
+        <a href="{% url 'stokapp:satinalma_listesi' %}?tab={{ tab }}" style="color:#1d4ed8; font-weight:600; text-decoration:none;">Filtreyi temizle</a>
+    </div>
+    {% endif %}
+    
+    {% if tab == 'taslaklar' or tab == 'teklif_bekleyen' or tab == 'degerlendirmede' %}
+    <!-- Tedarikçi Teklif Talebi listesi -->
+    <table style="width:100%; border-collapse:collapse; background:white; margin-bottom:20px;">
+        <thead>
+            <tr style="background-color:#f9fafb; border-bottom:2px solid #e5e7eb;">
+                <th style="padding:12px; text-align:left; font-weight:600;">Talep No</th>
+                <th style="padding:12px; text-align:left; font-weight:600;">Başlık</th>
+                <th style="padding:12px; text-align:left; font-weight:600;">Öncelik</th>
+                <th style="padding:12px; text-align:right; font-weight:600;">Kalem</th>
+                <th style="padding:12px; text-align:right; font-weight:600;">Tedarikçi</th>
+                <th style="padding:12px; text-align:left; font-weight:600;">Oluşturma</th>
+                <th style="padding:12px; text-align:left; font-weight:600;">Son Teklif</th>
+                <th style="padding:12px; text-align:left; font-weight:600;">İşlem</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for rfq in rfq_listesi %}
+            <tr style="border-bottom:1px solid #e5e7eb;">
+                <td style="padding:12px;">
+                    <a href="{% url 'stokapp:rfq_detay' rfq.pk %}" style="color:#3b82f6; text-decoration:none; font-weight:600;">{{ rfq.rfq_no }}</a>
+                </td>
+                <td style="padding:12px;">{{ rfq.baslik|truncatechars:50 }}</td>
+                <td style="padding:12px;">
+                    {% if rfq.oncelik == 'TERMIN' %}
+                        <span style="padding:2px 8px; background:#dbeafe; color:#1e40af; border-radius:10px; font-size:11px; font-weight:600;">Termin</span>
+                    {% else %}
+                        <span style="padding:2px 8px; background:#dcfce7; color:#166534; border-radius:10px; font-size:11px; font-weight:600;">Fiyat</span>
+                    {% endif %}
+                </td>
+                <td style="padding:12px; text-align:right;">{{ rfq.kalemler.count }}</td>
+                <td style="padding:12px; text-align:right;">{{ rfq.tedarikci_baglantilari.count }}</td>
+                <td style="padding:12px;">{{ rfq.olusturma_tarihi|date:"d.m.Y" }}</td>
+                <td style="padding:12px; {% if rfq.son_teklif_tarihi %}color:#ef4444;{% endif %}">{{ rfq.son_teklif_tarihi|date:"d.m.Y"|default:"-" }}</td>
+                <td style="padding:12px;">
+                    <a href="{% url 'stokapp:rfq_detay' rfq.pk %}" class="btn btn-secondary" style="padding:5px 12px; font-size:12px;">Detay</a>
+                    {% if tab == 'degerlendirmede' or rfq.durum == 'DEGERLENDIRMEDE' %}
+                    <a href="{% url 'stokapp:rfq_karsilastirma' rfq.pk %}" class="btn btn-primary" style="padding:5px 12px; font-size:12px; background:#3b82f6;">📊 Karşılaştır</a>
+                    {% endif %}
+                    {% if tab == 'taslaklar' or rfq.durum == 'TASLAK' %}
+                    <a href="{% url 'stokapp:rfq_duzenle' rfq.pk %}" class="btn btn-primary" style="padding:5px 12px; font-size:12px; background:#f59e0b;">✏️ Taslağı Düzenle</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="8" style="padding:40px; text-align:center; color:#6b7280;">
+                {% if tab == 'taslaklar' %}
+                    Kayıtlı tedarikçi teklif talebi taslağı yok. <a href="{% url 'stokapp:rfq_olustur' %}">Yeni taslak oluştur →</a>
+                {% elif tab == 'teklif_bekleyen' %}
+                    Teklif bekleyen tedarikçi teklif talebi yok. <a href="{% url 'stokapp:rfq_olustur' %}">Yeni tedarikçi teklif talebi oluştur →</a>
+                {% else %}
+                    Değerlendirme aşamasında tedarikçi teklif talebi yok.
+                {% endif %}
+            </td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Sayfalama -->
+    {% if rfq_listesi %}
+    <div style="display:flex; justify-content:center; align-items:center; gap:10px; margin-bottom:20px;">
+        {% if rfq_listesi.has_previous %}
+        <a href="?tab={{ tab }}{% if tedarikci_filtre_id %}&tedarikci={{ tedarikci_filtre_id }}{% endif %}&page=1" style="padding:8px 12px; color:#6b7280;">&lt;&lt;</a>
+        <a href="?tab={{ tab }}{% if tedarikci_filtre_id %}&tedarikci={{ tedarikci_filtre_id }}{% endif %}&page={{ rfq_listesi.previous_page_number }}" style="padding:8px 12px; color:#6b7280;">&lt;</a>
+        {% endif %}
+        <span style="padding:8px 12px; background:#f3f4f6; border-radius:4px; font-weight:600;">{{ rfq_listesi.number }} / {{ rfq_listesi.paginator.num_pages }}</span>
+        {% if rfq_listesi.has_next %}
+        <a href="?tab={{ tab }}{% if tedarikci_filtre_id %}&tedarikci={{ tedarikci_filtre_id }}{% endif %}&page={{ rfq_listesi.next_page_number }}" style="padding:8px 12px; color:#6b7280;">&gt;</a>
+        <a href="?tab={{ tab }}{% if tedarikci_filtre_id %}&tedarikci={{ tedarikci_filtre_id }}{% endif %}&page={{ rfq_listesi.paginator.num_pages }}" style="padding:8px 12px; color:#6b7280;">&gt;&gt;</a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% elif tab == 'teslim_bekleyen_kalemler' %}
+    <!-- Teslimat bekleyen satır kalemleri -->
+    <table style="width: 100%; border-collapse: collapse; background: white; margin-bottom: 20px;">
+        <thead>
+            <tr style="background-color: #f9fafb; border-bottom: 2px solid #e5e7eb;">
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Satın Alma Numarası</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Tedarikçi</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Stok Adı</th>
+                <th style="padding: 12px; text-align: right; font-weight: 600;">Talep Edilen Miktar</th>
+                <th style="padding: 12px; text-align: right; font-weight: 600;">Teslimat Bekleyen Miktar</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for kalem in bekleyen_kalemler %}
+            <tr style="border-bottom: 1px solid #e5e7eb; cursor: pointer;" onclick="window.location.href='{% url 'stokapp:satinalma_detay' kalem.satinalma.pk %}'">
+                <td style="padding: 12px;">
+                    <a href="{% url 'stokapp:satinalma_detay' kalem.satinalma.pk %}"
+                       class="purchase-hover-trigger"
+                       data-purchase-id="{{ kalem.satinalma.pk }}"
+                       data-items-url="{% url 'stokapp:satinalma_items_api' kalem.satinalma.pk %}"
+                       onclick="event.stopPropagation();"
+                       style="color: #3b82f6; text-decoration: none; font-weight: 600;">
+                        {{ kalem.satinalma.satinalma_numarasi }}
+                    </a>
+                </td>
+                <td style="padding: 12px;">
+                    {% if kalem.satinalma.tedarikci %}
+                        {{ kalem.satinalma.tedarikci.ad }}
+                    {% else %}
+                        {{ kalem.satinalma.tedarikci_adi|default:"-" }}
+                    {% endif %}
+                </td>
+                <td style="padding: 12px;">{{ kalem.stok_item.ad }}</td>
+                <td style="padding: 12px; text-align: right;">{{ kalem.miktar|floatformat:3 }} {{ kalem.stok_item.birim }}</td>
+                <td style="padding: 12px; text-align: right; color: #ef4444; font-weight: 600;">{{ kalem.teslimat_bekleyen_miktar|floatformat:3 }} {{ kalem.stok_item.birim }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" style="text-align: center; padding: 40px; color: #6b7280;">
+                    Teslimat bekleyen kalem bulunmuyor.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <!-- Tablo (sipariş listesi) -->
+    <table style="width: 100%; border-collapse: collapse; background: white; margin-bottom: 20px;">
+        <thead>
+            <tr style="background-color: #f9fafb; border-bottom: 2px solid #e5e7eb;">
+                <th style="padding: 12px; text-align: left; font-weight: 600;">
+                    <input type="checkbox" id="selectAllCheckbox" style="cursor: pointer;" onchange="toggleAllCheckboxes(this.checked)">
+                </th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">
+                    Satın Alma Numarası ℹ️
+                </th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">
+                    Tedarikçi ℹ️
+                </th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Etiketle ℹ️</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">
+                    Toplam ℹ️
+                </th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Oluşturulma Tarihi ℹ️</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Tamamlanması Beklenen Tarih ℹ️</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">
+                    Teslim Alındı ℹ️
+                    <select onchange="window.location.href=this.value" style="margin-left: 5px; padding: 2px 5px; font-size: 12px;">
+                        <option value="?tab={{ tab }}{% if tedarikci_filtre_id %}&tedarikci={{ tedarikci_filtre_id }}{% endif %}">Hepsi</option>
+                        <option value="?tab={{ tab }}{% if tedarikci_filtre_id %}&tedarikci={{ tedarikci_filtre_id }}{% endif %}&teslim_durumu=BEKLIYOR" {% if teslim_durumu == 'BEKLIYOR' %}selected{% endif %}>Bekliyor</option>
+                        <option value="?tab={{ tab }}{% if tedarikci_filtre_id %}&tedarikci={{ tedarikci_filtre_id }}{% endif %}&teslim_durumu=KISMI_TESLIM" {% if teslim_durumu == 'KISMI_TESLIM' %}selected{% endif %}>Kısmi Teslim</option>
+                        <option value="?tab={{ tab }}{% if tedarikci_filtre_id %}&tedarikci={{ tedarikci_filtre_id }}{% endif %}&teslim_durumu=TESLIM_ALINDI" {% if teslim_durumu == 'TESLIM_ALINDI' %}selected{% endif %}>Teslim Alındı</option>
+                    </select>
+                </th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">İşlemler</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for satinalma in satinalmalar %}
+            <tr style="border-bottom: 1px solid #e5e7eb; cursor: pointer;" onclick="window.location.href='{% url 'stokapp:satinalma_detay' satinalma.pk %}'">
+                <td style="padding: 12px;" onclick="event.stopPropagation();">
+                    <input type="checkbox" class="satinalma-checkbox" style="cursor: pointer;" value="{{ satinalma.pk }}" onchange="updateTeklifButton()">
+                </td>
+                <td style="padding: 12px;">
+                    <a
+                        href="{% url 'stokapp:satinalma_detay' satinalma.pk %}"
+                        class="purchase-hover-trigger"
+                        data-purchase-id="{{ satinalma.pk }}"
+                        data-items-url="{% url 'stokapp:satinalma_items_api' satinalma.pk %}"
+                        style="color: #3b82f6; text-decoration: none; font-weight: 600;"
+                    >
+                        {{ satinalma.satinalma_numarasi }}
+                    </a>
+                </td>
+                <td style="padding: 12px;">
+                    {% if satinalma.tedarikci %}
+                        {{ satinalma.tedarikci.ad }}
+                    {% else %}
+                        {{ satinalma.tedarikci_adi|default:"-" }}
+                    {% endif %}
+                </td>
+                <td style="padding: 12px;">{{ satinalma.etiketler|default:"-" }}</td>
+                <td style="padding: 12px;">{{ satinalma.toplam|currency }} {{ satinalma.para_birimi }}</td>
+                <td style="padding: 12px;">{{ satinalma.olusturulma_tarihi|date:"d.m.Y" }}</td>
+                <td style="padding: 12px; {% if satinalma.tamamlanma_tarihi %}color: #ef4444;{% endif %}">
+                    {{ satinalma.tamamlanma_tarihi|date:"d.m.Y"|default:"-" }}
+                </td>
+                <td style="padding: 12px;" onclick="event.stopPropagation();">
+                    <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                        <button type="button" 
+                                onclick="showSiparisDetay({{ satinalma.pk }})"
+                                style="padding: 6px 12px; border-radius: 4px; font-size: 13px; font-weight: 500; border: 1px solid #d1d5db; background: white; color: #374151; cursor: pointer;">
+                            📋 Sipariş Detayı
+                        </button>
+                        <div style="position: relative; display: inline-block;">
+                            <button type="button" 
+                                    class="teslimat-islem-btn" 
+                                    data-satinalma-id="{{ satinalma.pk }}"
+                                    onclick="toggleTeslimatDropdown({{ satinalma.pk }})"
+                                    style="padding: 6px 12px; border-radius: 4px; font-size: 13px; font-weight: 500; border: 1px solid #d1d5db; background: white; color: #374151; cursor: pointer;">
+                                🚚 Teslimat İşlemi ▼
+                            </button>
+                            <div class="teslimat-dropdown" 
+                                 id="teslimat_dropdown_{{ satinalma.pk }}"
+                             style="display: none; position: absolute; top: 100%; left: 0; background: white; border: 1px solid #d1d5db; border-radius: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 1000; min-width: 180px; margin-top: 4px;">
+                            <a href="#" 
+                                   onclick="event.preventDefault(); showTamTeslimatModal({{ satinalma.pk }}); toggleTeslimatDropdown({{ satinalma.pk }});"
+                               style="display: block; padding: 10px 15px; text-decoration: none; color: #374151; border-bottom: 1px solid #e5e7eb;">
+                                    ✅ Tam Teslimat
+                            </a>
+                            <a href="#" 
+                                   onclick="event.preventDefault(); showKismiTeslimatModal({{ satinalma.pk }}); toggleTeslimatDropdown({{ satinalma.pk }});"
+                               style="display: block; padding: 10px 15px; text-decoration: none; color: #374151;">
+                                    📦 Kısmi Teslimat
+                            </a>
+                        </div>
+                    </div>
+                        <a href="{% url 'stokapp:satinalma_duzenle' satinalma.pk %}" 
+                           class="btn" 
+                           style="background-color: #3b82f6; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px;">
+                            ✏️ Düzenle
+                        </a>
+                        <a href="{% url 'stokapp:satinalma_sil' satinalma.pk %}" 
+                           class="btn" 
+                           style="background-color: #ef4444; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px;"
+                           onclick="return confirm('Bu satın almayı silmek istediğinizden emin misiniz?');">
+                            🗑️ Sil
+                        </a>
+                        <button type="button" 
+                                onclick="teklifFormuOlusturTekil({{ satinalma.pk }})"
+                                class="btn" 
+                                style="background-color: #22c55e; color: white; padding: 6px 12px; border-radius: 4px; font-size: 13px; border: none; cursor: pointer;">
+                            📄 Teklif Formu
+                        </button>
+                        <button type="button" 
+                                onclick="showTeklifGirisi({{ satinalma.pk }})"
+                                class="btn" 
+                                style="background-color: #f59e0b; color: white; padding: 6px 12px; border-radius: 4px; font-size: 13px; border: none; cursor: pointer;">
+                            💰 Teklif Girişi
+                        </button>
+                        <button type="button" 
+                                onclick="siparisOlustur({{ satinalma.pk }})"
+                                class="btn" 
+                                style="background-color: #8b5cf6; color: white; padding: 6px 12px; border-radius: 4px; font-size: 13px; border: none; cursor: pointer;">
+                            📋 Sipariş Oluştur
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="9" style="text-align: center; padding: 40px; color: #6b7280;">
+                    Henüz satın alma bulunmuyor.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+    
+    <!-- Sayfalama -->
+    <div style="display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 20px;">
+        {% if tab == 'teslim_bekleyen_kalemler' %}
+            {% if bekleyen_kalemler.has_previous %}
+            <a href="?tab={{ tab }}{% if tedarikci_filtre_id %}&tedarikci={{ tedarikci_filtre_id }}{% endif %}&page=1" style="padding: 8px 12px; text-decoration: none; color: #6b7280;">&lt;&lt;</a>
+            <a href="?tab={{ tab }}{% if tedarikci_filtre_id %}&tedarikci={{ tedarikci_filtre_id }}{% endif %}&page={{ bekleyen_kalemler.previous_page_number }}" style="padding: 8px 12px; text-decoration: none; color: #6b7280;">&lt;</a>
+            {% endif %}
+            <span style="padding: 8px 12px; background-color: #f3f4f6; border-radius: 4px; color: #374151; font-weight: 600;">
+                {{ bekleyen_kalemler.number }} of {{ bekleyen_kalemler.paginator.num_pages }}
+            </span>
+            {% if bekleyen_kalemler.has_next %}
+            <a href="?tab={{ tab }}{% if tedarikci_filtre_id %}&tedarikci={{ tedarikci_filtre_id }}{% endif %}&page={{ bekleyen_kalemler.next_page_number }}" style="padding: 8px 12px; text-decoration: none; color: #6b7280;">&gt;</a>
+            <a href="?tab={{ tab }}{% if tedarikci_filtre_id %}&tedarikci={{ tedarikci_filtre_id }}{% endif %}&page={{ bekleyen_kalemler.paginator.num_pages }}" style="padding: 8px 12px; text-decoration: none; color: #6b7280;">&gt;&gt;</a>
+            {% endif %}
+        {% else %}
+            {% if satinalmalar.has_previous %}
+            <a href="?tab={{ tab }}{% if tedarikci_filtre_id %}&tedarikci={{ tedarikci_filtre_id }}{% endif %}&page=1{% if teslim_durumu %}&teslim_durumu={{ teslim_durumu }}{% endif %}" style="padding: 8px 12px; text-decoration: none; color: #6b7280;">&lt;&lt;</a>
+            <a href="?tab={{ tab }}{% if tedarikci_filtre_id %}&tedarikci={{ tedarikci_filtre_id }}{% endif %}&page={{ satinalmalar.previous_page_number }}{% if teslim_durumu %}&teslim_durumu={{ teslim_durumu }}{% endif %}" style="padding: 8px 12px; text-decoration: none; color: #6b7280;">&lt;</a>
+            {% endif %}
+            <span style="padding: 8px 12px; background-color: #f3f4f6; border-radius: 4px; color: #374151; font-weight: 600;">
+                {{ satinalmalar.number }} of {{ satinalmalar.paginator.num_pages }}
+            </span>
+            {% if satinalmalar.has_next %}
+            <a href="?tab={{ tab }}{% if tedarikci_filtre_id %}&tedarikci={{ tedarikci_filtre_id }}{% endif %}&page={{ satinalmalar.next_page_number }}{% if teslim_durumu %}&teslim_durumu={{ teslim_durumu }}{% endif %}" style="padding: 8px 12px; text-decoration: none; color: #6b7280;">&gt;</a>
+            <a href="?tab={{ tab }}{% if tedarikci_filtre_id %}&tedarikci={{ tedarikci_filtre_id }}{% endif %}&page={{ satinalmalar.paginator.num_pages }}{% if teslim_durumu %}&teslim_durumu={{ teslim_durumu }}{% endif %}" style="padding: 8px 12px; text-decoration: none; color: #6b7280;">&gt;&gt;</a>
+            {% endif %}
+            <select style="margin-left: 10px; padding: 8px 12px;">
+                <option>10</option>
+                <option>25</option>
+                <option>50</option>
+            </select>
+        {% endif %}
+    </div>
+    
+    {% if tab != 'teslim_bekleyen_kalemler' %}
+    <!-- Özet -->
+    <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
+        <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; min-width: 300px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                <span>Ara Toplam:</span>
+                <strong>{{ ara_toplam|currency }} TRY</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                <span>Vergi:</span>
+                <strong>{{ vergi|currency }} TRY</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding-top: 10px; border-top: 2px solid #e5e7eb; font-size: 18px; font-weight: 600;">
+                <span>Toplam:</span>
+                <strong>{{ toplam|currency }} TRY</strong>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+<div id="purchaseHoverTooltip" style="display:none; position:fixed; z-index:2200; width:min(380px, 92vw); background:#fff; border:1px solid #e5e7eb; border-radius:10px; box-shadow:0 12px 30px rgba(15,23,42,.18); padding:10px;">
+    <div style="font-size:12px; font-weight:700; margin-bottom:8px;">Satınalma Kalemleri</div>
+    <div id="purchaseHoverTooltipBody" style="max-height:220px; overflow:auto; font-size:12px; color:#111827;"></div>
+</div>
+
+<!-- Sipariş Detay Modal -->
+<div id="siparisDetayModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;" onclick="if(event.target.id === 'siparisDetayModal') closeSiparisDetayModal()">
+    <div style="background: white; border-radius: 12px; padding: 30px; max-width: 900px; width: 90%; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #e5e7eb; padding-bottom: 15px;">
+            <h2 style="margin: 0; color: #111827; font-size: 24px;">📋 Sipariş Detayı</h2>
+            <button type="button" onclick="closeSiparisDetayModal()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #6b7280; padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;">&times;</button>
+        </div>
+        
+        <div id="siparisDetayContent">
+            <!-- JavaScript ile doldurulacak -->
+        </div>
+    </div>
+</div>
+
+<!-- Kısmi Teslimat Modal -->
+<div id="kismiTeslimatModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;" onclick="if(event.target.id === 'kismiTeslimatModal') closeKismiTeslimatModal()">
+    <div style="background: white; border-radius: 12px; padding: 30px; max-width: 1000px; width: 90%; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #e5e7eb; padding-bottom: 15px;">
+            <h2 style="margin: 0; color: #111827; font-size: 24px;">📦 Kısmi Teslimat</h2>
+            <button type="button" onclick="closeKismiTeslimatModal()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #6b7280; padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;">&times;</button>
+        </div>
+        
+        <form id="kismiTeslimatForm" onsubmit="kismiTeslimatKaydet(event)">
+            <input type="hidden" id="kismiTeslimatSatinalmaId">
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                <thead>
+                    <tr style="background-color: #34495e; border-bottom: 2px solid #e5e7eb;">
+                        <th style="padding: 12px; text-align: left; font-weight: 600; color: white;">Stok Kodu</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600; color: white;">Stok Adı</th>
+                        <th style="padding: 12px; text-align: right; font-weight: 600; color: white;">Talep Edilen</th>
+                        <th style="padding: 12px; text-align: right; font-weight: 600; color: white;">Birim Fiyat</th>
+                        <th style="padding: 12px; text-align: right; font-weight: 600; color: white;">Teslim Alınan</th>
+                    </tr>
+                </thead>
+                <tbody id="kismiTeslimatKalemler">
+                    <!-- JavaScript ile doldurulacak -->
+                </tbody>
+            </table>
+            
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; padding-top: 20px; border-top: 2px solid #e5e7eb;">
+                <button type="button" onclick="closeKismiTeslimatModal()" style="padding: 10px 20px; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
+                    İptal
+                </button>
+                <button type="submit" style="padding: 10px 20px; background-color: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
+                    💾 Kaydet
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Teklif Girişi Modal -->
+<div id="teklifGirisiModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;" onclick="if(event.target.id === 'teklifGirisiModal') closeTeklifGirisiModal()">
+    <div style="background: white; border-radius: 12px; padding: 30px; max-width: 1000px; width: 90%; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #e5e7eb; padding-bottom: 15px;">
+            <h2 style="margin: 0; color: #111827; font-size: 24px;">💰 Teklif Girişi</h2>
+            <button type="button" onclick="closeTeklifGirisiModal()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #6b7280; padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;">&times;</button>
+        </div>
+        
+        <form id="teklifGirisiForm" onsubmit="teklifGirisiKaydet(event)">
+            <input type="hidden" id="teklifGirisiSatinalmaId">
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                <thead>
+                    <tr style="background-color: #34495e; border-bottom: 2px solid #e5e7eb;">
+                        <th style="padding: 12px; text-align: left; font-weight: 600; color: white;">Stok Adı</th>
+                        <th style="padding: 12px; text-align: right; font-weight: 600; color: white;">Miktar</th>
+                        <th style="padding: 12px; text-align: right; font-weight: 600; color: white;">Tedarikçi Fiyatı</th>
+                        <th style="padding: 12px; text-align: right; font-weight: 600; color: white;">Teslim Süresi (Gün)</th>
+                    </tr>
+                </thead>
+                <tbody id="teklifGirisiKalemler">
+                    <!-- JavaScript ile doldurulacak -->
+                </tbody>
+            </table>
+            
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; padding-top: 20px; border-top: 2px solid #e5e7eb;">
+                <button type="button" onclick="closeTeklifGirisiModal()" style="padding: 10px 20px; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
+                    İptal
+                </button>
+                <button type="submit" style="padding: 10px 20px; background-color: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
+                    💾 Kaydet
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Tam Teslimat Modal -->
+<div id="tamTeslimatModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center;" onclick="if(event.target.id === 'tamTeslimatModal') closeTamTeslimatModal()">
+    <div style="background: white; border-radius: 12px; padding: 30px; max-width: 1000px; width: 90%; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 2px solid #e5e7eb; padding-bottom: 15px;">
+            <h2 style="margin: 0; color: #111827; font-size: 24px;">✅ Tam Teslimat</h2>
+            <button type="button" onclick="closeTamTeslimatModal()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #6b7280; padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;">&times;</button>
+        </div>
+        
+        <div id="tamTeslimatContent">
+            <!-- JavaScript ile doldurulacak -->
+        </div>
+        
+        <div style="margin-top: 25px; padding: 20px; background-color: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b;">
+            <p style="margin: 0; color: #92400e; font-weight: 500; font-size: 16px;">
+                ⚠️ Tüm ürünlerin teslim alındığını onaylıyor musunuz? Bu işlem sonrasında sipariş "Teslimatı Tamamlanan Siparişler" sekmesine taşınacaktır.
+            </p>
+        </div>
+        
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 25px; padding-top: 20px; border-top: 2px solid #e5e7eb;">
+            <button type="button" onclick="closeTamTeslimatModal()" style="padding: 10px 20px; background-color: #ef4444; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
+                İptal
+            </button>
+            <button type="button" onclick="tamTeslimatOnayla()" style="padding: 10px 20px; background-color: #22c55e; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
+                ✅ Onayla ve Teslim Al
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+// CSRF token helper
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function getCSRFToken() {
+    const token = document.querySelector('[name=csrfmiddlewaretoken]');
+    if (token) return token.value;
+    return getCookie('csrftoken');
+}
+
+// Teslimat dropdown açma/kapama
+function toggleTeslimatDropdown(satinalmaId) {
+    const dropdown = document.getElementById('teslimat_dropdown_' + satinalmaId);
+        
+        // Diğer dropdown'ları kapat
+    document.querySelectorAll('.teslimat-dropdown').forEach(d => {
+        if (d.id !== 'teslimat_dropdown_' + satinalmaId) {
+                d.style.display = 'none';
+            }
+        });
+        
+        // Bu dropdown'ı aç/kapat
+        dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+}
+
+// Dışarı tıklandığında tüm dropdown'ları kapat
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.teslimat-islem-btn') && !e.target.closest('.teslimat-dropdown')) {
+        document.querySelectorAll('.teslimat-dropdown').forEach(d => {
+            d.style.display = 'none';
+        });
+    }
+});
+
+// Sipariş Detayı Modal
+function showSiparisDetay(satinalmaId) {
+    fetch(`{% url 'stokapp:satinalma_detay_popup' 0 %}`.replace('0', satinalmaId))
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success) {
+                alert('Sipariş detayı yüklenirken bir hata oluştu.');
+                return;
+            }
+            
+            const content = document.getElementById('siparisDetayContent');
+            const sat = data.satinalma;
+            
+            let html = `
+                <div style="margin-bottom: 25px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                        <div>
+                            <div style="font-size: 12px; color: #6b7280; margin-bottom: 5px;">Satın Alma Numarası</div>
+                            <div style="font-size: 16px; font-weight: 600; color: #111827;">${sat.satinalma_numarasi}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 12px; color: #6b7280; margin-bottom: 5px;">Tedarikçi</div>
+                            <div style="font-size: 16px; font-weight: 600; color: #111827;">${sat.tedarikci_adi || '-'}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 12px; color: #6b7280; margin-bottom: 5px;">Oluşturulma Tarihi</div>
+                            <div style="font-size: 16px; font-weight: 600; color: #111827;">${sat.olusturulma_tarihi}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 12px; color: #6b7280; margin-bottom: 5px;">Tamamlanma Tarihi</div>
+                            <div style="font-size: 16px; font-weight: 600; color: #111827;">${sat.tamamlanma_tarihi || '-'}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 12px; color: #6b7280; margin-bottom: 5px;">Toplam</div>
+                            <div style="font-size: 16px; font-weight: 600; color: #111827;">${sat.toplam} ${sat.para_birimi}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 12px; color: #6b7280; margin-bottom: 5px;">Teslim Durumu</div>
+                            <div style="font-size: 16px; font-weight: 600; color: #111827;">${sat.teslim_durumu}</div>
+                        </div>
+                    </div>
+                    ${sat.notlar ? `<div style="margin-top: 15px;"><div style="font-size: 12px; color: #6b7280; margin-bottom: 5px;">Notlar</div><div style="padding: 10px; background: #f9fafb; border-radius: 6px; color: #374151;">${sat.notlar}</div></div>` : ''}
+                </div>
+                
+                <div style="margin-top: 30px;">
+                    <h3 style="margin: 0 0 15px 0; color: #111827; font-size: 18px;">Ürünler</h3>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background-color: #34495e; border-bottom: 2px solid #e5e7eb;">
+                                <th style="padding: 12px; text-align: left; font-weight: 600; color: white;">Stok Kodu</th>
+                                <th style="padding: 12px; text-align: left; font-weight: 600; color: white;">Stok Adı</th>
+                                <th style="padding: 12px; text-align: right; font-weight: 600; color: white;">Talep Edilen</th>
+                                <th style="padding: 12px; text-align: right; font-weight: 600; color: white;">Teslim Alınan</th>
+                                <th style="padding: 12px; text-align: right; font-weight: 600; color: white;">Teslimat Bekleyen</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            data.kalemler.forEach(kalem => {
+                const bekleyen = parseFloat(kalem.teslimat_bekleyen_miktar);
+                html += `
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 12px; font-weight: 600; color: #2563eb;">${kalem.stok_kodu || '-'}</td>
+                        <td style="padding: 12px;">${kalem.stok_adi}</td>
+                        <td style="padding: 12px; text-align: right;">${parseFloat(kalem.talep_edilen_miktar).toFixed(3)} ${kalem.birim}</td>
+                        <td style="padding: 12px; text-align: right;">${parseFloat(kalem.teslim_alinan_miktar).toFixed(3)} ${kalem.birim}</td>
+                        <td style="padding: 12px; text-align: right; ${bekleyen > 0 ? 'color: #ef4444; font-weight: 600;' : 'color: #22c55e;'}">${bekleyen.toFixed(3)} ${kalem.birim}</td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            content.innerHTML = html;
+            document.getElementById('siparisDetayModal').style.display = 'flex';
+        })
+        .catch(error => {
+            console.error('Hata:', error);
+            alert('Sipariş detayı yüklenirken bir hata oluştu.');
+        });
+}
+
+function closeSiparisDetayModal() {
+    document.getElementById('siparisDetayModal').style.display = 'none';
+}
+
+// Kısmi Teslimat Modal
+function showKismiTeslimatModal(satinalmaId) {
+    document.getElementById('kismiTeslimatSatinalmaId').value = satinalmaId;
+    
+    fetch(`{% url 'stokapp:satinalma_detay_popup' 0 %}`.replace('0', satinalmaId))
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success) {
+                alert('Kalemler yüklenirken bir hata oluştu.');
+                return;
+            }
+            
+            const tbody = document.getElementById('kismiTeslimatKalemler');
+            tbody.innerHTML = '';
+            
+            data.kalemler.forEach(kalem => {
+                const talep = parseFloat(kalem.talep_edilen_miktar);
+                const teslim = parseFloat(kalem.teslim_alinan_miktar);
+                const bekleyen = talep - teslim;
+                
+                if (bekleyen <= 0) return; // Zaten teslim edilmişse gösterilmesin
+                
+                const row = document.createElement('tr');
+                row.style.borderBottom = '1px solid #e5e7eb';
+                row.innerHTML = `
+                    <td style="padding: 12px; font-weight: 600; color: #2563eb;">${kalem.stok_kodu || '-'}</td>
+                    <td style="padding: 12px; font-weight: 500;">${kalem.stok_adi}</td>
+                    <td style="padding: 12px; text-align: right; color: #6b7280;">${talep.toFixed(3)} ${kalem.birim}</td>
+                    <td style="padding: 12px; text-align: right;">
+                        <input type="number" 
+                               class="birim-fiyat-input"
+                               data-kalem-id="${kalem.id}"
+                               value="${parseFloat(kalem.efektif_birim_fiyat || kalem.birim_fiyat || 0).toFixed(2)}"
+                               min="0" 
+                               step="0.01"
+                               style="width: 120px; padding: 6px; border: 1px solid #d1d5db; border-radius: 4px; text-align: right;">
+                    </td>
+                    <td style="padding: 12px; text-align: right;">
+                        <input type="number" 
+                               class="teslim-miktar-input"
+                               data-kalem-id="${kalem.id}"
+                               data-max="${bekleyen}"
+                               value="0"
+                               min="0"
+                               max="${bekleyen}"
+                               step="0.001"
+                               style="width: 120px; padding: 6px; border: 1px solid #d1d5db; border-radius: 4px; text-align: right;">
+                        <span style="margin-left: 5px; color: #6b7280;">${kalem.birim}</span>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            // Miktar kontrolü
+            document.querySelectorAll('.teslim-miktar-input').forEach(input => {
+                input.addEventListener('input', function() {
+                    const max = parseFloat(this.getAttribute('data-max'));
+                    const value = parseFloat(this.value) || 0;
+                    if (value > max) {
+                        this.value = max;
+                        alert(`Maksimum teslim edilebilir miktar: ${max.toFixed(3)}`);
+                    }
+                });
+            });
+            
+            document.getElementById('kismiTeslimatModal').style.display = 'flex';
+        })
+        .catch(error => {
+            console.error('Hata:', error);
+            alert('Kalemler yüklenirken bir hata oluştu.');
+        });
+}
+
+function closeKismiTeslimatModal() {
+    document.getElementById('kismiTeslimatModal').style.display = 'none';
+}
+
+function kismiTeslimatKaydet(event) {
+    event.preventDefault();
+    
+    const satinalmaId = document.getElementById('kismiTeslimatSatinalmaId').value;
+    const kalemler = [];
+    
+    document.querySelectorAll('.teslim-miktar-input').forEach(input => {
+        const kalemId = input.getAttribute('data-kalem-id');
+        const teslimMiktar = parseFloat(input.value) || 0;
+        const birimFiyatInput = document.querySelector(`.birim-fiyat-input[data-kalem-id="${kalemId}"]`);
+        const birimFiyat = parseFloat(birimFiyatInput.value) || 0;
+        
+        if (teslimMiktar > 0) {
+            kalemler.push({
+                kalem_id: kalemId,
+                teslim_alinan_miktar: teslimMiktar,
+                birim_fiyat: birimFiyat
+            });
+        }
+    });
+    
+    if (kalemler.length === 0) {
+        alert('Lütfen en az bir ürün için teslim alınan miktar girin.');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('kalemler', JSON.stringify(kalemler));
+    
+    const csrftoken = getCSRFToken();
+    if (csrftoken) {
+        formData.append('csrfmiddlewaretoken', csrftoken);
+    }
+    
+    fetch(`{% url 'stokapp:satinalma_kismi_teslimat' 0 %}`.replace('0', satinalmaId), {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            closeKismiTeslimatModal();
+            window.location.reload();
+        } else {
+            alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+        }
+    })
+    .catch(error => {
+        console.error('Hata:', error);
+        alert('Teslimat kaydedilirken bir hata oluştu.');
+    });
+}
+
+// Tam Teslimat Modal
+function showTamTeslimatModal(satinalmaId) {
+    fetch(`{% url 'stokapp:satinalma_detay_popup' 0 %}`.replace('0', satinalmaId))
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success) {
+                alert('Kalemler yüklenirken bir hata oluştu.');
+                return;
+            }
+            
+            const content = document.getElementById('tamTeslimatContent');
+            let html = `
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background-color: #34495e; border-bottom: 2px solid #e5e7eb;">
+                                <th style="padding: 12px; text-align: left; font-weight: 600; color: white;">Stok Adı</th>
+                                <th style="padding: 12px; text-align: right; font-weight: 600; color: white;">Talep Edilen</th>
+                                <th style="padding: 12px; text-align: right; font-weight: 600; color: white;">Birim Fiyat</th>
+                                <th style="padding: 12px; text-align: right; font-weight: 600; color: white;">Teslim Alınan</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            data.kalemler.forEach(kalem => {
+                html += `
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 12px; font-weight: 500;">${kalem.stok_adi}</td>
+                        <td style="padding: 12px; text-align: right;">${parseFloat(kalem.talep_edilen_miktar).toFixed(3)} ${kalem.birim}</td>
+                        <td style="padding: 12px; text-align: right;">${parseFloat(kalem.efektif_birim_fiyat || kalem.birim_fiyat || 0).toFixed(2)} TRY</td>
+                        <td style="padding: 12px; text-align: right;">${parseFloat(kalem.teslim_alinan_miktar).toFixed(3)} ${kalem.birim}</td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                    </tbody>
+                </table>
+            `;
+            
+            content.innerHTML = html;
+            document.getElementById('tamTeslimatModal').setAttribute('data-satinalma-id', satinalmaId);
+            document.getElementById('tamTeslimatModal').style.display = 'flex';
+        })
+        .catch(error => {
+            console.error('Hata:', error);
+            alert('Kalemler yüklenirken bir hata oluştu.');
+        });
+}
+
+function closeTamTeslimatModal() {
+    document.getElementById('tamTeslimatModal').style.display = 'none';
+}
+
+function tamTeslimatOnayla() {
+    const satinalmaId = document.getElementById('tamTeslimatModal').getAttribute('data-satinalma-id');
+    
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const formData = new FormData();
+    formData.append('csrfmiddlewaretoken', csrftoken);
+    
+    fetch(`{% url 'stokapp:satinalma_tam_teslimat' 0 %}`.replace('0', satinalmaId), {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            closeTamTeslimatModal();
+            window.location.reload();
+        } else {
+            alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+        }
+    })
+    .catch(error => {
+        console.error('Hata:', error);
+        alert('Tam teslimat işlemi sırasında bir hata oluştu.');
+    });
+}
+
+// Checkbox seçim fonksiyonları
+function toggleAllCheckboxes(checked) {
+    const checkboxes = document.querySelectorAll('.satinalma-checkbox');
+    checkboxes.forEach(cb => cb.checked = checked);
+    updateTeklifButton();
+}
+
+function getSelectedSatinalmaIds() {
+    const checkboxes = document.querySelectorAll('.satinalma-checkbox:checked');
+    return Array.from(checkboxes).map(cb => cb.value);
+}
+
+function updateTeklifButton() {
+    const selectedIds = getSelectedSatinalmaIds();
+    const button = document.getElementById('teklifFormuOlusturBtn');
+    if (selectedIds.length > 0) {
+        button.disabled = false;
+        button.style.opacity = '1';
+    } else {
+        button.disabled = true;
+        button.style.opacity = '0.5';
+    }
+}
+
+// Tek bir satınalma için teklif formu oluştur
+function teklifFormuOlusturTekil(satinalmaId) {
+    window.location.href = '{% url "stokapp:teklif_talep_formu" %}?ids=' + satinalmaId;
+}
+
+// Teklif girişi modal'ını göster
+function showTeklifGirisi(satinalmaId) {
+    document.getElementById('teklifGirisiSatinalmaId').value = satinalmaId;
+    
+    fetch(`{% url 'stokapp:satinalma_detay_popup' 0 %}`.replace('0', satinalmaId))
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success) {
+                alert('Kalemler yüklenirken bir hata oluştu.');
+                return;
+            }
+            
+            const tbody = document.getElementById('teklifGirisiKalemler');
+            tbody.innerHTML = '';
+            
+            data.kalemler.forEach(kalem => {
+                const row = document.createElement('tr');
+                row.style.borderBottom = '1px solid #e5e7eb';
+                row.innerHTML = `
+                    <td style="padding: 12px; font-weight: 500;">${kalem.stok_adi}</td>
+                    <td style="padding: 12px; text-align: right; color: #6b7280;">${parseFloat(kalem.talep_edilen_miktar).toFixed(3)} ${kalem.birim}</td>
+                    <td style="padding: 12px; text-align: right;">
+                        <input type="number" 
+                               class="tedarikci-fiyat-input"
+                               data-kalem-id="${kalem.id}"
+                               value="${kalem.tedarikci_fiyat || kalem.birim_fiyat || ''}"
+                               min="0" 
+                               step="0.01"
+                               style="width: 120px; padding: 6px; border: 1px solid #d1d5db; border-radius: 4px; text-align: right;">
+                    </td>
+                    <td style="padding: 12px; text-align: right;">
+                        <input type="number" 
+                               class="teslim-suresi-input"
+                               data-kalem-id="${kalem.id}"
+                               value="${kalem.teslim_suresi || ''}"
+                               min="0"
+                               step="1"
+                               style="width: 100px; padding: 6px; border: 1px solid #d1d5db; border-radius: 4px; text-align: right;">
+                        <span style="margin-left: 5px; color: #6b7280;">gün</span>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            document.getElementById('teklifGirisiModal').style.display = 'flex';
+        })
+        .catch(error => {
+            console.error('Hata:', error);
+            alert('Kalemler yüklenirken bir hata oluştu.');
+        });
+}
+
+function closeTeklifGirisiModal() {
+    document.getElementById('teklifGirisiModal').style.display = 'none';
+}
+
+function teklifGirisiKaydet(event) {
+    event.preventDefault();
+    
+    const satinalmaId = document.getElementById('teklifGirisiSatinalmaId').value;
+    const kalemler = [];
+    
+    document.querySelectorAll('.tedarikci-fiyat-input, .teslim-suresi-input').forEach(input => {
+        const kalemId = input.getAttribute('data-kalem-id');
+        const existingKalem = kalemler.find(k => k.kalem_id === kalemId);
+        
+        if (input.classList.contains('tedarikci-fiyat-input')) {
+            const fiyat = parseFloat(input.value) || null;
+            if (existingKalem) {
+                existingKalem.tedarikci_fiyat = fiyat;
+            } else {
+                kalemler.push({
+                    kalem_id: kalemId,
+                    tedarikci_fiyat: fiyat,
+                    teslim_suresi: null
+                });
+            }
+        } else if (input.classList.contains('teslim-suresi-input')) {
+            const sure = parseInt(input.value) || null;
+            if (existingKalem) {
+                existingKalem.teslim_suresi = sure;
+            } else {
+                kalemler.push({
+                    kalem_id: kalemId,
+                    tedarikci_fiyat: null,
+                    teslim_suresi: sure
+                });
+            }
+        }
+    });
+    
+    const formData = new FormData();
+    formData.append('kalemler', JSON.stringify(kalemler));
+    
+    const csrftoken = getCSRFToken();
+    if (csrftoken) {
+        formData.append('csrfmiddlewaretoken', csrftoken);
+    }
+    
+    fetch(`{% url 'stokapp:teklif_girisi' 0 %}`.replace('0', satinalmaId), {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message || 'Teklif bilgileri kaydedildi.');
+            closeTeklifGirisiModal();
+            window.location.reload();
+        } else {
+            alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+        }
+    })
+    .catch(error => {
+        console.error('Hata:', error);
+        alert('Teklif bilgileri kaydedilirken bir hata oluştu.');
+    });
+}
+
+// Sipariş oluştur
+function siparisOlustur(satinalmaId) {
+    window.location.href = `{% url 'stokapp:siparis_formu' %}?ids=${satinalmaId}`;
+}
+
+function teklifFormuOlustur() {
+    const selectedIds = getSelectedSatinalmaIds();
+    if (selectedIds.length === 0) {
+        alert('Lütfen en az bir satın alma seçin.');
+        return;
+    }
+    
+    // Loading popup göster
+    const loadingModal = document.createElement('div');
+    loadingModal.id = 'teknikResimLoadingModal';
+    loadingModal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 3000; display: flex; align-items: center; justify-content: center;';
+    loadingModal.innerHTML = `
+        <div style="background: white; border-radius: 12px; padding: 40px; max-width: 400px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+            <div style="font-size: 48px; margin-bottom: 20px;">⏳</div>
+            <h3 style="margin: 0 0 10px 0; color: #111827; font-size: 20px;">Teknik Resim İşleniyor</h3>
+            <p style="margin: 0; color: #6b7280; font-size: 14px;">Lütfen bekleyin...</p>
+        </div>
+    `;
+    document.body.appendChild(loadingModal);
+    
+    // Seçilen ID'leri query string olarak gönder
+    const idsParam = selectedIds.join(',');
+    
+    // Teknik resimleri işle
+    const formData = new FormData();
+    formData.append('ids', idsParam);
+    const csrftoken = getCSRFToken();
+    if (csrftoken) {
+        formData.append('csrfmiddlewaretoken', csrftoken);
+    }
+    
+    fetch('{% url "stokapp:teklif_formu_teknik_resim_isle" %}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // İşlem başarılı, 2 saniye bekle
+            setTimeout(() => {
+                // Popup'ı kapat
+                loadingModal.remove();
+                // Teklif formu sayfasına yönlendir
+                window.location.href = '{% url "stokapp:teklif_talep_formu" %}?ids=' + idsParam;
+            }, 2000);
+        } else {
+            // Hata durumunda popup'ı kapat ve uyarı göster
+            loadingModal.remove();
+            alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+        }
+    })
+    .catch(error => {
+        console.error('Hata:', error);
+        loadingModal.remove();
+        alert('Teknik resimler işlenirken bir hata oluştu. Teklif formu oluşturuluyor...');
+        // Hata olsa bile teklif formu sayfasına git
+        window.location.href = '{% url "stokapp:teklif_talep_formu" %}?ids=' + idsParam;
+    });
+        }
+
+// Sayfa yüklendiğinde buton durumunu güncelle
+document.addEventListener('DOMContentLoaded', function() {
+    updateTeklifButton();
+});
+</script>
+
+<script>
+(function () {
+    const purchaseTooltipEl = document.getElementById("purchaseHoverTooltip");
+    const purchaseTooltipBodyEl = document.getElementById("purchaseHoverTooltipBody");
+    const purchaseItemsCache = new Map();
+    let purchaseHoverTimeout = null;
+    let purchaseTooltipOpen = false;
+    let currentPurchaseId = null;
+    let currentPurchaseAnchor = null;
+
+    function hidePurchaseTooltip() {
+        if (purchaseHoverTimeout) {
+            clearTimeout(purchaseHoverTimeout);
+            purchaseHoverTimeout = null;
+        }
+        purchaseTooltipEl.style.display = "none";
+        purchaseTooltipOpen = false;
+        currentPurchaseId = null;
+        currentPurchaseAnchor = null;
+    }
+
+    function formatPurchaseItemsHtml(items) {
+        if (!Array.isArray(items) || items.length === 0) {
+            return `<div style="color:#6b7280;">Kalem bulunamadı.</div>`;
+        }
+        return items.map((item) => `
+            <div style="display:grid; grid-template-columns: 1fr 1fr auto; gap:8px; padding:6px 0; border-bottom:1px solid #f1f5f9;">
+                <div style="font-weight:600;">${item.code || "-"}</div>
+                <div style="color:#374151;">${item.name || "-"}</div>
+                <div style="text-align:right; font-weight:600;">${item.quantity || "0"} ${item.unit || ""}</div>
+            </div>
+        `).join("");
+    }
+
+    function positionPurchaseTooltip(anchorEl) {
+        const rect = anchorEl.getBoundingClientRect();
+        const margin = 10;
+        const tooltipWidth = Math.min(380, window.innerWidth * 0.92);
+        let left = rect.left;
+        let top = rect.bottom + 8;
+        if (left + tooltipWidth > window.innerWidth - margin) left = window.innerWidth - tooltipWidth - margin;
+        if (left < margin) left = margin;
+        if (top + 260 > window.innerHeight - margin) top = Math.max(margin, rect.top - 260);
+        purchaseTooltipEl.style.left = `${left}px`;
+        purchaseTooltipEl.style.top = `${top}px`;
+    }
+
+    async function showPurchaseTooltip(anchorEl, purchaseId, itemsUrl) {
+        currentPurchaseId = purchaseId;
+        currentPurchaseAnchor = anchorEl;
+        positionPurchaseTooltip(anchorEl);
+        purchaseTooltipEl.style.display = "block";
+        purchaseTooltipBodyEl.innerHTML = `<div style="color:#6b7280;">Yükleniyor...</div>`;
+        purchaseTooltipOpen = true;
+
+        if (purchaseItemsCache.has(purchaseId)) {
+            purchaseTooltipBodyEl.innerHTML = formatPurchaseItemsHtml(purchaseItemsCache.get(purchaseId));
+            return;
+        }
+
+        try {
+            const res = await fetch(itemsUrl, { headers: { "X-Requested-With": "XMLHttpRequest" } });
+            const payload = await res.json();
+            if (!res.ok || !payload.success) {
+                purchaseTooltipBodyEl.innerHTML = `<div style="color:#b91c1c;">Detaylar alınamadı.</div>`;
+                return;
+            }
+            purchaseItemsCache.set(purchaseId, payload.items || []);
+            if (purchaseTooltipOpen && currentPurchaseId === purchaseId) {
+                purchaseTooltipBodyEl.innerHTML = formatPurchaseItemsHtml(payload.items || []);
+            }
+        } catch (e) {
+            purchaseTooltipBodyEl.innerHTML = `<div style="color:#b91c1c;">Detaylar alınamadı.</div>`;
+        }
+    }
+
+    document.querySelectorAll(".purchase-hover-trigger").forEach((el) => {
+        el.addEventListener("mouseenter", () => {
+            const purchaseId = el.dataset.purchaseId;
+            const itemsUrl = el.dataset.itemsUrl;
+            if (!purchaseId || !itemsUrl) return;
+            if (purchaseHoverTimeout) clearTimeout(purchaseHoverTimeout);
+            purchaseHoverTimeout = setTimeout(() => {
+                showPurchaseTooltip(el, purchaseId, itemsUrl);
+            }, 1000);
+        });
+        el.addEventListener("mouseleave", (evt) => {
+            if (purchaseHoverTimeout) {
+                clearTimeout(purchaseHoverTimeout);
+                purchaseHoverTimeout = null;
+            }
+            if (purchaseTooltipOpen) {
+                const toEl = evt.relatedTarget;
+                if (!toEl || !purchaseTooltipEl.contains(toEl)) {
+                    hidePurchaseTooltip();
+                }
+            }
+        });
+    });
+
+    purchaseTooltipEl.addEventListener("mouseleave", () => hidePurchaseTooltip());
+    window.addEventListener("scroll", () => {
+        if (purchaseTooltipOpen && currentPurchaseAnchor) positionPurchaseTooltip(currentPurchaseAnchor);
+    }, true);
+    window.addEventListener("resize", () => {
+        if (purchaseTooltipOpen && currentPurchaseAnchor) positionPurchaseTooltip(currentPurchaseAnchor);
+    });
+})();
+</script>
+
+<style>
+.teslim-al-btn:hover {
+    opacity: 0.8;
+}
+
+.teslim-al-option:hover {
+    background-color: #f3f4f6;
+}
+</style>
+
+{% endblock %}
+

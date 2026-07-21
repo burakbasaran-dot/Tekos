@@ -1,0 +1,128 @@
+{% extends 'stokapp/base.html' %}
+{% load static %}
+
+{% block title %}ECO Detay{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h1 style="margin: 0;">📝 ECO Detay</h1>
+        <div style="display: flex; gap: 10px;">
+            {% if eco.approval_status == 'DRAFT' or eco.approval_status == 'REJECTED' %}
+            <a href="{% url 'stokapp:eco_duzenle' eco.pk %}" class="btn btn-secondary">Düzenle</a>
+            {% endif %}
+            {% if eco.approval_status == 'PENDING' %}
+            <a href="{% url 'stokapp:eco_onayla' eco.pk %}" class="btn btn-primary" onclick="return confirm('Bu ECO\'yu onaylamak istediğinizden emin misiniz?');">Onayla</a>
+            <button type="button" onclick="showRejectModal()" class="btn btn-secondary" style="background: #dc3545; color: white;">Reddet</button>
+            {% endif %}
+            <a href="{% url 'stokapp:eco_listesi' %}" class="btn btn-secondary">← Geri</a>
+        </div>
+    </div>
+    
+    <!-- Temel Bilgiler -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">
+        <div>
+            <strong>Ürün:</strong> {{ eco.product.ad }}
+        </div>
+        <div>
+            <strong>Değişiklik Tipi:</strong> {{ eco.get_change_type_display }}
+        </div>
+        <div>
+            <strong>Revizyon:</strong> {{ eco.from_revision }} → {{ eco.to_revision }}
+        </div>
+        <div>
+            <strong>Onay Durumu:</strong>
+            <span style="display: inline-block; padding: 4px 8px; border-radius: 4px; background: 
+                {% if eco.approval_status == 'APPROVED' %}#22c55e
+                {% elif eco.approval_status == 'REJECTED' %}#ef4444
+                {% elif eco.approval_status == 'PENDING' %}#f97316
+                {% else %}#6b7280{% endif %}; color: white;">
+                {{ eco.get_approval_status_display }}
+            </span>
+        </div>
+        <div>
+            <strong>Geçerlilik Tarihi:</strong> {{ eco.effective_from_date|date:"d.m.Y" }}
+        </div>
+        {% if eco.approved_by %}
+        <div>
+            <strong>Onaylayan:</strong> {{ eco.approved_by.username }}
+        </div>
+        {% endif %}
+        {% if eco.approved_at %}
+        <div>
+            <strong>Onay Tarihi:</strong> {{ eco.approved_at|date:"d.m.Y H:i" }}
+        </div>
+        {% endif %}
+        <div>
+            <strong>Oluşturan:</strong> {{ eco.created_by.username }}
+        </div>
+        <div>
+            <strong>Oluşturulma:</strong> {{ eco.created_at|date:"d.m.Y H:i" }}
+        </div>
+    </div>
+    
+    {% if eco.complaint %}
+    <div style="margin-bottom: 20px; padding: 15px; background: #f9fafb; border-radius: 8px;">
+        <strong>İlgili Şikayet:</strong> 
+        <a href="{% url 'stokapp:complaint_detay' eco.complaint.pk %}">{{ eco.complaint.get_type_display }} - {{ eco.complaint.customer.ad }}</a>
+    </div>
+    {% endif %}
+    
+    <div style="margin-bottom: 20px;">
+        <strong>Açıklama:</strong>
+        <div style="padding: 15px; background: #f9fafb; border-radius: 8px; margin-top: 10px;">
+            {{ eco.description|linebreaks }}
+        </div>
+    </div>
+    
+    {% if eco.rejection_reason %}
+    <div style="margin-bottom: 20px; padding: 15px; background: #f8d7da; border-left: 4px solid #dc3545; border-radius: 8px;">
+        <strong>Red Nedeni:</strong>
+        <div style="margin-top: 10px;">{{ eco.rejection_reason|linebreaks }}</div>
+    </div>
+    {% endif %}
+    
+    <!-- Audit Log -->
+    {% if audit_logs %}
+    <div>
+        <h2 style="margin-bottom: 15px;">Değişiklik Geçmişi</h2>
+        <div style="max-height: 400px; overflow-y: auto;">
+            {% for log in audit_logs %}
+            <div style="padding: 10px; border-bottom: 1px solid #e5e7eb;">
+                <strong>{{ log.get_action_type_display }}</strong> - {{ log.user.username|default:"Sistem" }} - {{ log.timestamp|date:"d.m.Y H:i" }}
+                {% if log.field_name %}
+                <br><small style="color: #6b7280;">{{ log.field_name }}: {{ log.old_value }} → {{ log.new_value }}</small>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Red Modal -->
+<div id="rejectModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; padding: 30px; border-radius: 8px; max-width: 500px; width: 90%;">
+        <h2 style="margin-top: 0;">ECO Reddet</h2>
+        <form method="post" action="{% url 'stokapp:eco_reddet' eco.pk %}">
+            {% csrf_token %}
+            <label style="display: block; margin-bottom: 5px; font-weight: 600;">Red Nedeni:</label>
+            <textarea name="rejection_reason" rows="5" class="form-control" required style="width: 100%;"></textarea>
+            <div style="margin-top: 20px; display: flex; gap: 10px;">
+                <button type="submit" class="btn btn-primary" style="background: #dc3545; border-color: #dc3545;">Reddet</button>
+                <button type="button" onclick="hideRejectModal()" class="btn btn-secondary">İptal</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function showRejectModal() {
+    document.getElementById('rejectModal').style.display = 'flex';
+}
+function hideRejectModal() {
+    document.getElementById('rejectModal').style.display = 'none';
+}
+</script>
+{% endblock %}
+

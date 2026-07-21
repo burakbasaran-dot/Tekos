@@ -1,0 +1,148 @@
+{% extends "stokapp/base.html" %}
+{% load static %}
+{% block title %}Üretim Duruş Raporları{% endblock %}
+
+{% block content %}
+<div class="durus-page-wrap">
+<div class="durus-page-header">
+  <div>
+    <h1 style="margin:0 0 6px 0;">Üretim Duruş Raporları</h1>
+    <div class="muted">Duruşları filtreleyin, KPI ve grafiklerle analiz edin.</div>
+  </div>
+  <div class="export-actions">
+    <a id="export-excel-btn" class="btn btn-secondary" href="#">Excel Export</a>
+    <a id="export-pdf-btn" class="btn btn-secondary" href="#">PDF Export</a>
+  </div>
+</div>
+
+<section class="card section">
+  <h3 class="section-title">Filtre Alanı</h3>
+  <form id="durus-filter-form" class="filter-grid">
+    <label>Tarih Başlangıç<input type="date" name="date_start"></label>
+    <label>Tarih Bitiş<input type="date" name="date_end"></label>
+    <label>Personel
+      <select name="personel">
+        <option value="">Tümü</option>
+        {% for p in personeller %}
+          <option value="{{ p.id }}">{{ p.ad }} {{ p.soyad }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Makine (İş Merkezi)
+      <select name="makine">
+        <option value="">Tümü</option>
+        {% for m in makineler %}
+          <option value="{{ m.id }}">{{ m.ad }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Ürün
+      <select name="urun">
+        <option value="">Tümü</option>
+        {% for u in urunler %}
+          <option value="{{ u.id }}">{{ u.stok_kodu }} - {{ u.ad }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Operasyon<input type="text" name="operasyon" placeholder="Operasyon adı"></label>
+    <label>Duruş Nedeni
+      <select name="durus_nedeni">
+        <option value="">Tümü</option>
+        {% for n in nedenler %}
+          <option value="{{ n }}">{{ n }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>İş Emri Tipi
+      <select name="uretim_tipi">
+        <option value="">Tümü</option>
+        <option value="ORDER">Sipariş</option>
+        <option value="STOCK">Stok</option>
+      </select>
+    </label>
+    <div class="filter-actions">
+      <button class="btn btn-secondary" type="submit">Filtrele</button>
+      <button class="btn btn-secondary" type="button" id="durus-clear-btn">Temizle</button>
+    </div>
+  </form>
+</section>
+
+<section class="kpi-grid" id="kpi-cards">
+  <div class="card kpi-card"><div class="k">Toplam Duruş Süresi</div><div class="v" id="kpi-toplam-sure">00:00</div></div>
+  <div class="card kpi-card"><div class="k">Duruş Sayısı</div><div class="v" id="kpi-sayi">0</div></div>
+  <div class="card kpi-card"><div class="k">Ortalama Duruş</div><div class="v" id="kpi-ortalama">00:00</div></div>
+  <div class="card kpi-card"><div class="k">En Uzun Duruş</div><div class="v" id="kpi-en-uzun">00:00</div></div>
+  <div class="card kpi-card"><div class="k">En Çok Duruş Yapan Makine</div><div class="v" id="kpi-makine">-</div></div>
+  <div class="card kpi-card"><div class="k">En Çok Duruş Yapan Personel</div><div class="v" id="kpi-personel">-</div></div>
+</section>
+
+<section class="chart-grid">
+  <div class="card chart-card"><h3 class="section-title">Duruş Sebepleri</h3><div class="chart-canvas-wrap"><canvas id="chart-reason"></canvas></div></div>
+  <div class="card chart-card"><h3 class="section-title">Makine Bazlı Duruş</h3><div class="chart-canvas-wrap"><canvas id="chart-machine"></canvas></div></div>
+  <div class="card chart-card"><h3 class="section-title">Günlük Trend</h3><div class="chart-canvas-wrap"><canvas id="chart-daily"></canvas></div></div>
+  <div class="card chart-card"><h3 class="section-title">Personel Bazlı Duruş</h3><div class="chart-canvas-wrap"><canvas id="chart-personnel"></canvas></div></div>
+</section>
+
+<section class="card section">
+  <h3 class="section-title">Detay Tablo</h3>
+  <div class="muted" id="durus-row-count">0 kayıt</div>
+  <div style="overflow:auto;">
+    <table class="durus-table">
+      <thead>
+        <tr>
+          <th>Tarih</th><th>İş Emri</th><th>Ürün</th><th>Operasyon</th><th>Personel</th><th>Makine</th>
+          <th>Duruş Nedeni</th><th>Başlangıç</th><th>Bitiş</th><th>Süre</th><th>Açıklama</th>
+        </tr>
+      </thead>
+      <tbody id="durus-table-body"><tr><td colspan="11" class="muted">Yükleniyor...</td></tr></tbody>
+    </table>
+  </div>
+  <div class="pagination-row">
+    <button class="btn btn-secondary" id="durus-prev-page" type="button">Önceki</button>
+    <span id="durus-page-text" class="muted">Sayfa 1/1</span>
+    <button class="btn btn-secondary" id="durus-next-page" type="button">Sonraki</button>
+  </div>
+</section>
+
+<script id="durus-rapor-config" type="application/json">
+{
+  "listUrl": "{% url 'stokapp:uretim_durus_raporlari_api_liste' %}",
+  "summaryUrl": "{% url 'stokapp:uretim_durus_raporlari_api_ozet' %}",
+  "chartsUrl": "{% url 'stokapp:uretim_durus_raporlari_api_grafikler' %}",
+  "exportExcelUrl": "{% url 'stokapp:uretim_durus_raporlari_export_excel' %}",
+  "exportPdfUrl": "{% url 'stokapp:uretim_durus_raporlari_export_pdf' %}"
+}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="{% static 'stokapp/js/uretim_durus_raporlari.js' %}"></script>
+
+<style>
+.durus-page-wrap { max-width: 1380px; margin: 0 auto; }
+.durus-page-header { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:14px; }
+.muted { color:#6b7280; font-size:12px; }
+.section { margin-bottom:14px; border-radius:12px; }
+.section-title { margin:0 0 10px 0; font-size:14px; letter-spacing: 0.1px; }
+.filter-grid { display:grid; grid-template-columns: repeat(4, minmax(180px, 1fr)); gap:10px; }
+.filter-grid label { display:flex; flex-direction:column; gap:6px; font-size:12px; color:#4b5563; }
+.filter-grid input, .filter-grid select { border:1px solid #d1d5db; border-radius:8px; padding:8px 10px; font-size:12px; }
+.filter-actions { display:flex; gap:8px; align-items:end; }
+.kpi-grid { display:grid; grid-template-columns: repeat(6, minmax(150px, 1fr)); gap:10px; margin-bottom:14px; }
+.kpi-card { padding: 12px; border-radius: 12px; }
+.kpi-card .k { font-size:11px; color:#6b7280; margin-bottom:4px; text-transform: uppercase; letter-spacing: .2px; }
+.kpi-card .v { font-size:20px; font-weight:700; color:#0f172a; line-height: 1.15; }
+.chart-grid { display:grid; grid-template-columns: repeat(2, minmax(280px, 1fr)); gap:12px; margin-bottom:14px; align-items: start; }
+.chart-card { padding: 12px; border-radius: 12px; min-height: 320px; max-height: 320px; overflow: hidden; }
+.chart-canvas-wrap { position: relative; height: 260px; max-height: 260px; width: 100%; }
+.chart-canvas-wrap canvas { width: 100% !important; height: 100% !important; display: block; }
+.durus-table th { background:#f9fafb; color:#374151; border-bottom:1px solid #e5e7eb; white-space:nowrap; }
+.durus-table td { border-bottom:1px solid #f1f5f9; font-size:12px; white-space:nowrap; }
+.pagination-row { display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-top:10px; }
+.export-actions { display:flex; gap:8px; }
+@media (max-width: 1200px) {
+  .filter-grid { grid-template-columns: repeat(2, minmax(180px, 1fr)); }
+  .kpi-grid { grid-template-columns: repeat(2, minmax(160px, 1fr)); }
+  .chart-grid { grid-template-columns: 1fr; }
+}
+</style>
+</div>
+{% endblock %}

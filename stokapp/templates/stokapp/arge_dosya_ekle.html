@@ -1,0 +1,20 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Dosya yükle — {{ proje.proje_kodu }}{% endblock %}
+{% block content %}
+<div class="card" style="max-width:560px;">
+  <h2 style="margin-top:0;">Dosya yükle</h2>
+  <p><a href="{% url 'stokapp:arge_proje_detay' proje.pk %}?tab=dosyalar" class="btn btn-secondary">← İptal</a></p>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {% for field in form %}
+    <div style="margin-bottom:14px;">
+      <label style="display:block;font-weight:600;margin-bottom:4px;">{{ field.label }}</label>
+      {{ field }}
+      {% if field.errors %}<div style="color:#b91c1c;">{{ field.errors }}</div>{% endif %}
+    </div>
+    {% endfor %}
+    <button type="submit" class="btn btn-primary">Yükle</button>
+  </form>
+</div>
+<style>.card input, .card select { width:100%; padding:8px;border-radius:8px;border:1px solid #d1d5db;}</style>
+{% endblock %}

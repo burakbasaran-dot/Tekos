@@ -1,0 +1,349 @@
+{% extends "stokapp/base.html" %}
+{% block title %}{% if is_new %}Yeni Tedarikçi Teklif Talebi{% else %}Tedarikçi Teklif Talebi Düzenle{% endif %}{% endblock %}
+{% block content %}
+{% include "stokapp/includes/tdk_form_styles.html" %}
+<style>
+.rfq-kalem-count {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
+}
+.rfq-kalem-table select,
+.rfq-kalem-table input[type="text"],
+.rfq-kalem-table input[type="date"],
+.rfq-kalem-table textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+.rfq-kalem-table textarea { resize: vertical; min-height: 38px; }
+.rfq-footer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+.rfq-btn-send {
+  background: #22c55e !important;
+  border-color: #22c55e !important;
+}
+@media (max-width: 900px) {
+  .tdk-grid-3.rfq-top-grid { grid-template-columns: 1fr; }
+  .tdk-grid.rfq-meta-grid { grid-template-columns: 1fr; }
+}
+</style>
+
+<div class="tdk-page">
+  <div class="tdk-header">
+    <div>
+      <h1>
+        {% if is_new %}📨 Yeni Tedarikçi Teklif Talebi{% else %}✏️ {{ rfq.rfq_no }} — Düzenle{% endif %}
+      </h1>
+      <p>Talep kalemlerini tanımlayın; taslak kaydedin veya doğrudan tedarikçilere gönderin.</p>
+    </div>
+    <a href="{% url 'stokapp:satinalma_listesi' %}?tab=teklif_bekleyen" class="btn btn-secondary">← Geri</a>
+  </div>
+
+  {% if messages %}
+    {% for message in messages %}
+    <div class="tdk-alert {% if message.tags == 'error' %}tdk-alert-error{% elif message.tags == 'warning' %}tdk-alert-warning{% else %}tdk-alert-success{% endif %}">
+      {{ message }}
+    </div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="post" id="rfqForm" class="tdk-form-card">
+    {% csrf_token %}
+    {% if source_siparis_id %}
+    <input type="hidden" name="source_siparis" value="{{ source_siparis_id }}">
+    {% endif %}
+    <input type="hidden" name="kalemler" id="kalemlerInput">
+    <input type="hidden" name="save_and_send" id="saveAndSendInput" value="">
+
+    <section class="tdk-section">
+      <h2 class="tdk-section-title">
+        <span class="tdk-section-icon">📋</span>
+        Genel Bilgiler
+      </h2>
+      <div class="tdk-grid-3 rfq-top-grid">
+        <div class="tdk-field tdk-has-help full" style="grid-column: 1 / -1;" data-help="Teklif talebinin kısa başlığı. Listelerde ve tedarikçi maillerinde görünür.">
+          <label class="tdk-label required" for="rfq_baslik">Başlık</label>
+          <input type="text" name="baslik" id="rfq_baslik" maxlength="300" required class="form-control"
+                 value="{{ default_baslik }}"
+                 placeholder="Örn: 2026/05 Civata satın alma teklif talebi">
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Talebin oluşturulduğu tarih. Kalem termin hesaplarının referansıdır.">
+          <label class="tdk-label required" for="rfq_olusturma">Oluşturma Tarihi</label>
+          <input type="date" name="olusturma_tarihi" id="rfq_olusturma" value="{{ default_olusturma_tarihi }}" required>
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Tedarikçilerin teklif vermesi için son tarih. Boş bırakılabilir.">
+          <label class="tdk-label" for="rfq_son_teklif">Son Teklif Tarihi</label>
+          <input type="date" name="son_teklif_tarihi" id="rfq_son_teklif" value="{{ default_son_teklif_tarihi }}">
+        </div>
+      </div>
+      <div class="tdk-grid rfq-meta-grid" style="margin-top: 18px;">
+        <div class="tdk-field tdk-has-help" data-help="Karşılaştırmada öncelik kriteri: fiyat mı termin mi ağırlıklı değerlendirilecek.">
+          <label class="tdk-label" for="rfq_oncelik">Öncelik</label>
+          <select name="oncelik" id="rfq_oncelik">
+            <option value="FIYAT" {% if rfq and rfq.oncelik == 'FIYAT' %}selected{% endif %}>Fiyat</option>
+            <option value="TERMIN" {% if rfq and rfq.oncelik == 'TERMIN' %}selected{% endif %}>Termin</option>
+          </select>
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Tedarikçilerden beklenen teklif para birimi.">
+          <label class="tdk-label" for="rfq_para_birimi">Para Birimi</label>
+          <select name="para_birimi" id="rfq_para_birimi">
+            <option value="TRY" {% if rfq and rfq.para_birimi == 'TRY' %}selected{% endif %}>TRY (₺)</option>
+            <option value="USD" {% if rfq and rfq.para_birimi == 'USD' %}selected{% endif %}>USD ($)</option>
+            <option value="EUR" {% if rfq and rfq.para_birimi == 'EUR' %}selected{% endif %}>EUR (€)</option>
+            <option value="GBP" {% if rfq and rfq.para_birimi == 'GBP' %}selected{% endif %}>GBP (£)</option>
+          </select>
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Tedarikçilere iletilecek genel açıklama veya dahili not.">
+          <label class="tdk-label" for="rfq_notlar">Notlar</label>
+          <input type="text" name="notlar" id="rfq_notlar" class="form-control" value="{% if rfq %}{{ rfq.notlar }}{% endif %}">
+        </div>
+      </div>
+    </section>
+
+    <section class="tdk-section">
+      <div class="tdk-section-head">
+        <h2 class="tdk-section-title">
+          <span class="tdk-section-icon green">📦</span>
+          Talep Edilen Kalemler
+        </h2>
+        <span id="kalemSayisi" class="rfq-kalem-count">0 kalem</span>
+      </div>
+      <div class="tdk-table-wrap">
+        <table class="tdk-table rfq-kalem-table">
+          <thead>
+            <tr>
+              <th class="tdk-has-help" style="width:30%;" data-help="Stok kartından seçin veya kalem adını manuel yazın.">Kalem / Stok</th>
+              <th class="tdk-has-help" style="width:10%;" data-help="Talep edilen miktar. Tam sayı veya ondalıklı (örn. 21,55).">Miktar</th>
+              <th class="tdk-has-help" style="width:8%;" data-help="Ölçü birimi. Stok seçildiğinde otomatik dolar.">Birim</th>
+              <th class="tdk-has-help" style="width:12%;" data-help="Malzemenin istenen teslim tarihi. Varsayılan: oluşturma + 2 iş günü.">İstenen Termin</th>
+              <th class="tdk-has-help" style="width:35%;" data-help="Tedarikçiye iletilecek teknik detay, marka veya özel şartlar.">Teknik Notlar</th>
+              <th style="width:5%;">İşlem</th>
+            </tr>
+          </thead>
+          <tbody id="kalemTbody"></tbody>
+        </table>
+      </div>
+      <button type="button" onclick="kalemEkle()" class="btn btn-primary" style="margin-top:14px;">+ Kalem Ekle</button>
+    </section>
+
+    <div class="tdk-footer rfq-footer-actions">
+      <a href="{% url 'stokapp:satinalma_listesi' %}?tab=teklif_bekleyen" class="btn btn-secondary">İptal</a>
+      <button type="button" onclick="formGonder('save')" class="btn btn-primary">💾 Taslak Kaydet</button>
+      <button type="button" onclick="formGonder('save_and_send')" class="btn btn-primary rfq-btn-send">💾 Kaydet ve Tedarikçilere Gönder →</button>
+    </div>
+  </form>
+</div>
+
+<script>
+const STOK_LIST = [
+    {% for s in stok_items %}
+    { id: {{ s.pk }}, ad: "{{ s.ad|escapejs }}", kod: "{{ s.stok_kodu|escapejs }}", birim: "{{ s.birim|escapejs }}", kategori: "{% if s.kategori %}{{ s.kategori.ad|escapejs }}{% endif %}" }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+];
+const KALEMLER_INITIAL = {{ kalemler_initial_json|safe }};
+const DEFAULT_OLUSTURMA_YMD = "{{ default_olusturma_tarihi }}";
+
+const RFQ_KALEM_HELP = {
+    stok: 'Stok kartından seçin veya kalem adını manuel yazın.',
+    ad: 'Tedarikçiye gönderilecek kalem adı. Stok seçildiğinde otomatik dolar.',
+    miktar: 'Talep edilen miktar. Tam sayı veya ondalıklı (örn. 21,55).',
+    birim: 'Ölçü birimi. Stok seçildiğinde otomatik dolar.',
+    termin: 'Malzemenin istenen teslim tarihi. Varsayılan: oluşturma + 2 iş günü.',
+    teknik: 'Tedarikçiye iletilecek teknik detay, marka veya özel şartlar.'
+};
+
+function parseYMD(s) {
+    if (!s || typeof s !== 'string') return null;
+    const p = s.split('-');
+    if (p.length !== 3) return null;
+    const y = parseInt(p[0], 10);
+    const m = parseInt(p[1], 10) - 1;
+    const d = parseInt(p[2], 10);
+    if (isNaN(y) || isNaN(m) || isNaN(d)) return null;
+    return new Date(y, m, d);
+}
+
+function formatYMD(d) {
+    const y = d.getFullYear();
+    const mo = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return y + '-' + mo + '-' + day;
+}
+
+function isWeekend(d) {
+    const w = d.getDay();
+    return w === 0 || w === 6;
+}
+
+function addBusinessDaysFromYmd(startYmd, n) {
+    const start = parseYMD(startYmd);
+    if (!start || isNaN(start.getTime())) return '';
+    const d = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    let added = 0;
+    while (added < n) {
+        d.setDate(d.getDate() + 1);
+        if (!isWeekend(d)) added++;
+    }
+    return formatYMD(d);
+}
+
+function getDefaultIstenenTermin() {
+    const inp = document.querySelector('input[name=olusturma_tarihi]');
+    const ymd = (inp && inp.value) ? inp.value : DEFAULT_OLUSTURMA_YMD;
+    return addBusinessDaysFromYmd(ymd, 2) || '';
+}
+
+function normalizeMiktarNumber(raw) {
+    if (raw === null || raw === undefined) return NaN;
+    const s = String(raw).trim().replace(/\s/g, '').replace(',', '.');
+    if (s === '') return NaN;
+    return parseFloat(s);
+}
+
+function formatMiktarTrDisplay(raw) {
+    const n = normalizeMiktarNumber(raw);
+    if (isNaN(n) || n < 0) return '1';
+    const rounded = Math.round(n);
+    if (Math.abs(n - rounded) < 1e-9) return String(rounded);
+    const x = Math.round(n * 1000) / 1000;
+    let s = x.toFixed(3);
+    s = s.replace(/\.?0+$/, '');
+    return s.replace('.', ',');
+}
+
+function miktarToBackendString(n) {
+    if (isNaN(n) || n <= 0) return '1';
+    const x = Math.round(n * 1000) / 1000;
+    return String(x);
+}
+
+function kalemSatirHTML(idx, k) {
+    const terminVal = (k && k.istenen_termin) ? k.istenen_termin : getDefaultIstenenTermin();
+    const stokOptions = ['<option value="">-- Stoktan seç --</option>'].concat(
+        STOK_LIST.map(s => `<option value="${s.id}" data-birim="${s.birim}" ${k && k.stok_item == s.id ? 'selected' : ''}>${s.kod} — ${s.ad}${s.kategori ? ' [' + s.kategori + ']' : ''}</option>`)
+    ).join('');
+    return `
+    <tr data-idx="${idx}">
+        <td class="tdk-has-help" data-help="${RFQ_KALEM_HELP.stok}" style="vertical-align:top;">
+            <select onchange="stokSecildi(this, ${idx})">${stokOptions}</select>
+            <input type="text" class="tdk-has-help" data-help="${RFQ_KALEM_HELP.ad}" name="kalem_adi_${idx}" placeholder="Kalem Adı *" required value="${k ? (k.kalem_adi||'') : ''}" style="margin-top:6px;">
+        </td>
+        <td class="tdk-has-help" data-help="${RFQ_KALEM_HELP.miktar}" style="vertical-align:top;">
+            <input type="text" inputmode="decimal" autocomplete="off" name="miktar_${idx}" value="${k ? formatMiktarTrDisplay(k.miktar) : '1'}" required title="Tam sayı veya ondalıklı (örn. 21,55)">
+        </td>
+        <td class="tdk-has-help" data-help="${RFQ_KALEM_HELP.birim}" style="vertical-align:top;">
+            <input type="text" name="birim_${idx}" value="${k ? (k.birim||'Adet') : 'Adet'}">
+        </td>
+        <td class="tdk-has-help" data-help="${RFQ_KALEM_HELP.termin}" style="vertical-align:top;">
+            <input type="date" name="istenen_termin_${idx}" value="${terminVal}">
+        </td>
+        <td class="tdk-has-help" data-help="${RFQ_KALEM_HELP.teknik}" style="vertical-align:top;">
+            <textarea name="teknik_notlar_${idx}" rows="1">${k ? (k.teknik_notlar||'') : ''}</textarea>
+        </td>
+        <td style="vertical-align:top; text-align:center;">
+            <button type="button" onclick="kalemSil(this)" class="btn" style="background:#ef4444; color:#fff; padding:6px 10px;">×</button>
+        </td>
+    </tr>`;
+}
+
+let kalemIdx = 0;
+function kalemEkle(initial) {
+    const tbody = document.getElementById('kalemTbody');
+    tbody.insertAdjacentHTML('beforeend', kalemSatirHTML(kalemIdx, initial));
+    kalemIdx++;
+    sayiyiGuncelle();
+}
+
+function kalemSil(btn) {
+    btn.closest('tr').remove();
+    sayiyiGuncelle();
+}
+
+function stokSecildi(sel, idx) {
+    const opt = sel.options[sel.selectedIndex];
+    const tr = sel.closest('tr');
+    if (!opt.value) return;
+    const adInput = tr.querySelector(`input[name=kalem_adi_${idx}]`);
+    if (adInput && !adInput.value.trim()) {
+        adInput.value = opt.text.replace(/^\S+\s—\s/, '').replace(/\s\[.+\]$/, '');
+    }
+    const birimInput = tr.querySelector(`input[name=birim_${idx}]`);
+    if (birimInput) birimInput.value = opt.dataset.birim || 'Adet';
+}
+
+function sayiyiGuncelle() {
+    document.getElementById('kalemSayisi').textContent = document.querySelectorAll('#kalemTbody tr').length + ' kalem';
+}
+
+function topla() {
+    const trs = document.querySelectorAll('#kalemTbody tr');
+    const out = [];
+    trs.forEach(tr => {
+        const idx = tr.dataset.idx;
+        const stokSel = tr.querySelector('select');
+        const kalem_adi = tr.querySelector(`input[name=kalem_adi_${idx}]`).value.trim();
+        if (!kalem_adi) return;
+        const miktarRaw = tr.querySelector(`input[name=miktar_${idx}]`).value;
+        const miktarNum = normalizeMiktarNumber(miktarRaw);
+        if (isNaN(miktarNum) || miktarNum <= 0) {
+            alert('Geçersiz miktar: "' + (miktarRaw || '') + '" (' + kalem_adi + ')');
+            throw new Error('invalid_miktar');
+        }
+        out.push({
+            stok_item: stokSel && stokSel.value ? parseInt(stokSel.value) : null,
+            kalem_adi: kalem_adi,
+            miktar: miktarToBackendString(miktarNum),
+            birim: tr.querySelector(`input[name=birim_${idx}]`).value || 'Adet',
+            istenen_termin: tr.querySelector(`input[name=istenen_termin_${idx}]`).value || '',
+            teknik_notlar: tr.querySelector(`textarea[name=teknik_notlar_${idx}]`).value || '',
+        });
+    });
+    return out;
+}
+
+function formGonder(mode) {
+    let veri;
+    try {
+        veri = topla();
+    } catch (e) {
+        if (e.message !== 'invalid_miktar') throw e;
+        return;
+    }
+    if (veri.length === 0) {
+        alert('En az bir kalem ekleyin.');
+        return;
+    }
+    document.getElementById('kalemlerInput').value = JSON.stringify(veri);
+    document.getElementById('saveAndSendInput').value = (mode === 'save_and_send') ? '1' : '';
+    document.getElementById('rfqForm').submit();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const tbody = document.getElementById('kalemTbody');
+    if (tbody) {
+        tbody.addEventListener('blur', function(e) {
+            const t = e.target;
+            if (!t.name || !t.name.startsWith('miktar_')) return;
+            const n = normalizeMiktarNumber(t.value);
+            if (!isNaN(n) && n > 0) {
+                t.value = formatMiktarTrDisplay(n);
+            }
+        }, true);
+    }
+    if (KALEMLER_INITIAL && KALEMLER_INITIAL.length) {
+        KALEMLER_INITIAL.forEach(k => kalemEkle(k));
+    } else {
+        kalemEkle();
+    }
+});
+</script>
+{% endblock %}

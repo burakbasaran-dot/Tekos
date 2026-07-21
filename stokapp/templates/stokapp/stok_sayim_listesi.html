@@ -1,0 +1,60 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Stok Sayım İşlemleri{% endblock %}
+{% block content %}
+<div class="card" style="max-width:1100px;margin:0 auto;background:#fff;border-radius:14px;padding:22px;border:1px solid #e5e7eb;">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:18px;">
+    <h1 style="margin:0;font-size:1.35rem;">📋 Stok Sayım İşlemleri</h1>
+    {% if rbac_god or 'stok.duzenle' in rbac_kodlar %}
+    <a href="{% url 'stokapp:stok_sayim_baslat' %}" style="display:inline-flex;align-items:center;gap:8px;padding:10px 16px;background:#2ecc71;color:#fff;border-radius:10px;text-decoration:none;font-weight:600;">➕ Yeni sayım oluştur</a>
+    {% endif %}
+  </div>
+  <p style="color:#64748b;font-size:14px;margin:0 0 18px;">
+    Sayımı oluşturun, Rapor/PDF ile listeyi yazdırıp kağıda işleyin; ardından Başlat ile programdan girişi açın.
+  </p>
+
+  <table style="width:100%;border-collapse:collapse;font-size:14px;">
+    <thead>
+      <tr style="background:#34495e;color:#fff;">
+        <th style="padding:10px;text-align:left;">#</th>
+        <th style="padding:10px;text-align:left;">Başlık</th>
+        <th style="padding:10px;text-align:left;">Durum</th>
+        <th style="padding:10px;text-align:right;">İlerleme</th>
+        <th style="padding:10px;text-align:left;">Tarih</th>
+        <th style="padding:10px;text-align:left;">İşlem</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in sayimlar %}
+      <tr style="border-bottom:1px solid #eee;">
+        <td style="padding:10px;">{{ s.pk }}</td>
+        <td style="padding:10px;">{{ s.baslik|truncatechars:48 }}</td>
+        <td style="padding:10px;">{{ s.get_durum_display }}</td>
+        <td style="padding:10px;text-align:right;">
+          {% if s.kalem_sayisi %}
+            {{ s.sayildi_sayisi|add:s.atlandi_sayisi }} / {{ s.kalem_sayisi }}
+            {% if s.bekliyor_sayisi %}<span style="color:#b45309;"> ({{ s.bekliyor_sayisi }} bekliyor)</span>{% endif %}
+          {% else %}—{% endif %}
+        </td>
+        <td style="padding:10px;">{{ s.created_at|date:"d.m.Y H:i" }}</td>
+        <td style="padding:10px;white-space:nowrap;">
+          <a href="{% url 'stokapp:stok_sayim_rapor' s.pk %}">Rapor</a>
+          {% if rbac_god or 'stok.duzenle' in rbac_kodlar %}
+            {% if s.durum == 'HAZIR' %}
+              <span style="color:#cbd5e1;margin:0 6px;">·</span>
+              <a href="{% url 'stokapp:stok_sayim_basla' s.pk %}" style="color:#15803d;font-weight:600;">Başlat</a>
+              <span style="color:#cbd5e1;margin:0 6px;">·</span>
+              <a href="{% url 'stokapp:stok_sayim_sil' s.pk %}" style="color:#b91c1c;">Sil</a>
+            {% elif s.durum == 'DEVAM' and s.bekliyor_sayisi %}
+              <span style="color:#cbd5e1;margin:0 6px;">·</span>
+              <a href="{% url 'stokapp:stok_sayim_calis' s.pk %}">Devam et</a>
+            {% endif %}
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" style="padding:18px;color:#64748b;">Henüz sayım kaydı yok.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

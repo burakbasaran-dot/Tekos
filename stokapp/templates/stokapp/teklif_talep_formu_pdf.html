@@ -1,0 +1,349 @@
+{% load currency_filters %}
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta charset="UTF-8">
+    <style>
+        @page {
+            size: A4;
+            margin: 10mm;
+        }
+        body {
+            font-family: Arial, "DejaVu Sans", sans-serif;
+            font-size: 12px;
+            color: #000;
+            margin: 0;
+            padding: 15px;
+        }
+        .header-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #000;
+        }
+        .header-table td {
+            padding-bottom: 20px;
+            vertical-align: top;
+        }
+        .logo-cell {
+            width: 250px;
+        }
+        .center-cell {
+            text-align: center;
+            width: 100%;
+        }
+        .right-cell {
+            text-align: right;
+            width: 250px;
+        }
+        .form-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 0;
+        }
+        .info-row {
+            margin: 5px 0;
+        }
+        .info-label {
+            font-weight: bold;
+            display: inline-block;
+            min-width: 120px;
+        }
+        .section-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #000;
+            color: #dc3545;
+        }
+        .section-title strong {
+            color: #dc3545;
+        }
+        .address-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .address-table td {
+            width: 50%;
+            background: #f9fafb;
+            padding: 15px;
+            border: 1px solid #000;
+            vertical-align: top;
+        }
+        .address-label {
+            font-weight: bold;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .address-content {
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        .products-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        .products-table th {
+            background: #f9fafb;
+            color: #dc3545;
+            padding: 12px;
+            border: 1px solid #000;
+            font-weight: bold;
+            font-size: 14px;
+            text-align: left;
+        }
+        .products-table th.center {
+            text-align: center;
+        }
+        .products-table th.right {
+            text-align: right;
+        }
+        .products-table td {
+            padding: 10px 12px;
+            border: 1px solid #000;
+            font-size: 11px;
+        }
+        .products-table tbody tr:nth-child(even) {
+            background: #f9fafb;
+        }
+        .products-table td.center {
+            text-align: center;
+        }
+        .products-table td.right {
+            text-align: right;
+        }
+        .summary-table {
+            width: 300px;
+            margin-left: auto;
+            margin-top: 20px;
+            border-collapse: collapse;
+        }
+        .summary-table td {
+            padding: 8px 12px;
+            border: 1px solid #000;
+            font-size: 14px;
+        }
+        .summary-table td:first-child {
+            background: #f9fafb;
+            font-weight: bold;
+            text-align: right;
+        }
+        .summary-table td:last-child {
+            text-align: right;
+        }
+        .summary-table tr:last-child td {
+            font-weight: bold;
+            border-top: 2px solid #000;
+        }
+        .summary-table tr:last-child td:last-child {
+            font-size: 16px;
+        }
+        .description-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #000;
+        }
+        .description-label {
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        .description-box {
+            min-height: 80px;
+            border: 1px solid #000;
+            padding: 10px;
+            background: #f9fafb;
+        }
+        .brand-footer {
+            margin-top: 18px;
+            border-top: 1px solid #d1d5db;
+            padding-top: 10px;
+        }
+        .brand-row {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .brand-row td {
+            border: none;
+            padding: 0;
+            vertical-align: middle;
+        }
+        .brand-logos {
+            width: 140px;
+            white-space: nowrap;
+        }
+        .brand-logos img {
+            height: 20px;
+            width: auto;
+            margin-right: 8px;
+        }
+        .brand-text {
+            font-size: 10px;
+            color: #374151;
+            line-height: 1.35;
+            text-align: right;
+        }
+        img {
+            max-width: 250px;
+            max-height: 120px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <table class="header-table">
+        <tr>
+            <td class="logo-cell">
+                {% if logo_path %}
+                    <img src="file://{{ logo_path }}" alt="Logo" style="max-width: 250px; max-height: 120px;">
+                {% elif sablon and sablon.logo_goster and sablon.logo_yolu %}
+                    {% with sablon.logo_yolu.path as logo_full_path %}
+                    <img src="file://{{ logo_full_path }}" alt="Logo" style="max-width: 250px; max-height: 120px;">
+                    {% endwith %}
+                {% endif %}
+            </td>
+            <td class="center-cell">
+                <div class="form-title">TEKLİF TALEP FORMU</div>
+            </td>
+            <td class="right-cell">
+                <div class="info-row">
+                    <span class="info-label">Teklif Numarası:</span>
+                    <strong>{{ teklif_no }}</strong>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Termin Tarihi:</span>
+                    <strong>{{ termin_tarihi|date:"d-m-Y" }}</strong>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Tedarikçi Bilgisi -->
+    <div class="section-title">TEDARİKÇİ: 
+        <strong>
+            {% if tedarikci %}
+                {% if tedarikci.ad %}
+                    {{ tedarikci.ad }}
+                {% elif tedarikci.unvan %}
+                    {{ tedarikci.unvan }}
+                {% else %}
+                    {{ tedarikci }}
+                {% endif %}
+            {% else %}
+                -
+            {% endif %}
+        </strong>
+    </div>
+
+    <!-- Adresler -->
+    <table class="address-table">
+        <tr>
+            <td>
+                <div class="address-label">Teslimat Adresi</div>
+                <div class="address-content">
+                    {% if sablon %}
+                        {{ sablon.firma_adi|default:"Tekmar Endüstriyel Makina Otomasyon San. ve Tic. Ltd. Şti." }}<br>
+                        {{ sablon.firma_adres|default:"Karadenizliler Mahallesi, Horon Sokak, NO:7, Başiskele / KOCAELİ" }}<br>
+                        TEL: {{ sablon.firma_telefon|default:"+90 532 488 38 09" }}
+                    {% else %}
+                        Tekmar Endüstriyel Makina Otomasyon San. ve Tic. Ltd. Şti.<br>
+                        Karadenizliler Mahallesi, Horon Sokak, NO:7, Başiskele / KOCAELİ<br>
+                        TEL: +90 532 488 38 09
+                    {% endif %}
+                </div>
+            </td>
+            <td>
+                <div class="address-label">Fatura Adresi</div>
+                <div class="address-content">
+                    {% if sablon %}
+                        {{ sablon.firma_adi|default:"Tekmar Endüstriyel Makina Otomasyon San. ve Tic. Ltd. Şti." }}<br>
+                        {{ sablon.firma_adres|default:"Karadenizliler Mahallesi, Horon Sokak, NO:7, Başiskele / KOCAELİ" }}<br>
+                        Vergi Dairesi / Numarası: 
+                        {% if sablon.firma_vergi_no %}
+                            {{ sablon.firma_vergi_no }}
+                        {% else %}
+                            Tepecik / 8360669996
+                        {% endif %}
+                    {% else %}
+                        Tekmar Endüstriyel Makina Otomasyon San. ve Tic. Ltd. Şti.<br>
+                        Karadenizliler Mahallesi, Horon Sokak, NO:7, Başiskele / KOCAELİ<br>
+                        Vergi Dairesi / Numarası: Tepecik / 8360669996
+                    {% endif %}
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Ürün Listesi -->
+    <div class="section-title">TEKLİF TALEP LİSTESİ</div>
+    <table class="products-table">
+        <thead>
+            <tr>
+                <th>Ürün Kodu</th>
+                <th>Ürün Adı</th>
+                <th class="center">Adet</th>
+                <th class="right">Birim Fiyatı</th>
+                <th class="right">Ara Toplam</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in kalemler %}
+            <tr>
+                <td>{{ item.kalem.stok_item.stok_kodu|default:"-" }}</td>
+                <td>{{ item.urun_adi|default:"" }}</td>
+                <td class="center">{{ item.adet|format_adet }}</td>
+                <td class="right">&nbsp;</td>
+                <td class="right">&nbsp;</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Özet -->
+    <table class="summary-table">
+        <tr>
+            <td>Toplam Birim</td>
+            <td>{{ toplam_birim|format_adet }}</td>
+        </tr>
+        <tr>
+            <td>Ara Toplam</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td>Vergi</td>
+            <td>&nbsp;</td>
+        </tr>
+        <tr>
+            <td>Toplam</td>
+            <td>&nbsp;</td>
+        </tr>
+    </table>
+
+    <!-- Açıklama -->
+    <div class="description-section">
+        <div class="description-label">Açıklama:</div>
+        <div class="description-box">
+            &nbsp;
+        </div>
+    </div>
+    <div class="brand-footer">
+        <table class="brand-row">
+            <tr>
+                <td class="brand-logos">
+                    {% if tekos_logo_path %}<img src="file://{{ tekos_logo_path }}" alt="TEKOS">{% else %}<strong style="font-size:10px;">TEKOS</strong>{% endif %}
+                    {% if tekora_logo_path %}<img src="file://{{ tekora_logo_path }}" alt="TEKORA">{% else %}<strong style="font-size:10px;">TEKORA</strong>{% endif %}
+                </td>
+                <td class="brand-text">
+                    Güvenilir üretim, sürdürülebilir tedarik ve dijital hız ile<br>
+                    TEKOS &amp; TEKORA ekosistemiyle birlikte daha güçlü.
+                </td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>

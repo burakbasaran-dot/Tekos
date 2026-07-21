@@ -1,0 +1,21 @@
+{% extends "stokapp/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="card" style="max-width:640px;margin:0 auto;">
+  <h2>{{ title }}</h2>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {% if require_revision and revision_form %}
+    <div style="background:#fff7ed;border:1px solid #fdba74;padding:12px;border-radius:8px;margin-bottom:16px;">
+      <p><strong>Revizyon gerekli:</strong> Bu planda kontrol yapılmış kayıtlar var. Değişiklik yeni revizyon oluşturur.</p>
+      {{ revision_form.change_note.label_tag }}{{ revision_form.change_note }}
+    </div>
+    {% endif %}
+    {{ form.as_p }}
+    <div style="margin-top:20px;display:flex;gap:10px;">
+      <button type="submit" class="btn btn-primary">Kaydet</button>
+      <a href="{{ cancel_url|default:'/stok/uretim/kontrol/' }}" class="btn btn-secondary">İptal</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Raf Düzenle{% endblock %}
+{% block content %}
+<div class="card" style="margin-bottom: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>✏️ Raf Düzenle: {{ raf.ad }}</h2>
+        <a href="{% url 'stokapp:raf_listesi' %}" class="btn btn-secondary">← Geri</a>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        
+        <div style="max-width: 500px; margin-bottom: 30px;">
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Depo:</label>
+                {{ form.depo }}
+                {% if form.depo.errors %}
+                    <div style="color: #dc3545; font-size: 12px; margin-top: 5px;">{{ form.depo.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Raf Adı:</label>
+                {{ form.ad }}
+                {% if form.ad.errors %}
+                    <div style="color: #dc3545; font-size: 12px; margin-top: 5px;">{{ form.ad.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <a href="{% url 'stokapp:raf_listesi' %}" class="btn btn-secondary">İptal</a>
+                <button type="submit" class="btn btn-primary">💾 Kaydet</button>
+                <a href="{% url 'stokapp:raf_sil' raf.pk %}" class="btn btn-secondary" style="background: #dc3545; color: white;">🗑️ Sil</a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Stoklar -->
+<div class="card">
+    <h3>📦 Bu Raftaki Stoklar ({{ stoklar.count }})</h3>
+    {% if stoklar %}
+    <table>
+        <thead>
+            <tr>
+                <th>Stok Kodu</th>
+                <th>Ürün Adı</th>
+                <th>Miktar</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for stok in stoklar %}
+            <tr>
+                <td><strong>{{ stok.stok_kodu }}</strong></td>
+                <td>{{ stok.ad }}</td>
+                <td>{{ stok.mevcut_miktar }} {{ stok.birim }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="text-align: center; padding: 20px; color: #6b7280;">Bu rafta henüz stok bulunmuyor.</p>
+    {% endif %}
+</div>
+{% endblock %}

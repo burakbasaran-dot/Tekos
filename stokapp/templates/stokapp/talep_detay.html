@@ -1,0 +1,218 @@
+{% extends "stokapp/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
+        <div>
+            <h2 style="margin:0 0 8px 0;">{{ talep.talep_no }}</h2>
+            <div style="font-size:15px; color:#374151; font-weight:600;">{{ talep.baslik }}</div>
+            <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:8px;">
+                {% if gecikti %}<span style="background:#dc2626; color:#fff; padding:4px 10px; border-radius:6px; font-size:12px; font-weight:600;">Gecikti</span>{% endif %}
+                {% if talep.oncelik == 'ACIL' or talep.oncelik == 'KRITIK' %}
+                <span style="background:#ea580c; color:#fff; padding:4px 10px; border-radius:6px; font-size:12px; font-weight:600;">{{ talep.get_oncelik_display }}</span>
+                {% endif %}
+                {% if siparis_bekliyor %}<span style="background:#f59e0b; color:#fff; padding:4px 10px; border-radius:6px; font-size:12px;">Sipariş verilmedi</span>{% endif %}
+                <span style="background:#e5e7eb; padding:4px 10px; border-radius:6px; font-size:12px;">{{ talep.get_durum_display }}</span>
+            </div>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <a href="{% url 'stokapp:talep_listesi' %}" class="btn btn-secondary" style="padding:8px 14px;">← Liste</a>
+            {% if request.user.is_staff or request.user.id == talep.talep_eden_id %}
+            <a href="{% url 'stokapp:talep_duzenle' talep.pk %}" class="btn btn-primary" style="padding:8px 14px;">Düzenle</a>
+            {% endif %}
+            {% if talep.satinalma_id %}
+            <a href="{% url 'stokapp:satinalma_detay' talep.satinalma_id %}" class="btn btn-primary" style="padding:8px 14px; background:#059669;">Satın Alma {{ talep.satinalma.satinalma_numarasi }}</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap:12px; margin-bottom:24px; padding:16px; background:#f9fafb; border-radius:12px;">
+        <div><div style="font-size:11px; color:#6b7280;">Talep eden</div><div style="font-weight:600;">{{ talep.talep_eden.get_full_name|default:talep.talep_eden.username }}</div></div>
+        <div><div style="font-size:11px; color:#6b7280;">Tarih</div><div style="font-weight:600;">{{ talep.talep_tarihi|date:"d.m.Y" }}</div></div>
+        <div><div style="font-size:11px; color:#6b7280;">Öncelik</div><div style="font-weight:600;">{{ talep.get_oncelik_display }}</div></div>
+        <div><div style="font-size:11px; color:#6b7280;">Termin</div><div style="font-weight:600;">{{ talep.istenen_termin|date:"d.m.Y"|default:"—" }}</div></div>
+        <div><div style="font-size:11px; color:#6b7280;">Toplam tahmini</div><div style="font-weight:600;">—</div></div>
+        <div><div style="font-size:11px; color:#6b7280;">Satınalma durumu</div><div style="font-weight:600; font-size:13px;">{{ satinalma_yazi }}</div></div>
+    </div>
+
+    <div style="display:flex; gap:8px; flex-wrap:wrap; border-bottom:2px solid #e5e7eb; margin-bottom:20px;">
+        <a href="?tab=ozet" style="padding:10px 16px; text-decoration:none; border-radius:8px 8px 0 0; {% if tab == 'ozet' %}background:#374151; color:#fff;{% else %}background:#e5e7eb; color:#374151;{% endif %}">Talep Bilgileri</a>
+        <a href="?tab=kalemler" style="padding:10px 16px; text-decoration:none; border-radius:8px 8px 0 0; {% if tab == 'kalemler' %}background:#374151; color:#fff;{% else %}background:#e5e7eb; color:#374151;{% endif %}">Talep Kalemleri</a>
+        <a href="?tab=satinalma" style="padding:10px 16px; text-decoration:none; border-radius:8px 8px 0 0; {% if tab == 'satinalma' %}background:#374151; color:#fff;{% else %}background:#e5e7eb; color:#374151;{% endif %}">Satınalma Süreci</a>
+        <a href="?tab=dosyalar" style="padding:10px 16px; text-decoration:none; border-radius:8px 8px 0 0; {% if tab == 'dosyalar' %}background:#374151; color:#fff;{% else %}background:#e5e7eb; color:#374151;{% endif %}">Dosyalar</a>
+        <a href="?tab=gecmis" style="padding:10px 16px; text-decoration:none; border-radius:8px 8px 0 0; {% if tab == 'gecmis' %}background:#374151; color:#fff;{% else %}background:#e5e7eb; color:#374151;{% endif %}">Notlar / Geçmiş</a>
+        <a href="?tab=kapat" style="padding:10px 16px; text-decoration:none; border-radius:8px 8px 0 0; {% if tab == 'kapat' %}background:#9d174d; color:#fff;{% else %}background:#fce7f3; color:#9d174d;{% endif %}">Kapat</a>
+    </div>
+
+    {% if tab == 'ozet' or tab == 'bilgi' %}
+    <div style="line-height:1.7;">
+        <p><strong>Kategori:</strong> {{ talep.get_kategori_display }}</p>
+        <p><strong>Departman:</strong> {{ talep.departman|default:"—" }}</p>
+        <p><strong>Açıklama:</strong></p>
+        <div style="white-space:pre-wrap; background:#fff; border:1px solid #e5e7eb; padding:12px; border-radius:8px;">{{ talep.aciklama|default:"—" }}</div>
+    </div>
+    {% endif %}
+
+    {% if tab == 'kalemler' %}
+    <table style="width:100%; border-collapse:collapse; font-size:13px;">
+        <thead><tr style="background:#f3f4f6;">
+            <th style="padding:10px; text-align:left; width:72px;">Sıra</th>
+            <th style="padding:10px; text-align:left;">Kalem</th>
+            <th style="padding:10px;">Miktar</th>
+            <th style="padding:10px; text-align:left;">Açıklama</th>
+            <th style="padding:10px;">Durum</th>
+        </tr></thead>
+        <tbody>
+            {% for k in talep.kalemler.all %}
+            <tr style="border-bottom:1px solid #e5e7eb;">
+                <td style="padding:10px; font-weight:600; color:#374151;">{{ forloop.counter }}.</td>
+                <td style="padding:10px;">
+                    <strong>{{ k.kalem_adi }}</strong>
+                    {% if k.marka_model_tercihi %}<div style="color:#6b7280; font-size:12px;">{{ k.marka_model_tercihi }}</div>{% endif %}
+                </td>
+                <td style="padding:10px; text-align:right;">{{ k.miktar }} {% if k.birim %}{{ k.birim.ad }}{% endif %}</td>
+                <td style="padding:10px; color:#374151; font-size:13px;">{{ k.aciklama|default:"—"|linebreaksbr }}</td>
+                <td style="padding:10px;">{{ k.get_durum_display }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" style="padding:20px; text-align:center;">Kalem yok.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    {% if tab == 'satinalma' %}
+        {% if yonetici %}
+        <p style="color:#6b7280; font-size:14px;">Onaylı taleplerde satın alma kaydı oluşturulur; talep kalemlerinin özeti satın alma <strong>Notlar</strong> alanına yazılır. Satın alma satır kalemlerini kullanıcı satın alma ekranından ekler.</p>
+        {% if talep.durum == 'ONAYLANDI' and not talep.satinalma_id %}
+        <form method="post" action="{% url 'stokapp:talep_satinalmaya_aktar' talep.pk %}" style="margin-bottom:24px; padding:16px; background:#ecfdf5; border-radius:10px;">
+            {% csrf_token %}
+            <h4 style="margin-top:0;">Satınalmaya Aktar</h4>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; max-width:560px;">
+                <div>
+                    <label>Tedarikçi</label>
+                    <select name="tedarikci" class="form-select" style="width:100%; padding:8px;">
+                        <option value="">—</option>
+                        {% for td in tedarikciler %}
+                        <option value="{{ td.pk }}">{{ td.ad }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label>Satınalma sorumlusu</label>
+                    <select name="satinalma_sorumlusu" class="form-select" style="width:100%; padding:8px;">
+                        <option value="">—</option>
+                        {% for u in sorumlu_adaylari %}
+                        <option value="{{ u.pk }}">{{ u.get_full_name|default:u.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary" style="margin-top:12px; padding:10px 20px; background:#059669;">Satınalmaya Aktar</button>
+        </form>
+        {% endif %}
+
+        <form method="post" action="{% url 'stokapp:talep_detay' talep.pk %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="satinalma_bilgi">
+            <h4>Satınalma Takip Bilgileri</h4>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                {% for field in sat_form %}
+                <div style="{% if field.name == 'notlar' %}grid-column:1/-1;{% endif %}">
+                    <label style="font-weight:600;">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}<div style="color:#dc2626;">{{ field.errors }}</div>{% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            <button type="submit" class="btn btn-primary" style="margin-top:12px;">Kaydet</button>
+        </form>
+        {% else %}
+        <p>Bu bölüm yalnızca yetkili kullanıcılara açıktır.</p>
+        {% endif %}
+    {% endif %}
+
+    {% if tab == 'dosyalar' %}
+    <form method="post" enctype="multipart/form-data" action="{% url 'stokapp:talep_detay' talep.pk %}" style="margin-bottom:24px; padding:16px; background:#f9fafb; border-radius:10px;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="dosya_ekle">
+        <h4 style="margin-top:0;">Dosya yükle</h4>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; align-items:end;">
+            <div>{{ dosya_form.dosya.label_tag }}{{ dosya_form.dosya }}</div>
+            <div>{{ dosya_form.tip.label_tag }}{{ dosya_form.tip }}</div>
+            <div>{{ dosya_form.aciklama.label_tag }}{{ dosya_form.aciklama }}</div>
+        </div>
+        <button type="submit" class="btn btn-primary" style="margin-top:12px;">Yükle</button>
+    </form>
+    <ul style="list-style:none; padding:0;">
+        {% for d in talep.dosyalar.all %}
+        <li style="padding:10px; border-bottom:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <a href="{{ d.dosya.url }}" target="_blank" rel="noopener">{{ d.dosya.name|cut:"talep_dosyalari/" }}</a>
+                <span style="color:#6b7280; font-size:12px;"> — {{ d.get_tip_display }} — {{ d.yuklenme_zamani|date:"d.m.Y H:i" }}</span>
+            </div>
+        </li>
+        {% empty %}
+        <li style="color:#6b7280;">Henüz dosya yok.</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
+    {% if tab == 'gecmis' %}
+    <form method="post" action="{% url 'stokapp:talep_detay' talep.pk %}" style="margin-bottom:20px;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="not_ekle">
+        {{ not_form.mesaj.label_tag }}{{ not_form.mesaj }}
+        <button type="submit" class="btn btn-primary" style="margin-top:8px;">Not Ekle</button>
+    </form>
+    <div style="border-left:3px solid #e5e7eb; margin-left:8px; padding-left:16px;">
+        {% for g in talep.gecmis.all %}
+        <div style="margin-bottom:16px;">
+            <div style="font-size:12px; color:#6b7280;">{{ g.olusturulma|date:"d.m.Y H:i" }} — {% if g.kullanici %}{{ g.kullanici.username }}{% else %}Sistem{% endif %} — <strong>{{ g.olay }}</strong></div>
+            {% if g.eski_durum or g.yeni_durum %}
+            <div style="font-size:12px;">{{ g.eski_durum }} → {{ g.yeni_durum }}</div>
+            {% endif %}
+            <div style="white-space:pre-wrap; margin-top:4px;">{{ g.mesaj }}</div>
+        </div>
+        {% empty %}
+        <p style="color:#6b7280;">Kayıt yok.</p>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if tab == 'kapat' %}
+        {% if yonetici %}
+        <form method="post" action="{% url 'stokapp:talep_kapat' talep.pk %}">
+            {% csrf_token %}
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; max-width:720px;">
+                {% for field in kapat_form %}
+                <div style="{% if field.name == 'kapanis_notu' %}grid-column:1/-1;{% endif %}">
+                    <label style="font-weight:600;">{{ field.label }}</label>
+                    {{ field }}
+                </div>
+                {% endfor %}
+            </div>
+            <button type="submit" class="btn btn-primary" style="margin-top:16px; background:#9d174d; border:none;">Talebi Kapat</button>
+        </form>
+        {% else %}
+        <p>Yetkiniz yok.</p>
+        {% endif %}
+    {% endif %}
+
+    {% if yonetici %}
+    <div style="margin-top:32px; padding-top:20px; border-top:2px solid #e5e7eb;">
+        <h4>Yönetici İşlemleri</h4>
+        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+            {% if talep.durum == 'YENI' %}
+            <form method="post" action="{% url 'stokapp:talep_durum_aksiyon' talep.pk %}">{% csrf_token %}<input type="hidden" name="aksiyon" value="inceleme"><button type="submit" class="btn btn-secondary">İncelemeye Al</button></form>
+            {% endif %}
+            {% if talep.durum == 'YENI' or talep.durum == 'INCELEMEDE' %}
+            <form method="post" action="{% url 'stokapp:talep_durum_aksiyon' talep.pk %}">{% csrf_token %}<input type="hidden" name="aksiyon" value="onay"><button type="submit" class="btn btn-primary" style="background:#059669;">Onayla</button></form>
+            <form method="post" action="{% url 'stokapp:talep_durum_aksiyon' talep.pk %}" onsubmit="return confirm('Reddedilsin mi?');">{% csrf_token %}<input type="hidden" name="aksiyon" value="red"><input type="hidden" name="red_notu" value="Reddedildi"><button type="submit" class="btn btn-secondary" style="background:#fee2e2; color:#991b1b;">Reddet</button></form>
+            {% endif %}
+            <form method="post" action="{% url 'stokapp:talep_durum_aksiyon' talep.pk %}" onsubmit="return confirm('İptal edilsin mi?');">{% csrf_token %}<input type="hidden" name="aksiyon" value="iptal"><button type="submit" class="btn btn-secondary">İptal Et</button></form>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

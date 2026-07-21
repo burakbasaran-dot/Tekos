@@ -1,0 +1,418 @@
+{% extends 'stokapp/base.html' %}
+{% load static %}
+
+{% block title %}Şikayet/Uygunsuzluk Detay{% endblock %}
+
+{% block content %}
+<style>
+    .detay-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        padding-bottom: 24px;
+        border-bottom: 2px solid #e5e7eb;
+    }
+    .detay-header h1 {
+        font-size: 28px;
+        font-weight: 700;
+        color: #111827;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    .info-item {
+        background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+        padding: 16px 20px;
+        border-radius: 10px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .info-item strong {
+        display: block;
+        color: #6b7280;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+        font-weight: 600;
+    }
+    .info-item div {
+        color: #111827;
+        font-size: 15px;
+        font-weight: 500;
+    }
+    .section-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: #111827;
+        margin: 0 0 20px 0;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #e5e7eb;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .section-card {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    .badge-severity-5, .badge-severity-4 {
+        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        color: #991b1b;
+        border: 1px solid #fca5a5;
+    }
+    .badge-severity-3 {
+        background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
+        color: #9a3412;
+        border: 1px solid #fb923c;
+    }
+    .badge-severity-2, .badge-severity-1 {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        color: #78350f;
+        border: 1px solid #fcd34d;
+    }
+    .badge-status-acik, .badge-status-open {
+        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        color: #991b1b;
+    }
+    .badge-status-incelemede, .badge-status-review, .badge-status-pending {
+        background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
+        color: #9a3412;
+    }
+    .badge-status-aksiyonda, .badge-status-actioned {
+        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        color: #1e40af;
+    }
+    .badge-status-dogrulandi, .badge-status-verified {
+        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        color: #065f46;
+    }
+    .badge-status-kapali, .badge-status-closed {
+        background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+        color: #374151;
+    }
+    .badge-status-approved {
+        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        color: #065f46;
+    }
+    .badge-status-rejected {
+        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        color: #991b1b;
+    }
+    .badge-status-taslak, .badge-status-draft {
+        background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+        color: #374151;
+    }
+    .empty-state {
+        padding: 60px 20px;
+        text-align: center;
+        color: #9ca3af;
+    }
+    .empty-state-icon {
+        font-size: 64px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+    }
+    .kalite-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .kalite-table thead tr {
+        background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+    }
+    .kalite-table thead th {
+        padding: 16px;
+        text-align: left;
+        font-weight: 600;
+        color: white;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 2px solid #111827;
+    }
+    .kalite-table tbody tr {
+        border-bottom: 1px solid #f3f4f6;
+        transition: all 0.2s ease;
+    }
+    .kalite-table tbody tr:hover {
+        background: #f9fafb;
+        transform: scale(1.01);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .kalite-table tbody td {
+        padding: 14px 16px;
+        color: #374151;
+        font-size: 14px;
+    }
+    .btn-action {
+        padding: 6px 14px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 500;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        display: inline-block;
+    }
+    .btn-action:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    .btn-detail {
+        background: #3b82f6;
+        color: white;
+        border: none;
+    }
+    .btn-detail:hover {
+        background: #2563eb;
+    }
+    .btn-edit {
+        background: #f3f4f6;
+        color: #374151;
+        border: 1px solid #d1d5db;
+    }
+    .btn-edit:hover {
+        background: #e5e7eb;
+    }
+</style>
+
+<div class="card" style="padding: 30px;">
+    <div class="detay-header">
+        <h1><span style="font-size: 32px;">⚠️</span> Şikayet/Uygunsuzluk Detay</h1>
+        <div style="display: flex; gap: 10px;">
+            <a href="{% url 'stokapp:complaint_duzenle' complaint.pk %}" class="btn btn-secondary" style="padding: 10px 20px; border-radius: 8px;">✏️ Düzenle</a>
+            <a href="{% url 'stokapp:complaint_listesi' %}" class="btn btn-secondary" style="padding: 10px 20px; border-radius: 8px;">← Geri</a>
+        </div>
+    </div>
+    
+    <!-- Temel Bilgiler -->
+    <div class="section-card">
+        <h2 class="section-title">📋 Temel Bilgiler</h2>
+        <div class="info-grid">
+            <div class="info-item">
+                <strong>Tip</strong>
+                <div>{{ complaint.get_type_display }}</div>
+            </div>
+            <div class="info-item">
+                <strong>Durum</strong>
+                <div>
+                    <span class="badge badge-status-{{ complaint.status|lower }}">
+                        {{ complaint.get_status_display }}
+                    </span>
+                </div>
+            </div>
+            <div class="info-item">
+                <strong>Müşteri</strong>
+                <div>{{ complaint.customer.ad }}</div>
+            </div>
+            <div class="info-item">
+                <strong>Ürün</strong>
+                <div>{{ complaint.product.ad }}</div>
+            </div>
+            <div class="info-item">
+                <strong>Şiddet</strong>
+                <div>
+                    <span class="badge badge-severity-{{ complaint.severity }}">
+                        {{ complaint.severity }}/5
+                    </span>
+                </div>
+            </div>
+            <div class="info-item">
+                <strong>Kategori</strong>
+                <div>{{ complaint.category }}</div>
+            </div>
+            <div class="info-item">
+                <strong>Oluşturan</strong>
+                <div>{{ complaint.created_by.username }}</div>
+            </div>
+            <div class="info-item">
+                <strong>Oluşturulma</strong>
+                <div>{{ complaint.created_at|date:"d.m.Y H:i" }}</div>
+            </div>
+        </div>
+        
+        <div style="margin-top: 24px;">
+            <strong style="display: block; color: #6b7280; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;">Açıklama</strong>
+            <div style="padding: 20px; background: #f9fafb; border-radius: 10px; border: 1px solid #e5e7eb; color: #374151; line-height: 1.6;">
+                {{ complaint.description|linebreaks }}
+            </div>
+        </div>
+    </div>
+    
+    <!-- CAPA Aksiyonları -->
+    <div class="section-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 class="section-title" style="margin: 0; border: none; padding: 0;">🔧 CAPA Aksiyonları</h2>
+            <a href="{% url 'stokapp:capa_action_ekle' complaint.pk %}" class="btn btn-primary" style="padding: 10px 20px; border-radius: 8px;">+ CAPA Aksiyonu Ekle</a>
+        </div>
+        {% if capa_actions %}
+        <div style="overflow-x: auto;">
+            <table class="kalite-table">
+                <thead>
+                    <tr>
+                        <th>Tip</th>
+                        <th>Sorumlu</th>
+                        <th>Bitiş Tarihi</th>
+                        <th>Durum</th>
+                        <th style="text-align: center;">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for capa in capa_actions %}
+                    <tr>
+                        <td><strong>{{ capa.get_action_type_display }}</strong></td>
+                        <td>{{ capa.owner.username }}</td>
+                        <td>{{ capa.due_date|date:"d.m.Y" }}</td>
+                        <td>
+                            <span class="badge badge-status-{{ capa.status|lower }}">
+                                {{ capa.get_status_display }}
+                            </span>
+                        </td>
+                        <td style="text-align: center;">
+                            <a href="{% url 'stokapp:capa_action_duzenle' capa.pk %}" class="btn-action btn-edit">✏️ Düzenle</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">🔧</div>
+            <div style="font-size: 16px; font-weight: 600; color: #6b7280;">Henüz CAPA aksiyonu eklenmemiş.</div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- İlgili ECO'lar -->
+    <div class="section-card">
+        <h2 class="section-title">📝 İlgili ECO'lar</h2>
+        {% if eco_changes %}
+        <div style="overflow-x: auto;">
+            <table class="kalite-table">
+                <thead>
+                    <tr>
+                        <th>Değişiklik Tipi</th>
+                        <th>Ürün</th>
+                        <th>Revizyon</th>
+                        <th>Onay Durumu</th>
+                        <th style="text-align: center;">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for eco in eco_changes %}
+                    <tr>
+                        <td><strong>{{ eco.get_change_type_display }}</strong></td>
+                        <td>{{ eco.product.ad }}</td>
+                        <td><code style="background: #f3f4f6; padding: 4px 8px; border-radius: 4px;">{{ eco.from_revision }}</code> → <code style="background: #dbeafe; padding: 4px 8px; border-radius: 4px;">{{ eco.to_revision }}</code></td>
+                        <td>
+                            <span class="badge badge-status-{{ eco.approval_status|lower }}">
+                                {{ eco.get_approval_status_display }}
+                            </span>
+                        </td>
+                        <td style="text-align: center;">
+                            <a href="{% url 'stokapp:eco_detay' eco.pk %}" class="btn-action btn-detail">👁️ Detay</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">📝</div>
+            <div style="font-size: 16px; font-weight: 600; color: #6b7280;">Henüz ECO eklenmemiş.</div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Ekler -->
+    <div class="section-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 class="section-title" style="margin: 0; border: none; padding: 0;">📎 Ekler</h2>
+            <a href="{% url 'stokapp:complaint_ekle_attachment' complaint.pk %}" class="btn btn-primary" style="padding: 10px 20px; border-radius: 8px;">+ Dosya Ekle</a>
+        </div>
+        {% if attachments %}
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px;">
+            {% for attachment in attachments %}
+            <div style="padding: 16px; background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%); border: 1px solid #e5e7eb; border-radius: 10px; transition: all 0.2s ease; cursor: pointer;" 
+                 onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)'"
+                 onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                <a href="{{ attachment.file.url }}" target="_blank" style="text-decoration: none; color: #3b82f6; display: flex; align-items: center; gap: 10px; font-weight: 500;">
+                    <span style="font-size: 24px;">📎</span>
+                    <span>{{ attachment.file.name|slice:"30:" }}</span>
+                </a>
+                {% if attachment.note %}
+                <p style="font-size: 13px; color: #6b7280; margin-top: 8px; margin-left: 34px;">{{ attachment.note }}</p>
+                {% endif %}
+                <div style="font-size: 12px; color: #9ca3af; margin-top: 8px; margin-left: 34px;">
+                    {{ attachment.uploaded_at|date:"d.m.Y H:i" }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">📎</div>
+            <div style="font-size: 16px; font-weight: 600; color: #6b7280;">Henüz dosya eklenmemiş.</div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Audit Log -->
+    {% if audit_logs %}
+    <div class="section-card">
+        <h2 class="section-title">📜 Değişiklik Geçmişi</h2>
+        <div style="max-height: 400px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 8px; background: #f9fafb;">
+            {% for log in audit_logs %}
+            <div style="padding: 14px 18px; border-bottom: 1px solid #e5e7eb; transition: background 0.2s;" 
+                 onmouseover="this.style.background='white'"
+                 onmouseout="this.style.background='#f9fafb'">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 6px;">
+                    <span class="badge badge-status-{{ log.action_type|lower }}" style="font-size: 11px;">
+                        {{ log.get_action_type_display }}
+                    </span>
+                    <strong style="color: #374151;">{{ log.user.username|default:"Sistem" }}</strong>
+                    <span style="color: #9ca3af; font-size: 13px;">{{ log.timestamp|date:"d.m.Y H:i" }}</span>
+                </div>
+                {% if log.field_name %}
+                <div style="margin-left: 8px; font-size: 13px; color: #6b7280;">
+                    <strong>{{ log.field_name }}:</strong> 
+                    <span style="color: #ef4444;">{{ log.old_value|truncatewords:10 }}</span> 
+                    → 
+                    <span style="color: #22c55e;">{{ log.new_value|truncatewords:10 }}</span>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

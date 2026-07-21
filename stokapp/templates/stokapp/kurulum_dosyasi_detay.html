@@ -1,0 +1,194 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Kurulum Dosyası Detay - {{ dosya.urun.stok_kodu }}{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div>
+            <h2 style="margin: 0 0 5px 0;">{{ dosya.urun.stok_kodu }} - {{ dosya.urun_parcasi }}</h2>
+            <div style="display: flex; gap: 15px; margin-top: 10px;">
+                <a href="{% url 'stokapp:kurulum_dosyalari_listesi' %}" 
+                   class="btn" 
+                   style="background-color: #6b7280; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-size: 14px;">
+                    ← Geri
+                </a>
+                <a href="{% url 'stokapp:kurulum_dosyasi_duzenle' dosya.pk %}" 
+                   class="btn" 
+                   style="background-color: #3b82f6; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-size: 14px;">
+                    ✏️ Düzenle
+                </a>
+                <a href="{% url 'stokapp:kurulum_dosyasi_arsiv_listesi' dosya.pk %}" 
+                   class="btn" 
+                   style="background-color: #f59e0b; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-size: 14px;">
+                    📦 Arşiv ({{ arsivlenmis_versiyonlar.count }})
+                </a>
+                <a href="{% url 'stokapp:kurulum_dosyasi_sil' dosya.pk %}" 
+                   class="btn" 
+                   style="background-color: #ef4444; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-size: 14px;">
+                    🗑️ Sil
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 15px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background: #fff3cd; color: #856404; border-left: 4px solid #ffc107;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Aktif Kurulum Dosyası Bilgileri -->
+    <div style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; margin-bottom: 30px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+        <h3 style="margin: 0 0 20px 0; font-size: 20px; color: #111827; border-bottom: 2px solid #3b82f6; padding-bottom: 10px;">
+            📋 Kurulum Dosyası Bilgileri
+        </h3>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+            <div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 600; color: #6b7280; font-size: 13px; margin-bottom: 5px;">Ürün</label>
+                    <div style="font-size: 16px; color: #111827; font-weight: 600;">{{ dosya.urun.stok_kodu }}</div>
+                    <div style="font-size: 14px; color: #6b7280; margin-top: 2px;">{{ dosya.urun.ad }}</div>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 600; color: #6b7280; font-size: 13px; margin-bottom: 5px;">Ürün Parçası</label>
+                    <div style="font-size: 16px; color: #111827; font-weight: 500;">{{ dosya.urun_parcasi }}</div>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 600; color: #6b7280; font-size: 13px; margin-bottom: 5px;">İstasyon</label>
+                    <div style="font-size: 16px; color: #111827;">{{ dosya.istasyon.ad|default:"-" }}</div>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 600; color: #6b7280; font-size: 13px; margin-bottom: 5px;">CNC ekipmanları</label>
+                    {% if dosya.cnc_ekipmanlar.all %}
+                    <ul style="margin: 0; padding-left: 18px; font-size: 14px; color: #111827;">
+                        {% for eq in dosya.cnc_ekipmanlar.all %}
+                        <li style="margin-bottom: 4px;">{{ eq }} <span style="color: #6b7280;">({{ eq.get_machine_scope_display }})</span></li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <div style="font-size: 14px; color: #6b7280;">Tanımlı CNC ekipmanı yok.</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 600; color: #6b7280; font-size: 13px; margin-bottom: 5px;">Versiyon</label>
+                    <div style="font-size: 18px; color: #3b82f6; font-weight: 600;">
+                        <span style="display: inline-block; padding: 6px 14px; background: #eff6ff; border-radius: 16px;">
+                            v{{ dosya.versiyon }}
+                        </span>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 600; color: #6b7280; font-size: 13px; margin-bottom: 5px;">Oluşturulma Tarihi</label>
+                    <div style="font-size: 16px; color: #111827;">{{ dosya.created_at|date:"d.m.Y H:i" }}</div>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 600; color: #6b7280; font-size: 13px; margin-bottom: 5px;">Son Güncelleme</label>
+                    <div style="font-size: 16px; color: #111827;">{{ dosya.updated_at|date:"d.m.Y H:i" }}</div>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 600; color: #6b7280; font-size: 13px; margin-bottom: 5px;">Durum</label>
+                    <div>
+                        <span style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 500;
+                            {% if dosya.aktif %}background-color: #d1fae5; color: #065f46;{% else %}background-color: #fee2e2; color: #991b1b;{% endif %}">
+                            {% if dosya.aktif %}✅ Aktif{% else %}❌ Pasif{% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        {% if dosya.aciklama %}
+        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+            <label style="display: block; font-weight: 600; color: #6b7280; font-size: 13px; margin-bottom: 5px;">Açıklama</label>
+            <div style="font-size: 14px; color: #111827; line-height: 1.6; padding: 12px; background: #f9fafb; border-radius: 8px;">
+                {{ dosya.aciklama|linebreaks }}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- PDF Dosyası -->
+        {% if dosya.pdf_dosya %}
+        <div style="margin-top: 20px; padding: 20px; background-color: #f0f9ff; border-radius: 8px; border: 2px solid #3b82f6;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                    <label style="display: block; font-weight: 600; color: #1e40af; font-size: 13px; margin-bottom: 8px;">PDF Dosyası</label>
+                    <div style="font-size: 14px; color: #111827; font-weight: 500;">{{ dosya.pdf_dosya.name|slice:"-50:" }}</div>
+                </div>
+                <a href="{% url 'stokapp:kurulum_dosyasi_pdf_indir' dosya.pk %}" 
+                   class="btn" 
+                   style="background-color: #3b82f6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 500;">
+                    📥 PDF İndir
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Arşivlenmiş Versiyonlar -->
+    {% if arsivlenmis_versiyonlar %}
+    <div style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px;">
+        <h3 style="margin: 0 0 20px 0; font-size: 20px; color: #111827; border-bottom: 2px solid #6b7280; padding-bottom: 10px;">
+            📦 Arşivlenmiş Versiyonlar
+            <span style="font-size: 14px; color: #6b7280; font-weight: normal;">({{ arsivlenmis_versiyonlar.count }} adet)</span>
+        </h3>
+        
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background-color: #f9fafb; border-bottom: 2px solid #e5e7eb;">
+                        <th style="padding: 12px; text-align: left; font-weight: 600; color: #fff; font-size: 14px;">Versiyon</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600; color: #fff; font-size: 14px;">Açıklama</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600; color: #fff; font-size: 14px;">Arşivlenme Tarihi</th>
+                        <th style="padding: 12px; text-align: center; font-weight: 600; color: #fff; font-size: 14px;">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for arsiv in arsivlenmis_versiyonlar %}
+                    <tr style="border-bottom: 1px solid #e5e7eb; transition: background-color 0.2s;"
+                        onmouseover="this.style.backgroundColor='#f9fafb'"
+                        onmouseout="this.style.backgroundColor='white'">
+                        <td style="padding: 12px; font-size: 14px; color: #111827;">
+                            <span style="display: inline-block; padding: 4px 10px; background: #fef3c7; color: #92400e; border-radius: 12px; font-weight: 600; font-size: 12px;">
+                                v{{ arsiv.versiyon }}
+                            </span>
+                        </td>
+                        <td style="padding: 12px; font-size: 14px; color: #111827;">
+                            {{ arsiv.aciklama|default:"-"|truncatewords:15 }}
+                        </td>
+                        <td style="padding: 12px; font-size: 14px; color: #6b7280;">{{ arsiv.arsiv_tarihi|date:"d.m.Y H:i" }}</td>
+                        <td style="padding: 12px; text-align: center;">
+                            <a href="{% url 'stokapp:kurulum_dosyasi_arsiv_pdf_indir' arsiv.pk %}" 
+                               class="btn" 
+                               style="background-color: #3b82f6; color: white; padding: 6px 12px; text-decoration: none; border-radius: 6px; font-size: 12px; font-weight: 500;">
+                                📥 İndir
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 40px; text-align: center;">
+        <div style="font-size: 48px; margin-bottom: 15px;">📦</div>
+        <div style="font-size: 16px; color: #6b7280;">Henüz arşivlenmiş versiyon yok.</div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

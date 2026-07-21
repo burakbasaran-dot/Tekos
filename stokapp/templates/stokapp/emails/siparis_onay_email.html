@@ -1,0 +1,90 @@
+{% load currency_filters %}
+<div style="background:#f3f4f6; padding: 24px;">
+  <div style="max-width: 720px; margin: 0 auto; background:#ffffff; border-radius:12px; overflow:hidden; border:1px solid #e5e7eb;">
+    <div style="padding: 18px 24px; background: #111827; color: #ffffff; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+      <div>
+        <div style="font-size: 18px; font-weight: 700;">Siparişiniz işleme alınmıştır</div>
+        <div style="font-size: 12px; color: #d1d5db;">{{ siparis.siparis_numarasi }}</div>
+      </div>
+      <div style="display:flex; align-items:center; justify-content:flex-end; gap:12px; flex-wrap:wrap;">
+        {% if tekos_logo_cid %}
+          <img src="cid:{{ tekos_logo_cid }}" alt="TEKOS" style="max-height:36px;">
+        {% elif tekos_logo_url %}
+          <img src="{{ tekos_logo_url }}" alt="TEKOS" style="max-height:36px;">
+        {% endif %}
+        <span style="font-weight:700; font-size:15px; letter-spacing:0.03em; white-space:nowrap;">
+          TEKOS<span style="font-weight:500; opacity:0.75; margin:0 6px;">/</span>TEKORA
+        </span>
+      </div>
+    </div>
+
+    {% if tekmar_logo_cid or tekmar_logo_data_uri %}
+    <div style="padding: 12px 24px 0 24px; text-align:center;">
+      <img src="{% if tekmar_logo_cid %}cid:{{ tekmar_logo_cid }}{% else %}{{ tekmar_logo_data_uri }}{% endif %}" alt="TEKMAR Logo" style="max-width: 50%; height: auto;">
+    </div>
+    {% endif %}
+
+    <div style="padding: 24px; font-family: Arial, sans-serif; color:#111827; line-height:1.6;">
+      <p style="margin: 0 0 8px 0;">Sayın {{ siparis.musteri.ad }},</p>
+      <p style="margin: 0 0 16px 0;">İlgili siparişiniz onaylanmış ve işleme alınmıştır.</p>
+
+      <div style="margin: 16px 0; padding: 12px 14px; background:#f9fafb; border-radius:8px; border:1px solid #e5e7eb;">
+        <div><strong>Sipariş No:</strong> {{ siparis.siparis_numarasi }}</div>
+        <div><strong>Oluşturulma Tarihi:</strong> {{ siparis.olusturulma_tarihi|date:"d.m.Y" }}</div>
+        <div><strong>Teslim Tarihi:</strong> {{ siparis.tamamlanma_tarihi|date:"d.m.Y"|default:"-" }}</div>
+      </div>
+
+      <h3 style="margin: 0 0 8px 0;">Ürünler</h3>
+      <table style="width:100%; border-collapse: collapse; margin-bottom: 16px; font-size: 14px;">
+        <thead>
+          <tr>
+            <th style="text-align:left; border-bottom:1px solid #e5e7eb; padding:8px;">Ürün</th>
+            <th style="text-align:right; border-bottom:1px solid #e5e7eb; padding:8px;">Miktar</th>
+            <th style="text-align:right; border-bottom:1px solid #e5e7eb; padding:8px;">Birim Fiyat</th>
+            <th style="text-align:right; border-bottom:1px solid #e5e7eb; padding:8px;">Toplam</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for kalem in kalemler %}
+          <tr>
+            <td style="padding:8px;">
+              {% if kalem.stok_item %}
+                <strong>{{ kalem.stok_item.stok_kodu }}</strong> — {{ kalem.stok_item.ad }}
+              {% else %}
+                {{ kalem.aciklama|default:"-" }}
+              {% endif %}
+            </td>
+            <td style="padding:8px; text-align:right;">{{ kalem.miktar }}</td>
+            <td style="padding:8px; text-align:right;">{{ kalem.birim_fiyat|currency }} {{ siparis.para_birimi }}</td>
+            <td style="padding:8px; text-align:right;">{{ kalem.toplam|currency }} {{ siparis.para_birimi }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <div style="text-align:right; border-top:1px solid #e5e7eb; padding-top: 10px;">
+        <div><strong>Ara Toplam:</strong> {{ ara_toplam|currency }} {{ siparis.para_birimi }}</div>
+        <div><strong>Vergi:</strong> {{ vergi|currency }} {{ siparis.para_birimi }}</div>
+        <div style="font-size:16px; margin-top:6px;"><strong>Toplam:</strong> {{ toplam|currency }} {{ siparis.para_birimi }}</div>
+      </div>
+
+      <p style="margin-top: 20px;">Saygılarımızla,<br>Tekmar Endüstriyel</p>
+    </div>
+
+    <div style="padding: 16px 24px; background:#f9fafb; border-top:1px solid #e5e7eb; font-size: 12px; color:#6b7280;">
+      <div style="display:flex; gap:12px; align-items:center; margin-bottom:8px; flex-wrap:wrap;">
+        {% if tekos_logo_cid %}
+          <img src="cid:{{ tekos_logo_cid }}" alt="TEKOS" style="max-height:28px;">
+        {% elif tekos_logo_url %}
+          <img src="{{ tekos_logo_url }}" alt="TEKOS" style="max-height:28px;">
+        {% endif %}
+        <div style="font-weight:600; color:#374151; white-space:nowrap;">
+          TEKOS<span style="font-weight:500; color:#9ca3af; margin:0 6px;">/</span>TEKORA
+        </div>
+      </div>
+      Bu e-posta, TEKOS / TEKORA tarafından otomatik olarak oluşturulmuştur.<br>
+      Süreçlerimizin kesintisiz ve hatasız ilerlemesi için dijital sistemimiz tarafından iletilmiştir.<br>
+      © 2025 TEKOS / TEKORA. Tekmar Endüstriyel Makina Otomasyon San. ve Tic. Ltd. Şti.'nin tescilli dijital yönetim platformlarıdır.
+    </div>
+  </div>
+</div>

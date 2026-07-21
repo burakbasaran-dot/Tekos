@@ -1,0 +1,153 @@
+{% extends "stokapp/base.html" %}
+{% block title %}{{ proje.proje_kodu }} — Ar-Ge{% endblock %}
+{% block content %}
+{% url 'stokapp:arge_proje_detay' proje.pk as detay_base %}
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+    <div>
+      <h2 style="margin:0 0 6px 0;">{{ proje.proje_kodu }}</h2>
+      <div style="color:#6b7280;font-size:15px;">{{ proje.proje_adi }}</div>
+      <div style="margin-top:10px;font-size:14px;">
+        <strong>Stok:</strong>
+        {% if rbac_god or 'stok.goruntule' in rbac_kodlar %}
+        <a href="{% url 'stokapp:stok_detay' proje.stok_item.pk %}">{{ proje.stok_item.stok_kodu }}</a>
+        {% else %}
+        <span>{{ proje.stok_item.stok_kodu }}</span>
+        {% endif %}
+        — {{ proje.stok_item.ad }}
+      </div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;">
+      <a href="{% url 'stokapp:arge_proje_listesi' %}" class="btn btn-secondary">← Projeler</a>
+      {% if rbac_god or 'arge.duzenle' in rbac_kodlar %}
+      <a href="{% url 'stokapp:arge_proje_duzenle' proje.pk %}" class="btn btn-secondary">Düzenle</a>
+      {% endif %}
+      {% if rbac_god or 'arge.arsivle' in rbac_kodlar %}
+      <form method="post" action="{% url 'stokapp:arge_proje_arsivle' proje.pk %}" style="display:inline;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-secondary">{% if proje.arsivli %}Arşivden çıkar{% else %}Arşivle{% endif %}</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if messages %}
+    {% for message in messages %}
+    <div style="margin-top:12px;padding:10px 12px;border-radius:8px;background:{% if message.tags == 'error' %}#fee2e2{% else %}#d1fae5{% endif %};">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+
+  <div style="margin-top:18px;display:flex;flex-wrap:wrap;gap:6px;border-bottom:1px solid #e5e7eb;padding-bottom:2px;">
+    <a href="{{ detay_base }}?tab=genel" style="padding:8px 10px;border-radius:6px 6px 0 0;text-decoration:none;font-size:13px;font-weight:600;{% if tab == 'genel' %}background:#f3f4f6;color:#111827;border:1px solid #e5e7eb;border-bottom:none;{% else %}color:#6b7280;{% endif %}">Genel</a>
+    <a href="{{ detay_base }}?tab=revizyonlar" style="padding:8px 10px;border-radius:6px 6px 0 0;text-decoration:none;font-size:13px;font-weight:600;{% if tab == 'revizyonlar' %}background:#f3f4f6;color:#111827;border:1px solid #e5e7eb;border-bottom:none;{% else %}color:#6b7280;{% endif %}">Revizyonlar</a>
+    <a href="{{ detay_base }}?tab=prototipler" style="padding:8px 10px;border-radius:6px 6px 0 0;text-decoration:none;font-size:13px;font-weight:600;{% if tab == 'prototipler' %}background:#f3f4f6;color:#111827;border:1px solid #e5e7eb;border-bottom:none;{% else %}color:#6b7280;{% endif %}">Prototipler</a>
+    <a href="{{ detay_base }}?tab=testler" style="padding:8px 10px;border-radius:6px 6px 0 0;text-decoration:none;font-size:13px;font-weight:600;{% if tab == 'testler' %}background:#f3f4f6;color:#111827;border:1px solid #e5e7eb;border-bottom:none;{% else %}color:#6b7280;{% endif %}">Testler</a>
+    <a href="{{ detay_base }}?tab=dosyalar" style="padding:8px 10px;border-radius:6px 6px 0 0;text-decoration:none;font-size:13px;font-weight:600;{% if tab == 'dosyalar' %}background:#f3f4f6;color:#111827;border:1px solid #e5e7eb;border-bottom:none;{% else %}color:#6b7280;{% endif %}">Dosyalar</a>
+    <a href="{{ detay_base }}?tab=maliyet" style="padding:8px 10px;border-radius:6px 6px 0 0;text-decoration:none;font-size:13px;font-weight:600;{% if tab == 'maliyet' %}background:#f3f4f6;color:#111827;border:1px solid #e5e7eb;border-bottom:none;{% else %}color:#6b7280;{% endif %}">Maliyet</a>
+    <a href="{{ detay_base }}?tab=kararlar" style="padding:8px 10px;border-radius:6px 6px 0 0;text-decoration:none;font-size:13px;font-weight:600;{% if tab == 'kararlar' %}background:#f3f4f6;color:#111827;border:1px solid #e5e7eb;border-bottom:none;{% else %}color:#6b7280;{% endif %}">Kararlar</a>
+    <a href="{{ detay_base }}?tab=seri" style="padding:8px 10px;border-radius:6px 6px 0 0;text-decoration:none;font-size:13px;font-weight:600;{% if tab == 'seri' %}background:#f3f4f6;color:#111827;border:1px solid #e5e7eb;border-bottom:none;{% else %}color:#6b7280;{% endif %}">Seri üretim</a>
+  </div>
+
+  <div style="padding-top:18px;">
+    {% if tab == 'genel' %}
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;font-size:14px;">
+      <div><span style="color:#6b7280;">Durum</span><br><strong>{{ proje.get_durum_display }}</strong></div>
+      <div><span style="color:#6b7280;">Öncelik</span><br><strong>{{ proje.get_oncelik_display }}</strong></div>
+      <div><span style="color:#6b7280;">Başlangıç</span><br><strong>{{ proje.baslangic_tarihi|default:"—" }}</strong></div>
+      <div><span style="color:#6b7280;">Hedef</span><br><strong>{{ proje.hedef_tarih|default:"—" }}</strong></div>
+      <div><span style="color:#6b7280;">Hedef maliyet</span><br><strong>{{ proje.hedef_maliyet|default:"—" }}</strong></div>
+      <div><span style="color:#6b7280;">Hedef satış</span><br><strong>{{ proje.hedef_satis_fiyati|default:"—" }}</strong></div>
+      <div style="grid-column:1/-1;"><span style="color:#6b7280;">Sorumlu</span><br><strong>{% if proje.sorumlu %}{{ proje.sorumlu.get_full_name|default:proje.sorumlu.username }}{% else %}—{% endif %}</strong></div>
+      {% if proje.aciklama %}
+      <div style="grid-column:1/-1;"><span style="color:#6b7280;">Açıklama</span><br>{{ proje.aciklama|linebreaks }}</div>
+      {% endif %}
+    </div>
+    {% elif tab == 'revizyonlar' %}
+      {% if rbac_god or 'arge.ekle' in rbac_kodlar %}
+      <a href="{% url 'stokapp:arge_revizyon_ekle' proje.pk %}" class="btn btn-primary" style="margin-bottom:14px;">➕ Revizyon ekle</a>
+      {% endif %}
+      <table>
+        <thead><tr><th>No</th><th>Tarih</th><th>Neden</th><th>Tip</th><th>Karar</th><th></th></tr></thead>
+        <tbody>
+          {% for r in revizyonlar %}
+          <tr>
+            <td><strong>{{ r.revizyon_no }}</strong></td>
+            <td>{{ r.tarih }}</td>
+            <td>{{ r.revizyon_nedeni|truncatechars:40 }}</td>
+            <td>{{ r.get_degisiklik_tipi_display }}</td>
+            <td>{{ r.get_karar_display }}</td>
+            <td>
+              {% if rbac_god or 'arge.duzenle' in rbac_kodlar %}
+              <a href="{% url 'stokapp:arge_revizyon_duzenle' r.pk %}" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;">Düzenle</a>
+              {% endif %}
+              {% if rbac_god or 'arge.sil' in rbac_kodlar %}
+              <form action="{% url 'stokapp:arge_revizyon_sil' r.pk %}" method="post" style="display:inline;" onsubmit="return confirm('Silinsin mi?');">
+                {% csrf_token %}<button type="submit" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;">Sil</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" style="text-align:center;color:#6b7280;">Henüz revizyon yok.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% elif tab == 'prototipler' %}
+      <p style="color:#6b7280;">Prototip / demo üretim kayıtları bir sonraki aşamada eklenecek. Süreç bu proje altında takip edilecek.</p>
+    {% elif tab == 'testler' %}
+      <p style="color:#6b7280;">Test ve kontrol kayıtları bir sonraki aşamada eklenecek.</p>
+    {% elif tab == 'dosyalar' %}
+      {% if dosya_form %}
+      <div style="background:#f9fafb;padding:14px;border-radius:10px;margin-bottom:16px;border:1px solid #e5e7eb;">
+        <h4 style="margin:0 0 10px 0;">Dosya yükle</h4>
+        <form method="post" action="{% url 'stokapp:arge_dosya_ekle' proje.pk %}" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;">
+            {% for field in dosya_form %}
+            <div>{{ field.label_tag }} {{ field }}</div>
+            {% endfor %}
+            <button type="submit" class="btn btn-primary">Yükle</button>
+          </div>
+        </form>
+      </div>
+      {% endif %}
+      <table>
+        <thead><tr><th>Tip</th><th>Açıklama</th><th>Tarih</th><th></th></tr></thead>
+        <tbody>
+          {% for d in dosyalar %}
+          <tr>
+            <td>{{ d.get_dosya_tipi_display }}</td>
+            <td>{{ d.aciklama|default:"—" }}</td>
+            <td>{{ d.uploaded_at|date:"d.m.Y H:i" }}</td>
+            <td>
+              <a href="{% url 'stokapp:arge_dosya_indir' d.pk %}" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;">İndir</a>
+              {% if rbac_god or 'arge.sil' in rbac_kodlar %}
+              <form method="post" action="{% url 'stokapp:arge_dosya_sil' d.pk %}" style="display:inline;" onsubmit="return confirm('Dosya silinsin mi?');">
+                {% csrf_token %}<button type="submit" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;">Sil</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" style="text-align:center;color:#6b7280;">Dosya yok.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% elif tab == 'maliyet' %}
+      <p style="color:#6b7280;">Maliyet takibi bir sonraki aşamada eklenecek.</p>
+    {% elif tab == 'kararlar' %}
+      <p style="color:#6b7280;">Karar kayıtları bir sonraki aşamada eklenecek.</p>
+    {% elif tab == 'seri' %}
+      <p style="font-size:14px;color:#374151;margin-bottom:12px;">Seri üretime geçmeden önce aşağıdaki maddelerin tamamı işaretlenmeli; ardından proje durumu <strong>Seri üretime hazır</strong> seçilebilir.</p>
+      <ul style="list-style:none;padding:0;margin:0;display:grid;gap:8px;">
+        {% for label, ok in checklist_items %}
+        <li style="display:flex;align-items:center;gap:8px;">{% if ok %}<span style="color:#16a34a;">✓</span>{% else %}<span style="color:#dc2626;">○</span>{% endif %} {{ label }}</li>
+        {% endfor %}
+      </ul>
+      {% if proje.durum == 'SERI_URETIME_HAZIR' and not checklist_ok %}
+      <p style="margin-top:12px;color:#b45309;">Uyarı: Durum “seri üretime hazır” görünüyor ancak kontrol listesi eksik; düzenleme ekranından tamamlayın.</p>
+      {% endif %}
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

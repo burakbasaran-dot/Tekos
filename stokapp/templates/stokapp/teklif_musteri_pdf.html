@@ -1,0 +1,135 @@
+{% load currency_filters %}
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Teklif {{ teklif.teklif_no }}</title>
+</head>
+<body>
+  <table class="meta" style="width:100%; border-collapse:collapse;">
+    <tr>
+      <td style="width:58%; vertical-align:top;">
+        {% if logo_path %}
+        <img class="logo" src="file://{{ logo_path }}" alt="Tekmar" />
+        {% endif %}
+        <div class="firm-title sans">{{ ayarlar.firma_ismi|default:"Tekmar Endüstriyel" }}</div>
+        <div class="sans muted">{{ ayarlar.telefon|default:"" }} {% if ayarlar.email %}| {{ ayarlar.email }}{% endif %}</div>
+        <div class="sans" style="margin-top:3mm;line-height:1.45;color:#222;">
+          {% for satir in teklif_pdf_firma_adres_satirlari %}
+          {{ satir }}<br/>
+          {% endfor %}
+        </div>
+      </td>
+      <td style="width:42%; vertical-align:top; text-align:right;" class="sans">
+        <div><strong>Teklif No:</strong> {{ teklif.teklif_no }}</div>
+        <div><strong>Düzenleme:</strong> {{ teklif.duzenleme_tarihi|date:"d.m.Y" }}</div>
+        <div><strong>Geçerlilik:</strong> {% if teklif.vade_tarihi %}{{ teklif.vade_tarihi|date:"d.m.Y" }}{% else %}—{% endif %}</div>
+        {% if teklif.para_birimi == "MIX" %}
+        <div class="muted">Para birimleri satır bazındadır; özet aşağıda döviz bazında ayrılmıştır.</div>
+        {% endif %}
+        {% if teklif.doviz_kuru and teklif.doviz_kuru != 1 %}
+        <div><strong>Döviz kuru:</strong> {{ teklif.doviz_kuru|tr_decimal:"6" }}</div>
+        {% endif %}
+        <div style="margin-top:5mm;text-align:left;padding-top:4mm;border-top:1px solid #dfe6ee;line-height:1.45;font-size:9.5pt;">
+          <strong>Müşteri</strong><br/>
+          {{ musteri_unvan }}<br/>
+          {% if teklif.musteri_adres %}<span class="muted">{{ teklif.musteri_adres|linebreaksbr }}</span><br/>{% endif %}
+          {% if teklif.musteri_telefon %}Tel: {{ teklif.musteri_telefon }}<br/>{% endif %}
+          {% if teklif.musteri_email %}E-posta: {{ teklif.musteri_email }}{% endif %}
+        </div>
+      </td>
+    </tr>
+  </table>
+
+  <hr class="rule" />
+
+  {% if teklif.kaynak_siparis %}
+  <div class="sans" style="margin-bottom:4mm;font-size:9.5pt;color:#333;">
+    <strong>Kaynak sipariş:</strong> {{ teklif.kaynak_siparis.siparis_numarasi }}
+  </div>
+  {% endif %}
+
+  <div class="doc-title sans">SATIŞ TEKLİFİ</div>
+  <div class="sans" style="text-align:center; margin-bottom:6mm; color:#444;">{% if teklif.ad %}{{ teklif.ad }}{% else %}—{% endif %}</div>
+
+  <table class="grid sans">
+    <thead>
+      <tr>
+        <th style="width:4%;">#</th>
+        <th style="width:36%;">Ürün / Açıklama</th>
+        <th style="width:8%;">Miktar</th>
+        <th style="width:10%;">Birim</th>
+        <th style="width:10%;">Birim fiyat</th>
+        <th style="width:7%;">PB</th>
+        <th style="width:7%;">KDV %</th>
+        <th style="width:13%;">Satır toplamı<br/><span style="font-weight:normal;font-size:8pt;">(KDV dahil)</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for k in kalemler %}
+      <tr>
+        <td style="text-align:center;">{{ forloop.counter }}</td>
+        <td>
+          {% if k.stok_item %}{{ k.stok_item.stok_kodu }} — {{ k.stok_item.ad }}{% endif %}
+          {% if k.aciklama %}<br/><span class="muted">{{ k.aciklama|linebreaksbr }}</span>{% endif %}
+          {% if k.satir_notu %}<br/><span class="muted" style="font-size:8pt;">Not: {{ k.satir_notu|linebreaksbr }}</span>{% endif %}
+        </td>
+        <td style="text-align:right;">{{ k.miktar|tr_decimal:"3" }}</td>
+        <td>{{ k.birim }}</td>
+        <td style="text-align:right;">{{ k.birim_fiyat|tr_decimal:"2" }}</td>
+        <td style="text-align:center;">{{ k.para_birimi }}</td>
+        <td style="text-align:center;">{{ k.vergi_yuzdesi|tr_decimal:"2" }}</td>
+        <td style="text-align:right;">{{ k.satir_toplam|tr_decimal:"2" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% for oz in pdf_ozet_paralar %}
+  <table class="totals sans" {% if not forloop.first %}style="margin-top:3mm;"{% endif %}>
+    {% if pdf_ozet_paralar|length > 1 %}
+    <tr><td colspan="2" style="background:#eef2f7;font-weight:bold;border-color:#1e3a5f;">{{ oz.para }} — Özet</td></tr>
+    {% endif %}
+    <tr>
+      <td>Tutar <span class="muted">(KDV hariç)</span></td>
+      <td style="text-align:right;">{{ oz.pdf_tutar_kdv_haric|tr_decimal:"2" }} {{ oz.para }}</td>
+    </tr>
+    <tr>
+      <td>KDV</td>
+      <td style="text-align:right;">{{ oz.pdf_kdv_tutari|tr_decimal:"2" }} {{ oz.para }}</td>
+    </tr>
+    <tr class="totals-grand">
+      <td><strong>Genel toplam</strong> <span class="muted" style="font-weight:normal;">(KDV dahil)</span></td>
+      <td style="text-align:right;"><strong>{{ oz.pdf_genel_toplam|tr_decimal:"2" }} {{ oz.para }}</strong></td>
+    </tr>
+  </table>
+  {% empty %}
+  <table class="totals sans">
+    <tr><td colspan="2">Özet hesaplanamadı.</td></tr>
+  </table>
+  {% endfor %}
+
+  {% if sartlar_pdf_metni %}
+  <div class="sans" style="margin-top:8mm;">
+    <strong style="color:#1e3a5f;">Teklif şartları</strong>
+    <div style="margin-top:2mm; white-space:pre-wrap; border:1px solid #ddd; padding:8px;">{{ sartlar_pdf_metni }}</div>
+  </div>
+  {% endif %}
+
+  {% if teklif_banka_pdf_detay %}
+  <div class="sans" style="margin-top:6mm;">
+    <strong style="color:#1e3a5f;">Banka hesap bilgileri</strong>
+    <div style="margin-top:2mm;border:1px solid #ddd;padding:6px 8px;line-height:1.35;font-size:9pt;">
+      <span style="font-weight:600;">{{ teklif_banka_legal_header }}</span><br/>
+      {% for bh in teklif_banka_pdf_detay %}
+      {{ bh.banka_adi }} {{ bh.pb_simge }} - {{ bh.iban_display }}{% if not forloop.last %}<br/>{% endif %}
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="sans muted" style="margin-top:10mm; font-size:8pt;">
+    Bu belge elektronik ortamda oluşturulmuş olup imza gerektirmez.
+  </div>
+</body>
+</html>

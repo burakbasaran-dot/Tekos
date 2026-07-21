@@ -1,0 +1,153 @@
+{% extends "stokapp/base.html" %}
+{% load currency_filters %}
+{% block title %}Teklif {{ teklif.teklif_no }}{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
+        <h2 style="margin:0;">Teklif {{ teklif.teklif_no }}</h2>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <a href="{% url 'stokapp:teklif_listesi' %}" class="btn btn-secondary">← Liste</a>
+            {% if teklif.durum == 'draft' %}
+            <a href="{% url 'stokapp:teklif_duzenle' teklif.pk %}" class="btn btn-primary">Düzenle</a>
+            <a href="{% url 'stokapp:teklif_mail_alici_sec' teklif.pk %}" class="btn btn-primary" style="background:#0ea5e9;">Gönder</a>
+            {% endif %}
+            {% if teklif.durum == 'draft' or teklif.durum == 'sent' %}
+            {% if bekleyen_kalem_sayisi > 0 %}
+            <button type="button" class="btn teklif-onay-open" style="background:#22c55e;color:#fff;border:none;" data-pk="{{ teklif.pk }}">Onayla</button>
+            {% endif %}
+            {% endif %}
+            <a href="{% url 'stokapp:teklif_pdf_indir' teklif.pk %}" class="btn btn-secondary" target="_blank">PDF indir</a>
+            <a href="{% url 'stokapp:teklif_sil' teklif.pk %}" class="btn btn-secondary" title="Siparişe dönüşmüş teklif silinemez">Sil</a>
+        </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:16px; margin-bottom:20px;">
+        <div style="background:#f9fafb; padding:14px; border-radius:8px;">
+            <div><strong>Durum:</strong> {{ teklif.get_durum_display }}</div>
+            <div><strong>Ad:</strong> {% if teklif.ad %}{{ teklif.ad }}{% else %}—{% endif %}</div>
+            <div><strong>Müşteri:</strong> {% if teklif.musteri %}{{ teklif.musteri.ad }}{% else %}{{ teklif.musteri_adi|default:"—" }}{% endif %}</div>
+            <div><strong>Düzenleme:</strong> {{ teklif.duzenleme_tarihi|date:"d.m.Y" }}</div>
+            <div><strong>Teklif geçerlilik tarihi:</strong> {{ teklif.vade_tarihi|date:"d.m.Y"|default:"—" }}</div>
+            <div><strong>Para birimi:</strong> {% if teklif.para_birimi == "MIX" %}Çoklu (satır bazlı){% else %}{{ teklif.para_birimi }}{% endif %}</div>
+            {% if teklif_pb_ozet|length > 1 %}
+            <div style="margin-top:10px;"><strong>Özet (KDV dahil):</strong></div>
+            <ul style="margin:6px 0 0 18px; padding:0;">
+                {% for oz in teklif_pb_ozet %}
+                <li>{{ oz.brut|tr_decimal:"2" }} {{ oz.para }} <span style="color:#64748b;font-size:12px;">(KDV hariç {{ oz.net|tr_decimal:"2" }})</span></li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <div><strong>Toplam (KDV dahil):</strong> {% if teklif_pb_ozet %}{{ teklif_pb_ozet.0.brut|tr_decimal:"2" }} {{ teklif_pb_ozet.0.para }}{% else %}{{ teklif.toplam_tutar|tr_decimal:"2" }}{% endif %}</div>
+            {% endif %}
+            {% if teklif.olusturan %}<div><strong>Oluşturan:</strong> {{ teklif.olusturan.get_full_name|default:teklif.olusturan.username }}</div>{% endif %}
+            {% if teklif.son_gonderim_tarihi %}<div><strong>Son gönderim:</strong> {{ teklif.son_gonderim_tarihi|date:"d.m.Y H:i" }}</div>{% endif %}
+        </div>
+        <div style="background:#f9fafb; padding:14px; border-radius:8px;">
+            {% if olusan_siparisler %}
+            <div><strong>Oluşan siparişler:</strong></div>
+            <ul style="margin:8px 0 0 18px; padding:0;">
+                {% for s in olusan_siparisler %}
+                <li><a href="{% url 'stokapp:siparis_detay' s.pk %}" style="color:#2563eb;">{{ s.siparis_numarasi }}</a></li>
+                {% endfor %}
+            </ul>
+            {% if bekleyen_kalem_sayisi > 0 %}
+            <div style="margin-top:8px; font-size:13px; color:#92400e;">{{ bekleyen_kalem_sayisi }} kalem henüz siparişe aktarılmadı.</div>
+            {% endif %}
+            {% else %}
+            <div class="muted">Bu tekliften henüz sipariş oluşturulmadı.</div>
+            {% endif %}
+            {% if teklif.kaynak_siparis %}
+            <div style="margin-top:8px;"><strong>Kaynak sipariş:</strong>
+                <a href="{% url 'stokapp:siparis_detay' teklif.kaynak_siparis.pk %}">{{ teklif.kaynak_siparis.siparis_numarasi }}</a>
+            </div>
+            {% endif %}
+            {% if teklif.siparis_mektubu %}
+            <div style="margin-top:8px;">
+                <strong>Sipariş mektubu:</strong>
+                <a href="{{ teklif.siparis_mektubu.url }}" target="_blank" style="color:#2563eb; font-weight:600;">PDF görüntüle/indir</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if teklif.durum == 'rejected' %}
+    <div style="background:#fef2f2; border:1px solid #fecaca; padding:14px; border-radius:8px; margin-bottom:16px;">
+        <strong>Red bilgileri</strong>
+        <div>Sebep: {% if teklif.red_sebebi %}{{ teklif.get_red_sebebi_display }}{% else %}—{% endif %}</div>
+        {% if teklif.red_sebebi == 'DIGER' and teklif.red_sebebi_diger_aciklama %}
+        <div>Diğer açıklama: {{ teklif.red_sebebi_diger_aciklama }}</div>
+        {% endif %}
+        {% if teklif.red_notu %}<div>Not: {{ teklif.red_notu }}</div>{% endif %}
+        {% if teklif.red_tarihi %}<div>Tarih: {{ teklif.red_tarihi|date:"d.m.Y H:i" }}</div>{% endif %}
+        {% if teklif.reddeden_kullanici %}<div>Kullanıcı: {{ teklif.reddeden_kullanici.get_full_name|default:teklif.reddeden_kullanici.username }}</div>{% endif %}
+    </div>
+    {% endif %}
+
+    <h3 style="font-size:15px; border-bottom:1px solid #e5e7eb; padding-bottom:8px;">Kalemler</h3>
+    <table style="width:100%; border-collapse:collapse; font-size:13px;">
+        <thead><tr style="background:#f3f4f6;"><th>#</th><th>Ürün / Açıklama</th><th>Miktar</th><th>Birim fiyat</th><th>PB</th><th>KDV %</th><th>Satır</th><th>Sipariş durumu</th></tr></thead>
+        <tbody>
+            {% for k in kalemler %}
+            <tr style="border-bottom:1px solid #eee;">
+                <td>{{ forloop.counter }}</td>
+                <td>{% if k.stok_item %}<strong>{{ k.stok_item.stok_kodu }}</strong> — {{ k.stok_item.ad }}{% endif %} {% if k.aciklama %}<br/><small>{{ k.aciklama }}</small>{% endif %}{% if k.satir_notu %}<br/><small style="color:#64748b;">Not: {{ k.satir_notu|linebreaksbr }}</small>{% endif %}</td>
+                <td>{{ k.miktar|tr_decimal:"3" }}</td>
+                <td>{{ k.birim_fiyat|tr_decimal:"2" }}</td>
+                <td>{{ k.para_birimi }}</td>
+                <td>{{ k.vergi_yuzdesi|tr_decimal:"2" }}</td>
+                <td>{{ k.satir_toplam|tr_decimal:"2" }}</td>
+                <td>
+                    {% if k.id in siparise_aktarilmis_kalem_ids %}
+                    <span style="color:#166534; font-size:12px;">✓ Siparişe aktarıldı</span>
+                    {% else %}
+                    <span style="color:#64748b; font-size:12px;">Bekliyor</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {% if teklif.sartlar_metni %}
+    <h3 style="margin-top:20px; font-size:15px;">Teklif şartları</h3>
+    <pre style="white-space:pre-wrap; background:#fafafa; padding:12px; border-radius:8px;">{{ teklif.sartlar_metni }}</pre>
+    {% endif %}
+
+    {% if teklif_banka_satirlari %}
+    <h3 style="margin-top:20px; font-size:15px;">Banka hesap bilgileri</h3>
+    <div style="background:#fafafa; padding:12px; border-radius:8px; font-size:13px; line-height:1.55;">
+      <div style="font-weight:600; margin-bottom:10px;">Banka Hesap Adı : Tekmar Endüstriyel Makina Otomasyon Sanayi ve Ticaret Ltd Şti</div>
+      {% for bh in teklif_banka_satirlari %}
+      <div style="margin-bottom:10px;">
+        <strong>{{ bh.banka_adi }}</strong> — {{ bh.hesap_adi }}<br/>
+        IBAN: {{ bh.iban }}<br/>
+        Para birimi: {{ bh.para_birimi }}{% if bh.sube_kodu %} — Şube: {{ bh.sube_kodu }}{% endif %}{% if bh.hesap_no %} — Hesap no: {{ bh.hesap_no }}{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <h3 style="margin-top:24px; font-size:15px; border-bottom:1px solid #e5e7eb; padding-bottom:8px;">Gönderim geçmişi</h3>
+    <table style="width:100%; border-collapse:collapse; font-size:12px;">
+        <thead><tr style="background:#f3f4f6;"><th>Tarih</th><th>Durum</th><th>Konu</th><th>Alıcılar</th><th>Gönderen</th></tr></thead>
+        <tbody>
+            {% for g in gonderimler %}
+            <tr style="border-bottom:1px solid #eee;">
+                <td>{{ g.gonderim_tarihi|date:"d.m.Y H:i" }}</td>
+                <td>{{ g.get_durum_display }}{% if g.hata_mesaji %}<br/><small style="color:#b91c1c;">{{ g.hata_mesaji|truncatechars:80 }}</small>{% endif %}</td>
+                <td>{{ g.konu|truncatechars:40 }}</td>
+                <td>{{ g.alicilar|join:", " }}</td>
+                <td>{% if g.gonderen_kullanici %}{{ g.gonderen_kullanici.username }}{% endif %}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" style="color:#9ca3af;">Kayıt yok.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% if teklif.durum == 'draft' or teklif.durum == 'sent' %}
+{% if bekleyen_kalem_sayisi > 0 %}
+{% include "stokapp/includes/teklif_onay_modal.html" %}
+{% endif %}
+{% endif %}
+{% endblock %}

@@ -1,0 +1,241 @@
+{% extends "stokapp/base.html" %}
+{% block title %}CNC Program Detay - {{ program.program_name }}{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div>
+            <h2 style="margin: 0 0 5px 0;">{{ program.program_name }}</h2>
+            {% if program.program_number %}
+            <p style="margin: 0; color: #6b7280; font-size: 14px;">Program No: {{ program.program_number }}</p>
+            {% endif %}
+            <div style="display: flex; gap: 15px; margin-top: 15px;">
+                <a href="{% url 'stokapp:cnc_program_listesi' %}" 
+                   class="btn" 
+                   style="background-color: #6b7280; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-size: 14px;">
+                    ← Geri
+                </a>
+                <a href="{% url 'stokapp:cnc_program_duzenle' program.program_id %}" 
+                   class="btn" 
+                   style="background-color: #3b82f6; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-size: 14px;">
+                    ✏️ Düzenle
+                </a>
+                <a href="{% url 'stokapp:cnc_program_revizyon_ekle' program.program_id %}" 
+                   class="btn" 
+                   style="background-color: #22c55e; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-size: 14px;">
+                    ➕ Revizyon Ekle
+                </a>
+                {% if program.status == 'active' %}
+                <a href="{% url 'stokapp:cnc_program_sil' program.program_id %}" 
+                   class="btn" 
+                   style="background-color: #ef4444; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-size: 14px;">
+                    🗑️ Arşivle
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 15px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background: #fff3cd; color: #856404; border-left: 4px solid #ffc107;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Program Bilgileri -->
+    <div style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; margin-bottom: 30px;">
+        <h3 style="margin: 0 0 20px 0; font-size: 20px; color: #111827; border-bottom: 2px solid #3b82f6; padding-bottom: 10px;">
+            📋 Program Bilgileri
+        </h3>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+            <div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 600; color: #6b7280; font-size: 13px; margin-bottom: 5px;">Ürün</label>
+                    <div style="font-size: 16px; color: #111827; font-weight: 500;">
+                        <a href="{% url 'stokapp:stok_detay' program.product.pk %}" style="color: #3b82f6; text-decoration: none;">
+                            {{ program.product.stok_kodu }} - {{ program.product.ad }}
+                        </a>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 600; color: #6b7280; font-size: 13px; margin-bottom: 5px;">Ürün Parçası</label>
+                    <div style="font-size: 16px; color: #111827;">
+                        {% if program.urun_parcasi %}
+                            <span style="background-color: #f3f4f6; padding: 4px 10px; border-radius: 4px;">{{ program.urun_parcasi }}</span>
+                        {% else %}
+                            <span style="color: #9ca3af;">— Belirtilmemiş —</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 600; color: #6b7280; font-size: 13px; margin-bottom: 5px;">Makine Tipi</label>
+                    <div style="font-size: 16px; color: #111827;">{{ program.get_machine_type_display }}</div>
+                </div>
+                
+                {% if program.machine_name %}
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 600; color: #6b7280; font-size: 13px; margin-bottom: 5px;">Makine Adı</label>
+                    <div style="font-size: 16px; color: #111827;">{{ program.machine_name }}</div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 600; color: #6b7280; font-size: 13px; margin-bottom: 5px;">Aktif Revizyon</label>
+                    <div style="font-size: 16px; color: #111827; font-weight: 600;">
+                        {% if program.current_revision %}
+                        <span style="background-color: #22c55e; color: white; padding: 4px 12px; border-radius: 12px; font-size: 14px;">
+                            {{ program.current_revision }}
+                        </span>
+                        {% else %}
+                        <span style="color: #6b7280;">Revizyon yok</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 600; color: #6b7280; font-size: 13px; margin-bottom: 5px;">Dosya Formatı</label>
+                    <div style="font-size: 16px; color: #111827;">{{ program.get_file_format_display }}</div>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 600; color: #6b7280; font-size: 13px; margin-bottom: 5px;">Dosya Konumu</label>
+                    <div style="font-size: 14px; color: #111827;">
+                        {% if program.dosya_konumu %}
+                            <span style="background-color: #eff6ff; color: #1e40af; padding: 4px 10px; border-radius: 4px; font-family: monospace;">
+                                📂 {{ program.dosya_konumu }}
+                            </span>
+                        {% else %}
+                            <span style="color: #9ca3af;">— Belirtilmemiş —</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 600; color: #6b7280; font-size: 13px; margin-bottom: 5px;">Durum</label>
+                    <div>
+                        {% if program.status == 'active' %}
+                        <span style="background-color: #22c55e; color: white; padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 500;">Aktif</span>
+                        {% else %}
+                        <span style="background-color: #6b7280; color: white; padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 500;">Arşivlenmiş</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 600; color: #6b7280; font-size: 13px; margin-bottom: 5px;">Oluşturulma Tarihi</label>
+                    <div style="font-size: 14px; color: #111827;">{{ program.created_at|date:"d.m.Y H:i" }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Revizyon Geçmişi (Timeline) -->
+    <div style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; margin-bottom: 30px;">
+        <h3 style="margin: 0 0 20px 0; font-size: 20px; color: #111827; border-bottom: 2px solid #3b82f6; padding-bottom: 10px;">
+            📝 Revizyon Geçmişi
+        </h3>
+        
+        {% if revizyonlar %}
+        <div style="position: relative; padding-left: 30px;">
+            {% for revizyon in revizyonlar %}
+            <div style="position: relative; margin-bottom: 30px; padding-left: 20px; border-left: 3px solid {% if revizyon.is_active %}#22c55e{% else %}#e5e7eb{% endif %};">
+                <!-- Nokta -->
+                <div style="position: absolute; left: -11px; top: 5px; width: 20px; height: 20px; border-radius: 50%; background: {% if revizyon.is_active %}#22c55e{% else %}#9ca3af{% endif %}; border: 3px solid white; box-shadow: 0 0 0 2px {% if revizyon.is_active %}#22c55e{% else %}#e5e7eb{% endif %};"></div>
+                
+                <!-- Revizyon Bilgileri -->
+                <div style="background: {% if revizyon.is_active %}#f0fdf4{% else %}#f9fafb{% endif %}; padding: 16px; border-radius: 8px; border: 1px solid {% if revizyon.is_active %}#bbf7d0{% else %}#e5e7eb{% endif %};">
+                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                        <div>
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                                <strong style="font-size: 18px; color: #111827;">{{ revizyon.revision_code }}</strong>
+                                {% if revizyon.is_active %}
+                                <span style="background-color: #22c55e; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;">AKTİF</span>
+                                {% endif %}
+                                <span style="background-color: #eff6ff; color: #1e40af; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500;">
+                                    {{ revizyon.get_revision_type_display }}
+                                </span>
+                            </div>
+                            <div style="font-size: 13px; color: #6b7280;">
+                                <strong>{{ revizyon.created_by.get_full_name|default:revizyon.created_by.username }}</strong> tarafından
+                                {{ revizyon.created_at|date:"d.m.Y H:i" }} tarihinde oluşturuldu
+                            </div>
+                        </div>
+                        
+                        <!-- İşlem Butonları -->
+                        <div style="display: flex; gap: 8px;">
+                            <a href="{% url 'stokapp:cnc_program_revizyon_indir' revizyon.revision_id %}" 
+                               style="padding: 6px 12px; background-color: #3b82f6; color: white; border-radius: 6px; text-decoration: none; font-size: 12px;">
+                                ⬇️ İndir
+                            </a>
+                            {% if not revizyon.is_active %}
+                            <a href="{% url 'stokapp:cnc_program_revizyon_rollback' revizyon.revision_id %}" 
+                               style="padding: 6px 12px; background-color: #f59e0b; color: white; border-radius: 6px; text-decoration: none; font-size: 12px;"
+                               onclick="return confirm('Bu revizyonu aktif yapmak istediğinizden emin misiniz?');">
+                                🔄 Aktif Yap
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Revizyon Notu -->
+                    <div style="background: white; padding: 12px; border-radius: 6px; margin-top: 10px; border: 1px solid #e5e7eb;">
+                        <strong style="display: block; margin-bottom: 6px; color: #6b7280; font-size: 12px;">Revizyon Notu:</strong>
+                        <div style="color: #111827; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">{{ revizyon.revision_note }}</div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 40px; color: #6b7280;">
+            Henüz revizyon bulunmuyor. <a href="{% url 'stokapp:cnc_program_revizyon_ekle' program.program_id %}">İlk revizyonu ekleyin</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Log Kayıtları -->
+    {% if loglar %}
+    <div style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px;">
+        <h3 style="margin: 0 0 20px 0; font-size: 20px; color: #111827; border-bottom: 2px solid #3b82f6; padding-bottom: 10px;">
+            📊 İşlem Geçmişi
+        </h3>
+        
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background-color: #f9fafb;">
+                        <th style="padding: 10px; text-align: left; font-size: 12px; color: #6b7280; font-weight: 600;">Tarih</th>
+                        <th style="padding: 10px; text-align: left; font-size: 12px; color: #6b7280; font-weight: 600;">İşlem</th>
+                        <th style="padding: 10px; text-align: left; font-size: 12px; color: #6b7280; font-weight: 600;">Kullanıcı</th>
+                        <th style="padding: 10px; text-align: left; font-size: 12px; color: #6b7280; font-weight: 600;">Notlar</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in loglar %}
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 10px; font-size: 13px; color: #111827;">{{ log.created_at|date:"d.m.Y H:i" }}</td>
+                        <td style="padding: 10px; font-size: 13px;">
+                            <span style="background-color: #eff6ff; color: #1e40af; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500;">
+                                {{ log.get_action_display }}
+                            </span>
+                        </td>
+                        <td style="padding: 10px; font-size: 13px; color: #111827;">{{ log.user.get_full_name|default:log.user.username }}</td>
+                        <td style="padding: 10px; font-size: 13px; color: #6b7280;">{{ log.notes|truncatewords:10 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

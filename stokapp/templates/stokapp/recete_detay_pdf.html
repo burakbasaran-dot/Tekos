@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <title>Reçete — {{ recete.urun.stok_kodu }}</title>
+</head>
+<body>
+  <h1>Ürün Reçetesi</h1>
+  <div class="meta">
+    Ürün: <strong>{{ recete.urun.stok_kodu }}</strong> — {{ recete.urun.ad }} |
+    Versiyon: v{{ recete.versiyon }} |
+    Durum: {% if recete.aktif %}Aktif{% else %}Pasif{% endif %} |
+    PDF: {{ olusturma_tarihi|date:"d.m.Y H:i" }}
+  </div>
+  {% if recete.aciklama %}
+  <div class="meta pre-wrap"><strong>Açıklama:</strong> {{ recete.aciklama }}</div>
+  {% endif %}
+
+  <!-- Reçete Bileşenleri -->
+  <div class="section">
+    <h2>📋 Reçete Bileşenleri</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Sıra</th>
+          <th>Stok Kodu</th>
+          <th>Ürün</th>
+          <th class="num">Miktar</th>
+          <th>Birim</th>
+          <th class="num">Birim Fiyat</th>
+          <th class="num">Tutar</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in detaylar_with_prices %}
+        <tr>
+          <td>{{ row.detay.sira }}</td>
+          <td>{{ row.detay.stok_item.stok_kodu }}</td>
+          <td>{{ row.detay.stok_item.ad }}</td>
+          <td class="num">{{ row.detay.miktar }}</td>
+          <td>{{ row.detay.birim }}</td>
+          <td class="num">{{ row.para_sembol }} {{ row.birim_fiyat|floatformat:2 }}</td>
+          <td class="num">{{ row.para_sembol }} {{ row.tutar|floatformat:2 }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="empty">Bileşen bulunamadı.</td></tr>
+        {% endfor %}
+      </tbody>
+      {% if toplam_by_para_birimi %}
+      <tfoot>
+        <tr>
+          <td colspan="6" class="num"><strong>Toplam</strong></td>
+          <td class="num">
+            {% for para_birimi, data in toplam_by_para_birimi.items %}
+            <div>{{ data.para_sembol }} {{ data.toplam|floatformat:2 }}</div>
+            {% endfor %}
+          </td>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+
+  <!-- Operasyonlar -->
+  <div class="section">
+    <h2>⚙️ Operasyonlar</h2>
+    {% if operasyon_agaci %}
+      {% for node in operasyon_agaci %}
+      <div class="node-box">
+        <div class="node-header">
+          {% if node.genel %}
+            Genel Operasyon ({{ node.operasyonlar|length }})
+          {% else %}
+            {{ node.detay.stok_item.stok_kodu }} — {{ node.detay.stok_item.ad }} ({{ node.operasyonlar|length }})
+          {% endif %}
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Sıra</th>
+              <th>Operasyon</th>
+              <th>İstasyon</th>
+              <th>Standart</th>
+              <th class="num">Maliyet</th>
+              <th>Süre</th>
+              <th class="num">Toplam</th>
+              <th>Dış op.</th>
+              <th>Açıklama</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for op in node.operasyonlar %}
+            <tr>
+              <td>{{ op.sira }}</td>
+              <td>{{ op.operasyon.ad }}</td>
+              <td>{{ op.istasyon.ad|default:"-" }}</td>
+              <td>{% if op.uretim_standarti %}{{ op.uretim_standarti.kod }}{% else %}-{% endif %}</td>
+              <td class="num">{{ op.maliyet|floatformat:2 }} TRY</td>
+              <td>{{ op.get_sure_formatted }}</td>
+              <td class="num">{{ op.toplam_maliyet|floatformat:2 }} TRY</td>
+              <td>{% if op.operasyon.akis_dis_operasyon and op.dis_tedarikci %}{{ op.dis_tedarikci.ad }}{% else %}—{% endif %}</td>
+              <td>{{ op.aciklama|default:"-" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endfor %}
+      <div class="meta"><strong>Operasyonlar toplamı:</strong> ₺ {{ operasyonlar_toplam_maliyet|floatformat:2 }}</div>
+    {% else %}
+      <div class="empty">Operasyon bulunamadı.</div>
+    {% endif %}
+  </div>
+
+  <!-- Dış Operasyonlar -->
+  <div class="section">
+    <h2>🏭 Dış Operasyonlar</h2>
+    {% if dis_operasyon_agaci %}
+      {% for node in dis_operasyon_agaci %}
+      <div class="node-box">
+        <div class="node-header">
+          {% if node.genel %}
+            Ürün Geneli ({{ node.atamalar|length }})
+          {% else %}
+            {{ node.detay.stok_item.stok_kodu }} — {{ node.detay.stok_item.ad }} ({{ node.atamalar|length }})
+          {% endif %}
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Sıra</th>
+              <th>Dış Operasyon</th>
+              <th>Tedarikçi</th>
+              <th>Gönderim Deposu</th>
+              <th class="num">Birim Fiyat</th>
+              <th class="num">Dönüş (gün)</th>
+              <th>Açıklama</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in node.atamalar %}
+            <tr>
+              <td>{{ item.sira }}</td>
+              <td>{{ item.dis_operasyon_tipi.ad }}</td>
+              <td>{{ item.tedarikci.ad|default:"-" }}</td>
+              <td>{{ item.dis_gonderim_deposu.ad|default:"-" }}</td>
+              <td class="num">{{ item.dis_birim_fiyat|floatformat:2 }} {{ item.dis_para_birimi }}</td>
+              <td class="num">{{ item.dis_beklenen_donus_gun }}</td>
+              <td>{{ item.aciklama|default:"-" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty">Dış operasyon ataması bulunamadı.</div>
+    {% endif %}
+  </div>
+
+  <!-- Talimatlar -->
+  <div class="section">
+    <h2>📝 Talimatlar</h2>
+    {% if talimatlar %}
+      {% for talimat in talimatlar %}
+      <div class="talimat-block">
+        <div class="talimat-title">Talimat #{{ talimat.sira }}</div>
+        <div class="pre-wrap" style="margin-bottom:8px;">{{ talimat.aciklama }}</div>
+
+        {% if talimat.olculer.all %}
+        <h3>Ölçüler</h3>
+        <table class="sub-table">
+          <thead><tr><th>Açıklama</th><th class="num">Nominal</th><th>Birim</th><th class="num">Min</th><th class="num">Max</th></tr></thead>
+          <tbody>
+            {% for olcu in talimat.olculer.all %}
+            <tr>
+              <td>{{ olcu.aciklama|default:"-" }}</td>
+              <td class="num">{{ olcu.nominal_deger|default:"-" }}</td>
+              <td>{{ olcu.birim|default:"-" }}</td>
+              <td class="num">{{ olcu.min_deger|default:"-" }}</td>
+              <td class="num">{{ olcu.max_deger|default:"-" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% endif %}
+
+        {% if talimat.ekipmanlar.all %}
+        <h3>Ekipmanlar</h3>
+        <table class="sub-table">
+          <thead><tr><th>No</th><th>Ad</th><th>Açıklama</th></tr></thead>
+          <tbody>
+            {% for te in talimat.ekipmanlar.all %}
+            <tr>
+              <td>{% if te.ekipman %}{{ te.ekipman.ekipman_numarasi }}{% else %}-{% endif %}</td>
+              <td>{% if te.ekipman %}{{ te.ekipman.ad }}{% else %}-{% endif %}</td>
+              <td>{% if te.ekipman %}{{ te.ekipman.aciklama|default:"-" }}{% else %}-{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% endif %}
+
+        {% if talimat.fiksturler.all %}
+        <h3>Fikstürler</h3>
+        <table class="sub-table">
+          <thead><tr><th>No</th><th>Ad</th></tr></thead>
+          <tbody>
+            {% for tf in talimat.fiksturler.all %}
+            <tr>
+              <td>{{ tf.fikstur.fikstur_numarasi }}</td>
+              <td>{{ tf.fikstur.ad }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% endif %}
+
+        {% if talimat.olcu_aletleri.all %}
+        <h3>Ölçü Aletleri</h3>
+        <table class="sub-table">
+          <thead><tr><th>Seri No</th><th>Marka</th><th>Model</th></tr></thead>
+          <tbody>
+            {% for oa in talimat.olcu_aletleri.all %}
+            <tr>
+              <td>{% if oa.olcu_aleti %}{{ oa.olcu_aleti.seri_no }}{% else %}-{% endif %}</td>
+              <td>{% if oa.olcu_aleti %}{{ oa.olcu_aleti.marka|default:"-" }}{% else %}-{% endif %}</td>
+              <td>{% if oa.olcu_aleti %}{{ oa.olcu_aleti.model|default:"-" }}{% else %}-{% endif %}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% endif %}
+
+        {% if talimat.programlar.all %}
+        <h3>Programlar</h3>
+        <table class="sub-table">
+          <thead><tr><th>Program</th><th>Açıklama</th></tr></thead>
+          <tbody>
+            {% for prog in talimat.programlar.all %}
+            <tr>
+              <td>{{ prog.program_adi }}</td>
+              <td>{{ prog.aciklama|default:"-" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% endif %}
+
+        {% if talimat.ek_aciklamalar.all %}
+        <h3>Ek Açıklamalar</h3>
+        <table class="sub-table">
+          <thead><tr><th>Sıra</th><th>Açıklama</th></tr></thead>
+          <tbody>
+            {% for ek in talimat.ek_aciklamalar.all %}
+            <tr>
+              <td>{{ ek.sira }}</td>
+              <td class="pre-wrap">{{ ek.aciklama }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% endif %}
+
+        {% if talimat.kurulum_dosyalari.all %}
+        <h3>Kurulum Dosyaları</h3>
+        <table class="sub-table">
+          <thead><tr><th>Ürün</th><th>Parça</th><th>İstasyon</th><th>Versiyon</th><th>Açıklama</th></tr></thead>
+          <tbody>
+            {% for tk in talimat.kurulum_dosyalari.all %}
+            <tr>
+              <td>{{ tk.kurulum_dosyasi.urun.stok_kodu }}</td>
+              <td>{{ tk.kurulum_dosyasi.urun_parcasi|default:"-" }}</td>
+              <td>{% if tk.kurulum_dosyasi.istasyon %}{{ tk.kurulum_dosyasi.istasyon.ad }}{% else %}-{% endif %}</td>
+              <td>{{ tk.kurulum_dosyasi.versiyon }}</td>
+              <td>{{ tk.kurulum_dosyasi.aciklama|default:"-" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% endif %}
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty">Talimat bulunamadı.</div>
+    {% endif %}
+  </div>
+
+  <!-- Dosya Özeti -->
+  <div class="section">
+    <h2>📁 Dosya Özeti</h2>
+    {% if dosya_ozeti %}
+    <table>
+      <thead>
+        <tr>
+          <th>Kaynak</th>
+          <th>Dosya / Referans</th>
+          <th>Tip</th>
+          <th>Açıklama</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for dosya in dosya_ozeti %}
+        <tr>
+          <td>{{ dosya.kaynak }}</td>
+          <td>{{ dosya.dosya_adi }}</td>
+          <td>{{ dosya.dosya_tipi }}</td>
+          <td>{{ dosya.aciklama|default:"-" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <div class="empty">Ekli dosya bulunamadı.</div>
+    {% endif %}
+  </div>
+</body>
+</html>

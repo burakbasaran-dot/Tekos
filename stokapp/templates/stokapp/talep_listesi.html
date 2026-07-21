@@ -1,0 +1,166 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Talep Yönetimi{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
+        <h2 style="margin:0;">Talep Yönetimi</h2>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <a href="{% url 'stokapp:talep_ekle' %}" class="btn btn-primary" style="padding:10px 16px;">+ Yeni Talep</a>
+            <a href="{% url 'stokapp:talep_listesi' %}" class="btn btn-secondary" style="padding:10px 16px;">Açık Talepler</a>
+            {% if not filtre.arsiv %}
+            <a href="?arsiv=1" class="btn btn-secondary" style="padding:10px 16px;">Arşiv</a>
+            {% else %}
+            <a href="{% url 'stokapp:talep_listesi' %}" class="btn btn-secondary" style="padding:10px 16px;">Arşivden Çık</a>
+            {% endif %}
+        </div>
+    </div>
+
+    <form method="get" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap:10px; margin-bottom:20px; align-items:end;">
+        {% if filtre.arsiv %}<input type="hidden" name="arsiv" value="1">{% endif %}
+        <div>
+            <label style="display:block; font-size:12px; color:#6b7280;">Durum</label>
+            <select name="durum" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e5e7eb;">
+                <option value="">Tümü</option>
+                <option value="YENI" {% if filtre.durum == 'YENI' %}selected{% endif %}>Yeni Talep</option>
+                <option value="INCELEMEDE" {% if filtre.durum == 'INCELEMEDE' %}selected{% endif %}>İncelemede</option>
+                <option value="ONAYLANDI" {% if filtre.durum == 'ONAYLANDI' %}selected{% endif %}>Onaylandı</option>
+                <option value="SATINALMAYA_AKTARILDI" {% if filtre.durum == 'SATINALMAYA_AKTARILDI' %}selected{% endif %}>Satınalmaya Aktarıldı</option>
+                <option value="SIPARIS_VERILDI" {% if filtre.durum == 'SIPARIS_VERILDI' %}selected{% endif %}>Sipariş Verildi</option>
+                <option value="KISMEN_KARSILANDI" {% if filtre.durum == 'KISMEN_KARSILANDI' %}selected{% endif %}>Kısmen Karşılandı</option>
+                <option value="TAMAMLANDI" {% if filtre.durum == 'TAMAMLANDI' %}selected{% endif %}>Tamamlandı</option>
+                <option value="REDDEDILDI" {% if filtre.durum == 'REDDEDILDI' %}selected{% endif %}>Reddedildi</option>
+                <option value="IPTAL" {% if filtre.durum == 'IPTAL' %}selected{% endif %}>İptal Edildi</option>
+            </select>
+        </div>
+        <div>
+            <label style="display:block; font-size:12px; color:#6b7280;">Öncelik</label>
+            <select name="oncelik" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e5e7eb;">
+                <option value="">Tümü</option>
+                <option value="DUSUK" {% if filtre.oncelik == 'DUSUK' %}selected{% endif %}>Düşük</option>
+                <option value="NORMAL" {% if filtre.oncelik == 'NORMAL' %}selected{% endif %}>Normal</option>
+                <option value="ACIL" {% if filtre.oncelik == 'ACIL' %}selected{% endif %}>Acil</option>
+                <option value="KRITIK" {% if filtre.oncelik == 'KRITIK' %}selected{% endif %}>Kritik</option>
+            </select>
+        </div>
+        <div>
+            <label style="display:block; font-size:12px; color:#6b7280;">Kategori</label>
+            <select name="kategori" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e5e7eb;">
+                <option value="">Tümü</option>
+                <option value="SARF" {% if filtre.kategori == 'SARF' %}selected{% endif %}>Sarf Malzemesi</option>
+                <option value="URETIM_MALZ" {% if filtre.kategori == 'URETIM_MALZ' %}selected{% endif %}>Üretim Malzemesi</option>
+                <option value="BAKIM_ONARIM" {% if filtre.kategori == 'BAKIM_ONARIM' %}selected{% endif %}>Bakım / Onarım</option>
+                <option value="EKIPMAN" {% if filtre.kategori == 'EKIPMAN' %}selected{% endif %}>Ekipman</option>
+                <option value="OFIS" {% if filtre.kategori == 'OFIS' %}selected{% endif %}>Ofis Malzemesi</option>
+                <option value="HIZMET" {% if filtre.kategori == 'HIZMET' %}selected{% endif %}>Hizmet</option>
+                <option value="YEDEK_PARCA" {% if filtre.kategori == 'YEDEK_PARCA' %}selected{% endif %}>Yedek Parça</option>
+                <option value="DIGER" {% if filtre.kategori == 'DIGER' %}selected{% endif %}>Diğer</option>
+            </select>
+        </div>
+        <div>
+            <label style="display:block; font-size:12px; color:#6b7280;">Talep eden</label>
+            <select name="talep_eden" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e5e7eb;">
+                <option value="">Tümü</option>
+                {% for u in kullanicilar %}
+                <option value="{{ u.pk }}" {% if filtre.talep_eden == u.pk|stringformat:"s" %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="display:block; font-size:12px; color:#6b7280;">Satınalma sorumlusu</label>
+            <select name="sorumlu" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e5e7eb;">
+                <option value="">Tümü</option>
+                {% for u in kullanicilar %}
+                <option value="{{ u.pk }}" {% if filtre.sorumlu == u.pk|stringformat:"s" %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="display:block; font-size:12px; color:#6b7280;">Departman (içerir)</label>
+            <input type="text" name="departman" value="{{ filtre.departman|default:'' }}" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e5e7eb;">
+        </div>
+        <div>
+            <label style="display:block; font-size:12px; color:#6b7280;">Tarih başlangıç</label>
+            <input type="date" name="tarih_bas" value="{{ filtre.tarih_bas|default:'' }}" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e5e7eb;">
+        </div>
+        <div>
+            <label style="display:block; font-size:12px; color:#6b7280;">Tarih bitiş</label>
+            <input type="date" name="tarih_bit" value="{{ filtre.tarih_bit|default:'' }}" style="width:100%; padding:8px; border-radius:8px; border:1px solid #e5e7eb;">
+        </div>
+        <div style="display:flex; flex-direction:column; gap:6px;">
+            <label style="font-size:12px; color:#6b7280;">Hızlı</label>
+            <label style="font-size:13px;"><input type="checkbox" name="geciken" value="1" {% if filtre.geciken %}checked{% endif %}> Geciken</label>
+            <label style="font-size:13px;"><input type="checkbox" name="acik" value="1" {% if filtre.acik %}checked{% endif %}> Açık talepler</label>
+            <label style="font-size:13px;"><input type="checkbox" name="tamamlanan" value="1" {% if filtre.tamamlanan %}checked{% endif %}> Tamamlanan</label>
+        </div>
+        <div>
+            <button type="submit" class="btn btn-primary" style="padding:10px 16px;">Filtrele</button>
+        </div>
+    </form>
+
+    {% if messages %}
+        {% for m in messages %}<div class="alert alert-info" style="padding:10px; margin-bottom:12px;">{{ m }}</div>{% endfor %}
+    {% endif %}
+
+    <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; font-size:13px;">
+            <thead>
+                <tr style="background:#f3f4f6; border-bottom:2px solid #e5e7eb;">
+                    <th style="padding:10px; text-align:left;">Talep No</th>
+                    <th style="padding:10px; text-align:left;">Tarih</th>
+                    <th style="padding:10px; text-align:left;">Talep Eden</th>
+                    <th style="padding:10px; text-align:left;">Departman</th>
+                    <th style="padding:10px; text-align:left;">Kategori</th>
+                    <th style="padding:10px; text-align:left;">Başlık</th>
+                    <th style="padding:10px; text-align:left;">Öncelik</th>
+                    <th style="padding:10px; text-align:left;">Durum</th>
+                    <th style="padding:10px; text-align:left;">Termin</th>
+                    <th style="padding:10px; text-align:left;">Satınalma</th>
+                    <th style="padding:10px; text-align:center;">İşlem</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in talepler %}
+                <tr style="border-bottom:1px solid #e5e7eb; {% if t.oncelik == 'KRITIK' %}background:#fef2f2;{% elif t.oncelik == 'ACIL' %}background:#fff7ed;{% endif %}">
+                    <td style="padding:10px; font-weight:600;">
+                        <a href="{% url 'stokapp:talep_detay' t.pk %}" style="color:#2563eb;">{{ t.talep_no }}</a>
+                        {% if t.row_gecikti %}<span style="margin-left:6px; background:#dc2626; color:#fff; font-size:10px; padding:2px 6px; border-radius:4px;">Gecikti</span>{% endif %}
+                        {% if t.row_siparis_bekliyor %}<span style="margin-left:6px; background:#f59e0b; color:#fff; font-size:10px; padding:2px 6px; border-radius:4px;">Sipariş bekliyor</span>{% endif %}
+                    </td>
+                    <td style="padding:10px;">{{ t.talep_tarihi|date:"d.m.Y" }}</td>
+                    <td style="padding:10px;">{{ t.talep_eden.get_full_name|default:t.talep_eden.username }}</td>
+                    <td style="padding:10px;">{{ t.departman|default:"—" }}</td>
+                    <td style="padding:10px;">{{ t.get_kategori_display }}</td>
+                    <td style="padding:10px; max-width:220px;">{{ t.baslik|truncatechars:48 }}</td>
+                    <td style="padding:10px; font-weight:600;">{{ t.get_oncelik_display }}</td>
+                    <td style="padding:10px;">{{ t.get_durum_display }}</td>
+                    <td style="padding:10px;">{{ t.istenen_termin|date:"d.m.Y"|default:"—" }}</td>
+                    <td style="padding:10px; font-size:12px;">{{ t.row_satinalma_ozet }}</td>
+                    <td style="padding:10px;">
+                        <div style="display:flex; flex-wrap:wrap; gap:4px; justify-content:center;">
+                            <a href="{% url 'stokapp:talep_detay' t.pk %}" style="padding:4px 8px; background:#e0e7ff; border-radius:6px; text-decoration:none; color:#3730a3; font-size:12px;">Detay</a>
+                            {% if request.user.is_staff or request.user.id == t.talep_eden_id %}
+                            <a href="{% url 'stokapp:talep_duzenle' t.pk %}" style="padding:4px 8px; background:#dbeafe; border-radius:6px; text-decoration:none; color:#1d4ed8; font-size:12px;">Düzenle</a>
+                            {% endif %}
+                            {% if request.user.is_staff and t.durum == 'ONAYLANDI' and not t.satinalma_id %}
+                            <a href="{% url 'stokapp:talep_detay' t.pk %}?tab=satinalma" style="padding:4px 8px; background:#dcfce7; border-radius:6px; text-decoration:none; color:#166534; font-size:12px;">Aktar</a>
+                            {% endif %}
+                            {% if request.user.is_staff and t.durum != 'TAMAMLANDI' and t.durum != 'REDDEDILDI' and t.durum != 'IPTAL' %}
+                            <a href="{% url 'stokapp:talep_detay' t.pk %}?tab=kapat" style="padding:4px 8px; background:#fce7f3; border-radius:6px; text-decoration:none; color:#9d174d; font-size:12px;">Kapat</a>
+                            {% endif %}
+                            {% if request.user.is_staff and not t.arsivlendi %}
+                            <form method="post" action="{% url 'stokapp:talep_arsivle' t.pk %}" style="display:inline;" onsubmit="return confirm('Arşivlensin mi?');">
+                                {% csrf_token %}
+                                <button type="submit" style="padding:4px 8px; background:#f3f4f6; border:none; border-radius:6px; cursor:pointer; font-size:12px;">Arşivle</button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="11" style="padding:24px; text-align:center; color:#6b7280;">Kayıt yok.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

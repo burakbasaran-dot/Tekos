@@ -1,0 +1,55 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Transfer Geçmişi{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>📋 Stok Transfer Geçmişi</h2>
+        <div>
+            <a href="{% url 'stokapp:stok_transfer' %}" class="btn btn-primary">➕ Yeni Transfer</a>
+            <a href="{% url 'stokapp:stok_listesi' %}" class="btn btn-secondary">← Geri</a>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Tarih</th>
+                <th>Ürün</th>
+                <th>Miktar</th>
+                <th>Kaynak</th>
+                <th>Hedef</th>
+                <th>Referans No</th>
+                <th>Kullanıcı</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ref_no, transfer in transfer_gruplari.items %}
+                {% if transfer.cikis and transfer.giris %}
+                <tr>
+                    <td>{{ transfer.cikis.tarih|date:"d.m.Y H:i" }}</td>
+                    <td>
+                        <strong>{{ transfer.cikis.stok_item.stok_kodu }}</strong><br>
+                        <small>{{ transfer.cikis.stok_item.ad }}</small>
+                    </td>
+                    <td>{{ transfer.cikis.miktar }} {{ transfer.cikis.birim }}</td>
+                    <td>
+                        <span style="color: #856404;">📤 {{ transfer.cikis.aciklama|truncatewords:5 }}</span>
+                    </td>
+                    <td>
+                        <span style="color: #155724;">📥 {{ transfer.giris.aciklama|truncatewords:5 }}</span>
+                    </td>
+                    <td>{{ transfer.cikis.referans_no }}</td>
+                    <td>{{ transfer.cikis.user }}</td>
+                </tr>
+                {% endif %}
+            {% empty %}
+            <tr>
+                <td colspan="7" style="text-align: center; padding: 40px; color: #6b7280;">
+                    Henüz transfer işlemi bulunmuyor.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

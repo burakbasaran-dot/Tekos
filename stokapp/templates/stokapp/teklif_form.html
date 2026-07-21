@@ -1,0 +1,1028 @@
+{% extends "stokapp/base.html" %}
+{% block title %}{% if teklif %}Teklif düzenle{% else %}Yeni teklif{% endif %}{% endblock %}
+{% block content %}
+{% include "stokapp/includes/tdk_form_styles.html" %}
+<style>
+.tf-wrap { max-width: 1180px; margin: 0 auto; }
+.tf-row { display: flex; gap: 16px; align-items: flex-start; }
+.tf-icon { width: 36px; height: 36px; border-radius: 10px; background: #eff6ff; color: #2563eb; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 18px; }
+.tf-inp { width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; font-size: 14px; box-sizing: border-box; }
+.tf-label { font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 6px; display:block; }
+.tf-pill { padding: 8px 14px; border-radius: 8px; border: 1px solid #e5e7eb; background: #fafafa; cursor: pointer; font-size: 13px; }
+.tf-pill.act { background: #111827; color: #fff; border-color: #111827; }
+.tf-table { width:100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+.tf-table thead th {
+    text-align:left; padding:12px 10px;
+    background: linear-gradient(180deg, #3d566e 0%, #2c3e50 100%);
+    color:#fff; font-weight:600;
+    border-radius: 10px 10px 0 0;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 4px 12px rgba(15,23,42,.12);
+}
+.tf-table thead th:first-child { border-top-left-radius: 10px; }
+.tf-table thead th:last-child { border-top-right-radius: 10px; }
+.tf-table tbody td {
+    padding:11px 10px; vertical-align:middle;
+    background: linear-gradient(165deg, #ffffff 0%, #f4f7fb 100%);
+    border-bottom: 1px solid #dfe6ee;
+    box-shadow:
+        inset 0 1px 0 rgba(255,255,255,.92),
+        0 3px 8px rgba(15,23,42,.07),
+        0 1px 0 rgba(15,23,42,.04);
+    border-radius: 8px;
+}
+.tf-table tbody tr:hover td {
+    background: linear-gradient(165deg, #fafdff 0%, #eef3f8 100%);
+}
+.tf-ad-inline { flex: 1 1 220px; max-width: 380px; min-width: 160px; }
+.tf-ad-inline .tf-inp { font-size: 15px; max-width: 100%; }
+.tf-ozet-wrap {
+    margin-top: 20px; display: flex; flex-wrap: wrap; gap: 16px; justify-content: flex-end; align-items: stretch;
+}
+.tf-ozet {
+    padding: 16px 20px; border-radius: 12px;
+    background: linear-gradient(145deg, #ffffff 0%, #f1f5f9 100%);
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 6px 18px rgba(15,23,42,.08), inset 0 1px 0 rgba(255,255,255,.9);
+    flex: 1 1 280px; max-width: 340px;
+}
+.tf-ozet-cap { font-size: 11px; font-weight: 700; letter-spacing: .08em; color: #64748b; margin-bottom: 8px; }
+.tf-ozet-row { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 8px 0; font-size: 14px; color: #475569; border-bottom: 1px solid #e2e8f0; }
+.tf-ozet-row:last-child { border-bottom: none; padding-top: 12px; margin-top: 4px; font-size: 17px; font-weight: 700; color: #0f172a; }
+.tf-ozet-row:last-child .tf-ozet-val { color: #1e3a5f; }
+.tf-ozet-lbl { font-weight: 500; }
+.tf-ozet-val { font-weight: 600; font-variant-numeric: tabular-nums; }
+.stok-combo-wrap { position:relative; width:100%; }
+.stok-dd {
+    display:none; position:absolute; left:0; right:0; top:100%; margin-top:4px; z-index:80;
+    max-height:240px; overflow:auto; background:#fff; border:1px solid #d1d5db; border-radius:8px;
+    box-shadow:0 10px 25px rgba(15,23,42,.12);
+}
+.stok-dd-item { padding:10px 12px; font-size:12px; cursor:pointer; border-bottom:1px solid #f3f4f6; color:#111827; }
+.stok-dd-item:hover { background:#f3f4f6; }
+.stok-dd-item.reset { color:#6b7280; font-weight:600; }
+.stok-dd-empty { padding:10px 12px; font-size:12px; color:#9ca3af; }
+.btn-dark { background: var(--primary); color:#fff; border:none; padding:10px 20px; border-radius:10px; cursor:pointer; font-weight:600; }
+.btn-line { background:#fff; color:#374151; border:1px solid var(--border); padding:10px 18px; border-radius:10px; cursor:pointer; font-weight:500; text-decoration:none; display:inline-block; }
+.ts-drawer-backdrop { display:none; position:fixed; inset:0; background:rgba(15,23,42,.45); z-index:2000; justify-content:center; align-items:flex-start; padding-top:24px; overflow-y:auto; }
+.ts-drawer-backdrop.ts-open { display:flex; }
+.ts-drawer-panel { background:#fff; width:min(920px,96vw); max-height:88vh; overflow:hidden; display:flex; flex-direction:column; border-radius:12px; box-shadow:0 25px 60px rgba(0,0,0,.2); margin-bottom:48px; font-family: Arial, Helvetica, sans-serif; }
+.ts-drawer-head { display:flex; justify-content:space-between; align-items:center; padding:14px 18px; border-bottom:1px solid #e5e7eb; background:#1e3a5f; color:#fff; }
+.ts-drawer-head h3 { margin:0; font-size:16px; font-weight:600; }
+.ts-drawer-head button { background:transparent; border:none; color:#fff; font-size:24px; cursor:pointer; line-height:1; padding:0 4px; }
+.ts-drawer-body { padding:16px 18px; overflow-y:auto; flex:1; font-size:13px; }
+.ts-drawer-foot { padding:12px 18px; border-top:1px solid #e5e7eb; display:flex; flex-wrap:wrap; gap:10px; justify-content:flex-end; }
+.ts-sart-row { border:1px solid #e5e7eb; border-radius:10px; padding:12px 14px; margin-bottom:10px; background:#fafafa; }
+.ts-sart-row-head { display:flex; gap:12px; align-items:flex-start; }
+.ts-sart-title { font-weight:600; font-size:14px; color:#111827; flex:1; }
+.ts-sart-fields { display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; margin-left:28px; align-items:flex-end; }
+.ts-sart-help { font-size:11px; color:#64748b; margin-top:6px; margin-left:28px; line-height:1.35; }
+.ts-field-grp { display:flex; flex-direction:column; gap:4px; min-width:100px; }
+.ts-field-grp label { font-size:10px; font-weight:600; color:#64748b; text-transform:uppercase; letter-spacing:.04em; }
+.ts-ozel-card { border:1px dashed #94a3b8; border-radius:10px; padding:12px; margin-bottom:10px; background:#fff; }
+.tf-kalem-note td { background:#f1f5f9 !important; padding:12px 14px !important; border-radius:0 0 8px 8px; box-shadow:none !important; }
+.tf-act-cell { display:flex; gap:6px; align-items:center; justify-content:flex-end; flex-wrap:nowrap; }
+.tf-act-cell .btn-line { padding:6px 10px; min-width:36px; text-align:center; }
+</style>
+
+<div class="tdk-page tf-wrap">
+    <form method="post" id="teklifForm" class="tdk-form-card">
+        {% csrf_token %}
+        <input type="hidden" name="kalemler" id="kalemlerInput">
+        <input type="hidden" name="kaynak_siparis_id" value="{{ kaynak_siparis_id }}">
+
+        <section class="tdk-section">
+            <div class="tdk-header" style="margin-bottom:0;">
+                <div style="display:flex; align-items:flex-end; gap:16px; flex-wrap:wrap; flex:1; min-width:220px;">
+                    <div>
+                        <h1 style="margin:0; font-size:26px; font-weight:700; color:var(--ink); display:flex; align-items:center; gap:10px;">
+                            📄 {% if teklif %}Teklif Düzenle{% else %}Yeni Teklif{% endif %}
+                        </h1>
+                        <p style="margin:6px 0 0; font-size:14px; color:var(--muted);">Müşteri, şartlar, banka bilgileri ve kalemleri tek ekrandan yönetin.</p>
+                    </div>
+                </div>
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <a href="{% url 'stokapp:teklif_listesi' %}" class="btn-line">Vazgeç</a>
+                    <button type="submit" class="btn-dark">Kaydet</button>
+                </div>
+            </div>
+            <div class="tdk-grid-3" style="margin-top:20px;">
+                <div class="tdk-field tdk-has-help full" style="grid-column:1/-1;" data-help="Teklif için kısa başlık. Listelerde kolay tanıma sağlar; boş bırakılabilir.">
+                    <label class="tf-label">Teklif ismi <span style="font-weight:500;color:#94a3b8;">(isteğe bağlı)</span></label>
+                    <input class="tf-inp" name="ad" value="{{ form_ad }}" placeholder="Kısa başlık — boş bırakılabilir">
+                </div>
+                <div class="tdk-field tdk-has-help" data-help="Teklifin düzenlendiği tarih. Geçerlilik süresi bu tarihten hesaplanır.">
+                    <label class="tf-label">Düzenleme tarihi</label>
+                    <input type="date" class="tf-inp" name="duzenleme_tarihi" id="duzenleme_tarihi" value="{{ form_duzenleme }}">
+                </div>
+                <div class="tdk-field tdk-has-help" data-help="Teklif şartlarındaki geçerlilik süresine göre otomatik hesaplanır; manuel değiştirilemez.">
+                    <label class="tf-label">Teklif geçerlilik tarihi</label>
+                    <input type="text" class="tf-inp" id="teklif_gecerlilik_display" readonly placeholder="Şartlardan hesaplanır" value="{{ form_gecerlilik }}" style="background:#f9fafb;color:#374151;">
+                </div>
+            </div>
+        </section>
+
+        <section class="tdk-section">
+            <h2 class="tdk-section-title">
+                <span class="tdk-section-icon">👤</span>
+                Müşteri
+            </h2>
+            <div>
+                <div class="tdk-field tdk-has-help" data-help="Kayıtlı müşteri seçin. Seçildiğinde ünvan alanı otomatik doldurulabilir.">
+                    <select name="musteri" id="id_musteri" class="tf-inp" style="max-width:100%;">
+                        <option value="">— Kayıtlı müşteri seçin —</option>
+                        {% for m in musteriler %}
+                        <option value="{{ m.pk }}" {% if musteri_selected_pk == m.pk %}selected{% endif %}>{{ m.ad }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <p style="font-size:12px; color:#6b7280; margin-top:8px;">ⓘ Kayıtlı müşteri seçebilir veya aşağıya yeni müşteri bilgisi yazabilirsiniz.</p>
+                <div class="tf-label" style="margin-top:14px;">MÜŞTERİ BİLGİLERİ (manuel)</div>
+                <div class="tdk-field tdk-has-help" style="margin-top:8px;" data-help="Kayıtsız veya manuel müşteri ünvanı. Teklif PDF ve mailde görünür.">
+                    <input type="text" class="tf-inp" name="musteri_adi_snapshot" id="musteri_adi_snapshot" value="{{ form_musteri_adi_snapshot }}" placeholder="Ünvan / ad">
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">
+                    <div class="tdk-field tdk-has-help" data-help="Müşteri iletişim telefonu. Teklif belgelerinde kullanılabilir.">
+                        <input type="text" class="tf-inp" name="musteri_telefon" placeholder="Telefon" value="{{ form_musteri_telefon|default:'' }}">
+                    </div>
+                    <div class="tdk-field tdk-has-help" data-help="Teklif PDF ve mail gönderiminde kullanılacak müşteri e-postası.">
+                        <input type="email" class="tf-inp" name="musteri_email" placeholder="E-posta" value="{{ form_musteri_email|default:'' }}">
+                    </div>
+                </div>
+                <div class="tdk-field tdk-has-help" style="margin-top:10px;" data-help="Teklif belgelerinde görünecek müşteri adresi.">
+                    <textarea class="tf-inp" name="musteri_adres" rows="2" placeholder="Adres">{{ form_musteri_adres|default:'' }}</textarea>
+                </div>
+                {% if kaynak_siparis_id %}
+                <div style="margin-top:14px; padding:10px 14px; background:#ecfdf5; border-radius:8px; font-size:13px; color:#065f46;">
+                    ✓ Siparişten aktarıldı (bağlantılı sipariş kaydı)
+                </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <section class="tdk-section">
+            <div class="tdk-section-head">
+                <h2 class="tdk-section-title">
+                    <span class="tdk-section-icon">✎</span>
+                    Teklif Koşulları
+                </h2>
+                <button type="button" class="btn-line" id="btnSartPanelAc" style="padding:8px 14px;">Şart Ekle / Düzenle</button>
+            </div>
+            <div>
+                <p style="font-size:12px;color:#6b7280;margin:8px 0 10px;line-height:1.4;">Hazır şartları işaretleyip parametreleri doldurun; numaralı metin aşağıya yazılır. İsterseniz metni burada doğrudan da düzenleyebilirsiniz.</p>
+                <div class="tdk-field tdk-has-help" data-help="Teklif koşulları metni. PDF'te numaralı madde olarak yer alır. Şart panelinden otomatik üretilebilir.">
+                    <textarea class="tf-inp" name="sartlar_metni" id="id_sartlar_metni" rows="5" placeholder="Teklif şartları...">{{ form_sartlar }}</textarea>
+                </div>
+                <input type="hidden" name="teklif_sartlari_json" id="teklif_sartlari_json" value="">
+            </div>
+        </section>
+
+        <section class="tdk-section">
+            <div class="tdk-section-head">
+                <h2 class="tdk-section-title">
+                    <span class="tdk-section-icon amber">🏦</span>
+                    Banka Hesapları
+                </h2>
+                <button type="button" class="btn-line" id="btnBankPanelAc" style="padding:8px 14px;">Banka seç / düzenle</button>
+            </div>
+            <div>
+                <p style="font-size:12px;color:#6b7280;margin:8px 0 10px;line-height:1.4;">PDF ve teklif ekranında şartların altında gösterilir. Yönetimsel süreçler — finans — banka hesaplarındaki aktif kayıtlardan seçin.</p>
+                <div class="tdk-field tdk-has-help" data-help="Seçilen banka hesaplarının özeti. PDF'te ödeme bilgisi olarak görünür; panelden düzenlenir.">
+                    <textarea class="tf-inp" id="bankaOzetMetni" rows="6" readonly style="background:#f9fafb;font-size:13px;"></textarea>
+                </div>
+                <input type="hidden" name="teklif_banka_json" id="teklif_banka_json" value="">
+            </div>
+        </section>
+
+        <section class="tdk-section">
+            <div class="tdk-section-head">
+                <h2 class="tdk-section-title">
+                    <span class="tdk-section-icon green">📦</span>
+                    Hizmet / Ürün Kalemleri
+                </h2>
+                <button type="button" id="btnSatirEkle" class="btn-line">+ Yeni Satır Ekle</button>
+            </div>
+            <div class="tdk-table-wrap">
+            <table class="tf-table tdk-table">
+                <thead>
+                    <tr>
+                        <th class="tdk-has-help" style="min-width:220px;" data-help="Stok kartından ürün seçin veya serbest satır açıklaması girin.">Hizmet / Ürün</th>
+                        <th class="tdk-has-help" style="width:100px;" data-help="Teklif satırı miktarı.">Miktar</th>
+                        <th class="tdk-has-help" style="width:90px;" data-help="Ölçü birimi (Adet, kg, m vb.).">Birim</th>
+                        <th class="tdk-has-help" style="width:100px;" data-help="Birim satış fiyatı (KDV hariç).">Br. Fiyat</th>
+                        <th class="tdk-has-help" style="width:76px;" data-help="Satır para birimi.">PB</th>
+                        <th class="tdk-has-help" style="width:100px;" data-help="Uygulanacak KDV oranı.">Vergi</th>
+                        <th class="tdk-has-help" style="width:120px;" data-help="KDV dahil satır toplamı.">Toplam</th>
+                        <th style="width:100px;"></th>
+                    </tr>
+                </thead>
+                <tbody id="kalemBody"></tbody>
+            </table>
+            </div>
+            <div id="footerOzetsi" class="tf-ozet-wrap" aria-live="polite"></div>
+        </section>
+    </form>
+</div>
+
+{{ teklif_sartlari_meta|json_script:"teklif-sart-meta" }}
+{{ initial_teklif_sartlari_rows|json_script:"teklif-sart-initial" }}
+{{ banka_hesaplari_meta|json_script:"banka-hesap-meta" }}
+{{ initial_teklif_banka_ids|json_script:"teklif-banka-initial" }}
+
+<div id="bhDrawerBackdrop" class="ts-drawer-backdrop" aria-hidden="true">
+    <div class="ts-drawer-panel" role="dialog" aria-labelledby="bhDrawerTitle">
+        <div class="ts-drawer-head">
+            <h3 id="bhDrawerTitle">Banka hesapları</h3>
+            <button type="button" id="bhDrawerCloseX" aria-label="Kapat">×</button>
+        </div>
+        <div class="ts-drawer-body">
+            <p style="font-size:12px;color:#64748b;margin:0 0 12px;">Gösterilecek hesapları işaretleyin; sıra seçim sıranızdır.</p>
+            <div id="bhPresetMount"></div>
+        </div>
+        <div class="ts-drawer-foot">
+            <button type="button" class="btn-dark" id="bhUygulaBtn">Uygula</button>
+            <button type="button" class="btn-line" id="bhIptalBtn">İptal</button>
+        </div>
+    </div>
+</div>
+
+<div id="tsDrawerBackdrop" class="ts-drawer-backdrop" aria-hidden="true">
+    <div class="ts-drawer-panel" role="dialog" aria-labelledby="tsDrawerTitle">
+        <div class="ts-drawer-head">
+            <h3 id="tsDrawerTitle">Teklif şartları</h3>
+            <button type="button" id="tsDrawerCloseX" aria-label="Kapat">×</button>
+        </div>
+        <div class="ts-drawer-body">
+            <div id="tsPresetMount"></div>
+            <div style="margin-top:8px;">
+                <button type="button" class="btn-line" id="tsOzelEkle">+ Özel Şart Ekle</button>
+            </div>
+            <div id="tsOzelMount" style="margin-top:12px;"></div>
+            <div style="margin-top:14px;">
+                <div class="tf-label">Önizleme</div>
+                <pre id="tsPreview" style="white-space:pre-wrap;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px;font-size:13px;min-height:72px;margin:6px 0 0;font-family:inherit;"></pre>
+                <div id="tsPreviewErr" style="color:#b91c1c;font-size:12px;margin-top:6px;"></div>
+            </div>
+        </div>
+        <div class="ts-drawer-foot">
+            <button type="button" class="btn-line" id="tsOnizleBtn">Önizlemeyi güncelle</button>
+            <button type="button" class="btn-dark" id="tsUygulaBtn">Metni teklife uygula</button>
+            <button type="button" class="btn-line" id="tsIptalBtn">İptal</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const stokItems = [
+{% for item in stok_items %}
+{id: {{ item.pk }}, kod: "{{ item.stok_kodu|escapejs }}", ad: "{{ item.ad|escapejs }}", birim: "{{ item.birim|escapejs|default:'Adet' }}", satis_fiyati: {{ item.satis_fiyati|default:'0' }}, satis_para_birimi: "{% if item.satis_para_birimi %}{{ item.satis_para_birimi|escapejs }}{% else %}TL{% endif %}"}{% if not forloop.last %},{% endif %}
+{% endfor %}
+];
+let initialRows = {{ initial_kalemler_json|safe }};
+if (!Array.isArray(initialRows)) initialRows = [];
+
+const PARA_SECENEKLER = ['TL', 'USD', 'EUR', 'GBP'];
+function normalizePb(p) {
+    if (!p) return 'TL';
+    let x = String(p).trim().toUpperCase();
+    if (x === 'TRY') x = 'TL';
+    return PARA_SECENEKLER.includes(x) ? x : 'TL';
+}
+function pbSelectHtml(selectedPb) {
+    const sel = normalizePb(selectedPb);
+    let opts = '';
+    PARA_SECENEKLER.forEach(function(pb) {
+        opts += '<option value="' + pb + '"' + (pb === sel ? ' selected' : '') + '>' + pb + '</option>';
+    });
+    return '<select class="tf-inp inp-para-birimi" style="min-width:72px;padding:8px;">' + opts + '</select>';
+}
+function pbSembol(pb) {
+    const v = normalizePb(pb);
+    if (v === 'TL') return ' ₺';
+    if (v === 'USD') return ' $';
+    if (v === 'EUR') return ' €';
+    if (v === 'GBP') return ' £';
+    return ' ' + v;
+}
+function fmtMoneyPb(pb, n) {
+    const x = Number(n) || 0;
+    return x.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + pbSembol(pb);
+}
+
+function rowPb(tr) {
+    const sel = tr.querySelector('.inp-para-birimi');
+    return sel ? normalizePb(sel.value) : 'TL';
+}
+
+function normalizeVergiYuzdesi(v) {
+    if (v === undefined || v === null || v === '') return '20';
+    const s = String(v).trim();
+    const allowed = ['0', '1', '10', '20'];
+    return allowed.includes(s) ? s : '20';
+}
+
+function computeGecerlilikBitisIso(duzenlemeStr, rows) {
+    if (!duzenlemeStr || !rows || !Array.isArray(rows)) return '';
+    const row = rows.find(function(r) {
+        return r && String(r.tip).toUpperCase() === 'HAZIR' && r.sablon_kodu === 'GECERLILIK_GUN' && r.aktif;
+    });
+    if (!row) return '';
+    const dv = Object.assign({}, row.degerler || {});
+    let miktar = parseInt(String(dv.miktar != null ? dv.miktar : '').replace(',', '.'), 10);
+    if ((!miktar || miktar < 1) && dv.gun != null && dv.gun !== '') {
+        miktar = parseInt(String(dv.gun).replace(',', '.'), 10) || 10;
+        dv.birim = 'gun';
+    }
+    if (!miktar || miktar < 1) miktar = 10;
+    let b = String(dv.birim || 'gun').toLowerCase();
+    if (b === 'yıl') b = 'yil';
+    const parts = duzenlemeStr.split('-');
+    const y = parseInt(parts[0], 10);
+    const mo = parseInt(parts[1], 10) - 1;
+    const da = parseInt(parts[2], 10);
+    const d = new Date(y, mo, da);
+    if (b === 'gun') d.setDate(d.getDate() + miktar);
+    else if (b === 'hafta') d.setDate(d.getDate() + 7 * miktar);
+    else if (b === 'ay') d.setMonth(d.getMonth() + miktar);
+    else if (b === 'yil') d.setFullYear(d.getFullYear() + miktar);
+    else d.setDate(d.getDate() + miktar);
+    const yy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return yy + '-' + mm + '-' + dd;
+}
+
+function refreshTeklifGecerlilikDisplay() {
+    const out = document.getElementById('teklif_gecerlilik_display');
+    if (!out) return;
+    const dStr = document.getElementById('duzenleme_tarihi').value;
+    if (!dStr) {
+        out.value = '';
+        return;
+    }
+    let iso = '';
+    if (typeof window.buildTeklifSartPayload === 'function') {
+        iso = computeGecerlilikBitisIso(dStr, window.buildTeklifSartPayload());
+    }
+    out.value = iso;
+}
+
+function satirNet(miktar, birimFiyat) {
+    return (Number(miktar)||0) * (Number(birimFiyat)||0);
+}
+
+function satirBrut(net, vergiYuzde) {
+    const v = Number(vergiYuzde)||0;
+    return net * (1 + v/100);
+}
+
+function formatStokLabel(s) {
+    return `${s.kod} — ${s.ad}`;
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function bindStokCombo(tr, initialId) {
+    const hid = tr.querySelector('.stok-id-hidden');
+    const inp = tr.querySelector('.stok-search');
+    const dd = tr.querySelector('.stok-dd');
+    const serbest = tr.querySelector('.serbest-aciklama');
+    const SERBEST_PLACEHOLDER = '- Serbest Satır -';
+
+    function syncSerbest() {
+        const hasStok = !!(hid.value && hid.value.trim());
+        serbest.style.display = hasStok ? 'none' : 'block';
+        if (hasStok) {
+            const it = stokItems.find(x => String(x.id) === String(hid.value));
+            if (it) tr.querySelector('.inp-birim').value = it.birim || 'Adet';
+        }
+    }
+
+    function renderDd(query) {
+        const t = (query || '').trim().toLowerCase();
+        let html = `<div class="stok-dd-item reset" data-reset="1">${escapeHtml(SERBEST_PLACEHOLDER)}</div>`;
+        const items = stokItems.filter(s =>
+            !t || s.kod.toLowerCase().includes(t) || s.ad.toLowerCase().includes(t)
+        ).slice(0, 120);
+        items.forEach(s => {
+            html += `<div class="stok-dd-item" data-id="${s.id}"><strong>${escapeHtml(s.kod)}</strong> — ${escapeHtml(s.ad)}</div>`;
+        });
+        if (!items.length && t) {
+            html += '<div class="stok-dd-empty">Eşleşen stok yok</div>';
+        }
+        dd.innerHTML = html;
+    }
+
+    function openDd() {
+        renderDd(inp.value);
+        dd.style.display = 'block';
+    }
+
+    function closeDd() {
+        dd.style.display = 'none';
+    }
+
+    if (initialId) {
+        const it = stokItems.find(x => String(x.id) === String(initialId));
+        hid.value = initialId;
+        inp.value = it ? formatStokLabel(it) : '';
+        inp.placeholder = SERBEST_PLACEHOLDER;
+    } else {
+        hid.value = '';
+        inp.value = '';
+        inp.placeholder = SERBEST_PLACEHOLDER;
+    }
+
+    dd.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        const item = e.target.closest('.stok-dd-item');
+        if (!item) return;
+        if (item.dataset.reset === '1') {
+            hid.value = '';
+            inp.value = '';
+            inp.placeholder = SERBEST_PLACEHOLDER;
+            closeDd();
+            syncSerbest();
+            refreshRow(tr);
+            recalc();
+            return;
+        }
+        const sid = item.dataset.id;
+        const st = stokItems.find(x => String(x.id) === String(sid));
+        hid.value = sid || '';
+        inp.value = st ? formatStokLabel(st) : '';
+        if (st) {
+            const sf = Number(st.satis_fiyati);
+            tr.querySelector('.inp-birim-fiyat').value = Number.isFinite(sf) ? sf.toFixed(2) : '0';
+            const pbEl = tr.querySelector('.inp-para-birimi');
+            if (pbEl) pbEl.value = normalizePb(st.satis_para_birimi || 'TL');
+        }
+        closeDd();
+        syncSerbest();
+        refreshRow(tr);
+        recalc();
+    });
+
+    inp.addEventListener('focus', () => { openDd(); });
+
+    inp.addEventListener('input', () => {
+        const curId = hid.value;
+        if (curId) {
+            const it = stokItems.find(x => String(x.id) === String(curId));
+            const expected = it ? formatStokLabel(it) : '';
+            if (inp.value.trim() !== expected) hid.value = '';
+        }
+        openDd();
+        syncSerbest();
+        refreshRow(tr);
+        recalc();
+    });
+
+    inp.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeDd();
+    });
+
+    syncSerbest();
+}
+
+function addRow(data) {
+    const mainTr = document.createElement('tr');
+    mainTr.className = 'tf-kalem-main';
+    const noteTr = document.createElement('tr');
+    noteTr.className = 'tf-kalem-note';
+    noteTr.style.display = 'none';
+    const sid = data && data.stok_item ? String(data.stok_item) : '';
+    const acik = (data && data.aciklama) ? String(data.aciklama) : '';
+    const miktar = data && data.miktar != null ? data.miktar : '1';
+    const birim = data && data.birim ? data.birim : 'Adet';
+    const bf = data && data.birim_fiyat != null ? data.birim_fiyat : '0';
+    const vy = normalizeVergiYuzdesi(data && data.vergi_yuzdesi != null ? data.vergi_yuzdesi : '20');
+    const pbInit = normalizePb(data && data.para_birimi ? data.para_birimi : 'TL');
+    const pbHtml = pbSelectHtml(pbInit);
+    const notInit = (data && data.satir_notu) ? String(data.satir_notu) : '';
+    mainTr.innerHTML = `
+        <td class="tdk-has-help" data-help="Stok kartından ürün seçin veya serbest satır açıklaması girin.">
+            <div class="stok-combo-wrap">
+                <input type="hidden" class="stok-id-hidden" value="">
+                <input type="text" class="tf-inp stok-search" placeholder="- Serbest Satır -" autocomplete="off" spellcheck="false">
+                <div class="stok-dd"></div>
+            </div>
+            <input type="text" class="tf-inp serbest-aciklama" style="margin-top:6px; font-size:12px;" placeholder="Serbest kalem açıklaması" value="">
+        </td>
+        <td class="tdk-has-help" data-help="Teklif satırı miktarı."><input type="number" step="0.001" class="tf-inp inp-miktar" value="${miktar}"></td>
+        <td class="tdk-has-help" data-help="Ölçü birimi (Adet, kg, m vb.)."><input type="text" class="tf-inp inp-birim" value="${birim}"></td>
+        <td class="tdk-has-help" data-help="Birim satış fiyatı (KDV hariç)."><input type="number" step="0.01" class="tf-inp inp-birim-fiyat" value="${bf}"></td>
+        <td class="tdk-has-help td-pb-select" data-help="Satır para birimi.">${pbHtml}</td>
+        <td class="tdk-has-help" data-help="Uygulanacak KDV oranı.">
+            <select class="tf-inp inp-vergi">
+                <option value="0">KDV %0</option>
+                <option value="1">KDV %1</option>
+                <option value="10">KDV %10</option>
+                <option value="20">KDV %20</option>
+            </select>
+        </td>
+        <td class="td-toplam" style="font-weight:600;">0</td>
+        <td class="tf-act-cell">
+            <button type="button" class="btn-line satir-not-toggle" title="Satır notu">+</button>
+            <button type="button" class="btn-line satir-sil" title="Satırı sil">✕</button>
+        </td>
+    `;
+    noteTr.innerHTML = '<td colspan="8" class="tdk-has-help" data-help="Satıra özel isteğe bağlı not; PDF\'te gösterilebilir."><div class="tf-label">Satır notu</div><textarea class="tf-inp inp-satir-notu" rows="2" placeholder="İsteğe bağlı not"></textarea></td>';
+    mainTr.querySelector('.inp-vergi').value = vy;
+    const serbest = mainTr.querySelector('.serbest-aciklama');
+    serbest.value = (!sid && acik) ? acik : '';
+    const taNote = noteTr.querySelector('.inp-satir-notu');
+    taNote.value = notInit;
+    if (notInit.trim()) noteTr.style.display = 'table-row';
+    bindStokCombo(mainTr, sid || '');
+    mainTr.querySelectorAll('.inp-miktar,.inp-birim,.inp-birim-fiyat,.inp-vergi,.serbest-aciklama,.inp-para-birimi').forEach(el => {
+        const fn = () => { refreshRow(mainTr); recalc(); };
+        el.addEventListener('input', fn);
+        el.addEventListener('change', fn);
+    });
+    taNote.addEventListener('input', () => { /* no totals change */ });
+    mainTr.querySelector('.satir-not-toggle').addEventListener('click', () => {
+        const open = noteTr.style.display !== 'none';
+        noteTr.style.display = open ? 'none' : 'table-row';
+    });
+    mainTr.querySelector('.satir-sil').addEventListener('click', () => {
+        noteTr.remove();
+        mainTr.remove();
+        recalc();
+    });
+    document.getElementById('kalemBody').appendChild(mainTr);
+    document.getElementById('kalemBody').appendChild(noteTr);
+    refreshRow(mainTr);
+}
+
+function refreshRow(tr) {
+    if (!tr || !tr.classList.contains('tf-kalem-main')) return;
+    const m = tr.querySelector('.inp-miktar').value;
+    const bf = tr.querySelector('.inp-birim-fiyat').value;
+    const vy = normalizeVergiYuzdesi(tr.querySelector('.inp-vergi').value);
+    tr.querySelector('.inp-vergi').value = vy;
+    const net = satirNet(m, bf);
+    const brut = satirBrut(net, vy);
+    tr.querySelector('.td-toplam').textContent = fmtMoneyPb(rowPb(tr), brut);
+}
+
+function recalc() {
+    const byPb = {};
+    document.querySelectorAll('#kalemBody tr.tf-kalem-main').forEach(tr => {
+        const pb = rowPb(tr);
+        const m = tr.querySelector('.inp-miktar').value;
+        const bf = tr.querySelector('.inp-birim-fiyat').value;
+        const vy = tr.querySelector('.inp-vergi').value;
+        const net = satirNet(m, bf);
+        const brut = satirBrut(net, vy);
+        if (!byPb[pb]) byPb[pb] = { net: 0, kdv: 0, brut: 0 };
+        byPb[pb].net += net;
+        byPb[pb].brut += brut;
+        byPb[pb].kdv += brut - net;
+    });
+    const keys = Object.keys(byPb).sort();
+    const mount = document.getElementById('footerOzetsi');
+    mount.innerHTML = '';
+    keys.forEach(pb => {
+        const g = byPb[pb];
+        const blk = document.createElement('div');
+        blk.className = 'tf-ozet';
+        const cap = keys.length > 1 ? `<div class="tf-ozet-cap">${pb}</div>` : '';
+        blk.innerHTML = cap +
+            '<div class="tf-ozet-row"><span class="tf-ozet-lbl">Tutar <span style="font-size:11px;font-weight:400;color:#94a3b8;">(KDV hariç)</span></span>' +
+            `<span class="tf-ozet-val">${fmtMoneyPb(pb, g.net)}</span></div>` +
+            '<div class="tf-ozet-row"><span class="tf-ozet-lbl">KDV</span>' +
+            `<span class="tf-ozet-val">${fmtMoneyPb(pb, g.kdv)}</span></div>` +
+            '<div class="tf-ozet-row"><span class="tf-ozet-lbl">Genel toplam</span>' +
+            `<span class="tf-ozet-val">${fmtMoneyPb(pb, g.brut)}</span></div>`;
+        mount.appendChild(blk);
+    });
+}
+
+function gatherKalemler() {
+    const out = [];
+    document.querySelectorAll('#kalemBody tr.tf-kalem-main').forEach(mainTr => {
+        const sel = mainTr.querySelector('.stok-id-hidden').value.trim();
+        const serbest = mainTr.querySelector('.serbest-aciklama').value.trim();
+        const miktar = mainTr.querySelector('.inp-miktar').value;
+        const birim = mainTr.querySelector('.inp-birim').value.trim() || 'Adet';
+        const birim_fiyat = mainTr.querySelector('.inp-birim-fiyat').value;
+        const vergi_yuzdesi = normalizeVergiYuzdesi(mainTr.querySelector('.inp-vergi').value);
+        const para_birimi = normalizePb(mainTr.querySelector('.inp-para-birimi').value);
+        let satir_notu = '';
+        const nxt = mainTr.nextElementSibling;
+        if (nxt && nxt.classList.contains('tf-kalem-note')) {
+            const ta = nxt.querySelector('.inp-satir-notu');
+            satir_notu = ta ? ta.value.trim() : '';
+        }
+        if (sel) {
+            out.push({ tip: 'product', stok_item: sel, miktar, birim, birim_fiyat, vergi_yuzdesi, aciklama: '', para_birimi, satir_notu });
+        } else {
+            if (!serbest) return;
+            out.push({ tip: 'custom', stok_item: '', miktar, birim, birim_fiyat, vergi_yuzdesi, aciklama: serbest, para_birimi, satir_notu });
+        }
+    });
+    return out;
+}
+
+document.getElementById('btnSatirEkle').addEventListener('click', () => { addRow(null); recalc(); });
+
+document.getElementById('teklifForm').addEventListener('submit', function(e) {
+    if (window.syncSartlariHidden) window.syncSartlariHidden();
+    if (window.syncTeklifBankHidden) window.syncTeklifBankHidden();
+    const k = gatherKalemler();
+    if (!k.length) { e.preventDefault(); alert('En az bir geçerli satır ekleyin (serbest satırda açıklama girin).'); return; }
+    document.getElementById('kalemlerInput').value = JSON.stringify(k);
+});
+
+const musteriAdlari = {
+{% for m in musteriler %}
+{{ m.pk }}: "{{ m.ad|escapejs }}"{% if not forloop.last %},{% endif %}
+{% endfor %}
+};
+document.getElementById('id_musteri').addEventListener('change', function() {
+    const id = this.value;
+    const inp = document.getElementById('musteri_adi_snapshot');
+    if (id && musteriAdlari[id]) inp.value = musteriAdlari[id];
+});
+
+(function init(){
+    if (!window._teklifFormDdCloser) {
+        window._teklifFormDdCloser = true;
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.stok-combo-wrap')) return;
+            document.querySelectorAll('#kalemBody .stok-dd').forEach(dd => { dd.style.display = 'none'; });
+        });
+    }
+    if (initialRows.length) initialRows.forEach(r => addRow(r));
+    else addRow(null);
+    recalc();
+    const duzInp = document.getElementById('duzenleme_tarihi');
+    if (duzInp) duzInp.addEventListener('change', () => { refreshTeklifGecerlilikDisplay(); });
+})();
+</script>
+
+<script>
+(function(){
+  function escapeHtmlTs(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  let TS_META = [];
+  let sartState = { presets: {}, ozelList: [] };
+
+  function defaultsFromMeta(m) {
+    const d = {};
+    (m.alanlar || []).forEach(function(a) {
+      d[a.ad] = a.varsayilan !== undefined && a.varsayilan !== null ? a.varsayilan : '';
+    });
+    return d;
+  }
+
+  function hydrateInitial(rows) {
+    const presets = {};
+    TS_META.forEach(function(m) {
+      const row = rows.find(function(r) { return r.tip === 'HAZIR' && r.sablon_kodu === m.kod; });
+      if (row) {
+        presets[m.kod] = { aktif: !!row.aktif, degerler: Object.assign(defaultsFromMeta(m), row.degerler || {}) };
+      } else {
+        presets[m.kod] = { aktif: !!m.varsayilan_aktif, degerler: defaultsFromMeta(m) };
+      }
+    });
+    const ozelList = rows.filter(function(r) { return r.tip === 'OZEL' || r.tip === 'ÖZEL'; }).map(function(r, idx) {
+      return {
+        clientId: 'ozel-init-' + idx + '-' + Math.random().toString(36).slice(2, 8),
+        baslik: (r.degerler && r.degerler.baslik) ? r.degerler.baslik : '',
+        aciklama: (r.degerler && r.degerler.aciklama) ? r.degerler.aciklama : ''
+      };
+    });
+    return { presets: presets, ozelList: ozelList };
+  }
+
+  function buildPayload() {
+    let si = 0;
+    const out = [];
+    TS_META.forEach(function(m) {
+      const p = sartState.presets[m.kod];
+      out.push({
+        tip: 'HAZIR',
+        sablon_kodu: m.kod,
+        aktif: !!p.aktif,
+        degerler: Object.assign({}, p.degerler),
+        sira: si++
+      });
+    });
+    sartState.ozelList.forEach(function(o) {
+      out.push({
+        tip: 'OZEL',
+        sablon_kodu: '',
+        aktif: true,
+        degerler: { baslik: o.baslik || '', aciklama: o.aciklama || '' },
+        sira: si++
+      });
+    });
+    return out;
+  }
+
+  function syncSartlariHidden() {
+    const hid = document.getElementById('teklif_sartlari_json');
+    if (hid) hid.value = JSON.stringify(buildPayload());
+    if (typeof refreshTeklifGecerlilikDisplay === 'function') refreshTeklifGecerlilikDisplay();
+  }
+  window.syncSartlariHidden = syncSartlariHidden;
+  window.buildTeklifSartPayload = buildPayload;
+
+  function setupOdemeToggle(container, kod) {
+    if (kod !== 'ODEME_ORAN') return;
+    const modSel = container.querySelector('select.ts-inp[data-alan="odeme_modu"]');
+    if (!modSel) return;
+    function apply() {
+      const mod = modSel.value || 'oran';
+      container.querySelectorAll('.ts-field-grp[data-odeme-alt]').forEach(function(el) {
+        el.style.display = el.getAttribute('data-odeme-alt') === mod ? '' : 'none';
+      });
+    }
+    modSel.addEventListener('change', function() { apply(); syncSartlariHidden(); });
+    apply();
+  }
+
+  function renderPresetRows() {
+    const mount = document.getElementById('tsPresetMount');
+    mount.innerHTML = '';
+    TS_META.forEach(function(m) {
+      const st = sartState.presets[m.kod];
+      let fieldsHtml = '';
+      if (!m.sadece_onay && m.alanlar && m.alanlar.length) {
+        fieldsHtml = '<div class="ts-sart-fields">';
+        m.alanlar.forEach(function(a) {
+          const id = 'sf-' + m.kod + '-' + a.ad;
+          const odAttr = a.odeme_alt_grup ? ' data-odeme-alt="' + escapeHtmlTs(a.odeme_alt_grup) + '"' : '';
+          if (a.tur === 'secim') {
+            fieldsHtml += '<div class="ts-field-grp"' + odAttr + '><label for="' + id + '">' + escapeHtmlTs(a.etiket || a.ad) + '</label><select class="tf-inp ts-inp" data-kod="' + escapeHtmlTs(m.kod) + '" data-alan="' + escapeHtmlTs(a.ad) + '" id="' + id + '">';
+            (a.secenekler || []).forEach(function(opt) {
+              const sel = String(st.degerler[a.ad]) === String(opt.v) ? ' selected' : '';
+              fieldsHtml += '<option value="' + escapeHtmlTs(opt.v) + '"' + sel + '>' + escapeHtmlTs(opt.l) + '</option>';
+            });
+            fieldsHtml += '</select></div>';
+          } else {
+            fieldsHtml += '<div class="ts-field-grp"' + odAttr + '><label for="' + id + '">' + escapeHtmlTs(a.etiket || a.ad) + '</label><input type="number" class="tf-inp ts-inp" data-kod="' + escapeHtmlTs(m.kod) + '" data-alan="' + escapeHtmlTs(a.ad) + '" id="' + id + '" value="' + escapeHtmlTs(String(st.degerler[a.ad] !== undefined && st.degerler[a.ad] !== null ? st.degerler[a.ad] : '')) + '" step="any"></div>';
+          }
+        });
+        fieldsHtml += '</div>';
+      }
+      const div = document.createElement('div');
+      div.className = 'ts-sart-row';
+      div.innerHTML =
+        '<div class="ts-sart-row-head">' +
+          '<label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;margin:0;width:100%;">' +
+            '<input type="checkbox" class="ts-chk-aktif" data-kod="' + escapeHtmlTs(m.kod) + '" ' + (st.aktif ? 'checked' : '') + ' style="margin-top:3px;">' +
+            '<span class="ts-sart-title">' + escapeHtmlTs(m.baslik) + '</span>' +
+          '</label>' +
+        '</div>' +
+        fieldsHtml +
+        '<div class="ts-sart-help">' + escapeHtmlTs(m.yardim) + '</div>';
+      mount.appendChild(div);
+      setupOdemeToggle(div, m.kod);
+    });
+    mount.querySelectorAll('.ts-chk-aktif').forEach(function(el) {
+      el.addEventListener('change', function() {
+        sartState.presets[el.dataset.kod].aktif = el.checked;
+        syncSartlariHidden();
+      });
+    });
+    mount.querySelectorAll('.ts-inp').forEach(function(el) {
+      function syncField() {
+        const kod = el.dataset.kod;
+        const alan = el.dataset.alan;
+        sartState.presets[kod].degerler[alan] = el.value;
+        syncSartlariHidden();
+      }
+      el.addEventListener('input', syncField);
+      el.addEventListener('change', syncField);
+    });
+  }
+
+  function renderOzelRows() {
+    const mount = document.getElementById('tsOzelMount');
+    mount.innerHTML = '';
+    sartState.ozelList.forEach(function(o, idx) {
+      const div = document.createElement('div');
+      div.className = 'ts-ozel-card';
+      div.innerHTML =
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
+          '<span style="font-weight:600;font-size:13px;">Özel şart '+(idx+1)+'</span>' +
+          '<button type="button" class="btn-line ts-ozel-sil" data-id="'+escapeHtmlTs(o.clientId)+'" style="padding:4px 10px;font-size:12px;">Kaldır</button>' +
+        '</div>' +
+        '<div class="tf-label">Başlık</div>' +
+        '<input type="text" class="tf-inp ts-ozel-baslik" data-id="'+escapeHtmlTs(o.clientId)+'" style="margin-bottom:8px;">' +
+        '<div class="tf-label">Açıklama</div>' +
+        '<textarea class="tf-inp ts-ozel-aciklama" data-id="'+escapeHtmlTs(o.clientId)+'" rows="2"></textarea>';
+      mount.appendChild(div);
+      div.querySelector('.ts-ozel-baslik').value = o.baslik || '';
+      div.querySelector('.ts-ozel-aciklama').value = o.aciklama || '';
+    });
+    mount.querySelectorAll('.ts-ozel-baslik').forEach(function(el) {
+      el.addEventListener('input', function() {
+        const o = sartState.ozelList.find(function(x) { return x.clientId === el.dataset.id; });
+        if (o) o.baslik = el.value;
+        syncSartlariHidden();
+      });
+    });
+    mount.querySelectorAll('.ts-ozel-aciklama').forEach(function(el) {
+      el.addEventListener('input', function() {
+        const o = sartState.ozelList.find(function(x) { return x.clientId === el.dataset.id; });
+        if (o) o.aciklama = el.value;
+        syncSartlariHidden();
+      });
+    });
+    mount.querySelectorAll('.ts-ozel-sil').forEach(function(el) {
+      el.addEventListener('click', function() {
+        sartState.ozelList = sartState.ozelList.filter(function(x) { return x.clientId !== el.dataset.id; });
+        renderOzelRows();
+        syncSartlariHidden();
+      });
+    });
+  }
+
+  function tsFetchPreview() {
+    const prev = document.getElementById('tsPreview');
+    const errEl = document.getElementById('tsPreviewErr');
+    errEl.textContent = '';
+    prev.textContent = 'Yükleniyor…';
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    return fetch('{% url "stokapp:teklif_sartlari_onizle" %}', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+      body: JSON.stringify({ satirlar: buildPayload() })
+    }).then(function(res) { return res.json(); }).then(function(data) {
+      if (data.ok) {
+        prev.textContent = data.metin || '(Seçili şart yok)';
+        if (data.hatalar && data.hatalar.length) errEl.textContent = data.hatalar.join(' ');
+      } else {
+        prev.textContent = '';
+        errEl.textContent = data.error || 'Önizleme alınamadı';
+      }
+    }).catch(function(e) {
+      prev.textContent = '';
+      errEl.textContent = String(e);
+    });
+  }
+
+  function openDrawer() {
+    renderPresetRows();
+    renderOzelRows();
+    document.getElementById('tsDrawerBackdrop').classList.add('ts-open');
+    document.getElementById('tsDrawerBackdrop').setAttribute('aria-hidden', 'false');
+    tsFetchPreview();
+  }
+
+  function closeDrawer() {
+    document.getElementById('tsDrawerBackdrop').classList.remove('ts-open');
+    document.getElementById('tsDrawerBackdrop').setAttribute('aria-hidden', 'true');
+  }
+
+  const metaEl = document.getElementById('teklif-sart-meta');
+  const initEl = document.getElementById('teklif-sart-initial');
+  if (metaEl && initEl) {
+    TS_META = JSON.parse(metaEl.textContent);
+    const initialRows = JSON.parse(initEl.textContent);
+    sartState = hydrateInitial(initialRows);
+    syncSartlariHidden();
+
+    document.getElementById('btnSartPanelAc').addEventListener('click', openDrawer);
+    document.getElementById('tsDrawerCloseX').addEventListener('click', closeDrawer);
+    document.getElementById('tsIptalBtn').addEventListener('click', closeDrawer);
+    document.getElementById('tsDrawerBackdrop').addEventListener('click', function(e) {
+      if (e.target === this) closeDrawer();
+    });
+    document.getElementById('tsOnizleBtn').addEventListener('click', function() { tsFetchPreview(); });
+    document.getElementById('tsUygulaBtn').addEventListener('click', function() {
+      tsFetchPreview().then(function() {
+        var t = document.getElementById('tsPreview').textContent.trim();
+        if (t && t !== 'Yükleniyor…') document.getElementById('id_sartlar_metni').value = t;
+        syncSartlariHidden();
+        closeDrawer();
+      });
+    });
+    document.getElementById('tsOzelEkle').addEventListener('click', function() {
+      sartState.ozelList.push({ clientId: 'ozel-' + Date.now(), baslik: '', aciklama: '' });
+      renderOzelRows();
+      syncSartlariHidden();
+    });
+  }
+})();
+</script>
+
+<script>
+(function() {
+  const BANK_LEGAL = 'Banka Hesap Adı : Tekmar Endüstriyel Makina Otomasyon Sanayi ve Ticaret Ltd Şti';
+  let BANK_META = [];
+  let bankSelectedIds = [];
+
+  function escBh(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function syncBankHidden() {
+    const hid = document.getElementById('teklif_banka_json');
+    if (hid) hid.value = JSON.stringify(bankSelectedIds);
+  }
+  window.syncTeklifBankHidden = syncBankHidden;
+
+  function buildBankOzetText() {
+    const lines = [BANK_LEGAL, ''];
+    const byId = {};
+    BANK_META.forEach(function(h) { byId[h.id] = h; });
+    bankSelectedIds.forEach(function(pid) {
+      const h = byId[pid];
+      if (!h) return;
+      lines.push(h.banka_adi + ' — ' + h.hesap_adi);
+      lines.push('IBAN: ' + h.iban);
+      lines.push('Para birimi: ' + (h.para_birimi || 'TL'));
+      if (h.sube_kodu) lines.push('Şube: ' + h.sube_kodu);
+      if (h.hesap_no) lines.push('Hesap no: ' + h.hesap_no);
+      lines.push('');
+    });
+    return lines.join('\n').trim();
+  }
+
+  function refreshBankOzet() {
+    const ta = document.getElementById('bankaOzetMetni');
+    if (ta) ta.value = buildBankOzetText();
+    syncBankHidden();
+  }
+
+  function renderBankChecks() {
+    const mount = document.getElementById('bhPresetMount');
+    if (!mount) return;
+    mount.innerHTML = '';
+    BANK_META.forEach(function(h) {
+      const id = h.id;
+      const checked = bankSelectedIds.indexOf(id) >= 0 ? ' checked' : '';
+      const div = document.createElement('div');
+      div.className = 'ts-sart-row';
+      div.innerHTML =
+        '<label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer;margin:0;width:100%;">' +
+        '<input type="checkbox" class="bh-chk" data-id="' + id + '"' + checked + ' style="margin-top:3px;">' +
+        '<span><strong>' + escBh(h.banka_adi) + '</strong> — ' + escBh(h.hesap_adi) + '<br/>' +
+        '<span style="font-size:11px;color:#64748b;">IBAN: ' + escBh(h.iban) + ' · PB: ' + escBh(h.para_birimi || 'TL') + '</span></span></label>';
+      mount.appendChild(div);
+    });
+    mount.querySelectorAll('.bh-chk').forEach(function(ch) {
+      ch.addEventListener('change', function() {
+        const pk = parseInt(ch.dataset.id, 10);
+        if (ch.checked) {
+          if (bankSelectedIds.indexOf(pk) < 0) bankSelectedIds.push(pk);
+        } else {
+          bankSelectedIds = bankSelectedIds.filter(function(x) { return x !== pk; });
+        }
+      });
+    });
+  }
+
+  function openBh() {
+    renderBankChecks();
+    var bd = document.getElementById('bhDrawerBackdrop');
+    if (bd) {
+      bd.classList.add('ts-open');
+      bd.setAttribute('aria-hidden', 'false');
+    }
+  }
+  function closeBh() {
+    var bd = document.getElementById('bhDrawerBackdrop');
+    if (bd) {
+      bd.classList.remove('ts-open');
+      bd.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  const metaEl = document.getElementById('banka-hesap-meta');
+  const initEl = document.getElementById('teklif-banka-initial');
+  if (metaEl && initEl) {
+    BANK_META = JSON.parse(metaEl.textContent);
+    bankSelectedIds = JSON.parse(initEl.textContent);
+    if (!Array.isArray(bankSelectedIds)) bankSelectedIds = [];
+    refreshBankOzet();
+
+    var btnOpen = document.getElementById('btnBankPanelAc');
+    if (btnOpen) btnOpen.addEventListener('click', openBh);
+    var bx = document.getElementById('bhDrawerCloseX');
+    if (bx) bx.addEventListener('click', closeBh);
+    var bi = document.getElementById('bhIptalBtn');
+    if (bi) bi.addEventListener('click', closeBh);
+    var bd = document.getElementById('bhDrawerBackdrop');
+    if (bd) bd.addEventListener('click', function(e) { if (e.target === bd) closeBh(); });
+    var bu = document.getElementById('bhUygulaBtn');
+    if (bu) bu.addEventListener('click', function() {
+      refreshBankOzet();
+      closeBh();
+    });
+  }
+})();
+</script>
+
+{% endblock %}

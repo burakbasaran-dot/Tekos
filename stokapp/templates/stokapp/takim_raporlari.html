@@ -1,0 +1,211 @@
+{% extends "stokapp/base.html" %}
+{% load static %}
+{% block title %}Takım Performans Raporu{% endblock %}
+
+{% block content %}
+<div class="tool-report-wrap">
+  <div class="tool-report-header">
+    <h1 style="margin:0;">Takım Performans Raporu</h1>
+    <a href="{% url 'stokapp:takim_listesi' %}" class="btn btn-secondary">Takım Yönetimine Dön</a>
+  </div>
+
+  <section class="card section">
+    <form id="tool-report-filter" class="filter-grid">
+      <label>Takım
+        <select name="tool">
+          <option value="">Tümü</option>
+          {% for t in tools %}
+            <option value="{{ t.id }}">{{ t.tool_code }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Malzeme
+        <select name="material">
+          <option value="">Tümü</option>
+          {% for m in materials %}
+            <option value="{{ m.id }}">{{ m.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Başlangıç<input type="date" name="date_start"></label>
+      <label>Bitiş<input type="date" name="date_end"></label>
+      <div class="actions">
+        <button type="submit" class="btn btn-secondary">Filtrele</button>
+        <button type="button" id="clear-btn" class="btn btn-secondary">Temizle</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="kpi-grid">
+    <div class="card kpi-card">
+      <div class="k">Toplam Kesme</div>
+      <div class="v" id="kpi-total">0 mm</div>
+    </div>
+    <div class="card kpi-card">
+      <div class="k">Ortalama Ömür mm</div>
+      <div class="v" id="kpi-life-avg">0 mm</div>
+    </div>
+  </section>
+
+  <section class="chart-grid">
+    <div class="card chart-card">
+      <h3>Malzeme Dağılımı</h3>
+      <div class="chart-wrap"><canvas id="chart-material"></canvas></div>
+    </div>
+    <div class="card chart-card">
+      <h3>Takım Bazlı Kullanım</h3>
+      <div class="chart-wrap"><canvas id="chart-tool"></canvas></div>
+    </div>
+    <div class="card chart-card chart-wide">
+      <h3>Zaman İçinde Kullanım</h3>
+      <div class="chart-wrap"><canvas id="chart-day"></canvas></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h3>Malzeme Bazlı Analiz</h3>
+    <div class="table-wrap">
+      <table class="material-analysis-table">
+        <thead><tr><th>Malzeme</th><th>Kesme mm</th></tr></thead>
+        <tbody id="material-table-body"></tbody>
+      </table>
+    </div>
+  </section>
+  <section class="card">
+    <h3>Ömür Bazlı Analiz</h3>
+    <div class="table-wrap">
+      <table class="life-analysis-table">
+        <thead><tr><th>Takım</th><th>Ömür No</th><th>Kesme mm</th></tr></thead>
+        <tbody id="life-table-body"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<style>
+.tool-report-wrap { max-width: 1200px; margin: 0 auto; }
+.tool-report-header { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:8px; }
+.card { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:12px; margin-bottom:12px; }
+.filter-grid { display:grid; grid-template-columns: repeat(5,minmax(160px,1fr)); gap:10px; align-items:end; }
+.kpi-grid { display:grid; grid-template-columns: repeat(1,minmax(220px,1fr)); margin-bottom:12px; }
+.kpi-card .k { color:#6b7280; font-size:12px; }
+.kpi-card .v { font-size:22px; font-weight:700; }
+.chart-grid { display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px; }
+.chart-wide { grid-column: span 2; }
+.chart-wrap { position:relative; height:260px; }
+.table-wrap { overflow:auto; }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+th, td { border:1px solid #e5e7eb; padding:7px; text-align:left; }
+th { background:#f3f4f6; }
+.material-analysis-table th { color:#000; }
+.life-analysis-table th { color:#000; }
+@media (max-width:900px) {
+  .filter-grid, .chart-grid { grid-template-columns:1fr; }
+  .chart-wide { grid-column: auto; }
+  .tool-report-header { flex-direction:column; align-items:flex-start; }
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+(function () {
+  const form = document.getElementById("tool-report-filter");
+  const clearBtn = document.getElementById("clear-btn");
+  const kpiTotal = document.getElementById("kpi-total");
+  const kpiLifeAvg = document.getElementById("kpi-life-avg");
+  const materialTableBody = document.getElementById("material-table-body");
+  const lifeTableBody = document.getElementById("life-table-body");
+  const chartMaterialCtx = document.getElementById("chart-material");
+  const chartToolCtx = document.getElementById("chart-tool");
+  const chartDayCtx = document.getElementById("chart-day");
+  let materialChart = null;
+  let toolChart = null;
+  let dayChart = null;
+
+  function toQueryString() {
+    const params = new URLSearchParams();
+    new FormData(form).forEach((val, key) => {
+      if (val) params.append(key, val);
+    });
+    return params.toString();
+  }
+
+  function renderCharts(data) {
+    const materialLabels = data.by_material.map(x => x.material__name || "Tanımsız");
+    const materialValues = data.by_material.map(x => Number(x.total || 0));
+    const toolLabels = data.by_tool.map(x => x.tool__tool_code || "-");
+    const toolValues = data.by_tool.map(x => Number(x.total || 0));
+    const dayLabels = data.by_day.map(x => x.day || "");
+    const dayValues = data.by_day.map(x => Number(x.total || 0));
+
+    if (materialChart) materialChart.destroy();
+    if (toolChart) toolChart.destroy();
+    if (dayChart) dayChart.destroy();
+
+    materialChart = new Chart(chartMaterialCtx, {
+      type: "pie",
+      data: { labels: materialLabels, datasets: [{ data: materialValues }] },
+      options: { responsive: true, maintainAspectRatio: false },
+    });
+    toolChart = new Chart(chartToolCtx, {
+      type: "bar",
+      data: { labels: toolLabels, datasets: [{ label: "Kesme mm", data: toolValues }] },
+      options: { responsive: true, maintainAspectRatio: false },
+    });
+    dayChart = new Chart(chartDayCtx, {
+      type: "line",
+      data: { labels: dayLabels, datasets: [{ label: "Kesme mm", data: dayValues, borderColor: "#2563eb" }] },
+      options: { responsive: true, maintainAspectRatio: false },
+    });
+  }
+
+  function renderTable(data) {
+    materialTableBody.innerHTML = "";
+    if (!data.by_material.length) {
+      materialTableBody.innerHTML = "<tr><td colspan='2'>Kayıt bulunamadı.</td></tr>";
+      return;
+    }
+    data.by_material.forEach((row) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${row.material__name || "Tanımsız"}</td><td>${row.total || 0}</td>`;
+      materialTableBody.appendChild(tr);
+    });
+  }
+
+  function renderLifeTable(data) {
+    lifeTableBody.innerHTML = "";
+    if (!data.by_life || !data.by_life.length) {
+      lifeTableBody.innerHTML = "<tr><td colspan='3'>Kayıt bulunamadı.</td></tr>";
+      return;
+    }
+    data.by_life.forEach((row) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td>${row.tool__tool_code || "-"}</td><td>#${row.life_cycle__life_no || "-"}</td><td>${row.total || 0}</td>`;
+      lifeTableBody.appendChild(tr);
+    });
+  }
+
+  async function loadReports() {
+    const qs = toQueryString();
+    const res = await fetch(`{% url 'stokapp:get_tool_reports' %}?${qs}`);
+    const data = await res.json();
+    if (!data.success) return;
+    kpiTotal.textContent = `${data.summary.total_cutting_mm || 0} mm`;
+    kpiLifeAvg.textContent = `${data.avg_life_mm || 0} mm`;
+    renderCharts(data);
+    renderTable(data);
+    renderLifeTable(data);
+  }
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    loadReports();
+  });
+  clearBtn.addEventListener("click", () => {
+    form.reset();
+    loadReports();
+  });
+  loadReports();
+})();
+</script>
+{% endblock %}

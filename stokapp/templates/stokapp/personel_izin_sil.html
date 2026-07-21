@@ -1,0 +1,18 @@
+{% extends "stokapp/base.html" %}
+{% block title %}İzin Sil{% endblock %}
+{% block content %}
+<div class="card" style="max-width:640px;">
+  <h2>🗑️ İzin Kaydı Sil</h2>
+  <p>
+    <strong>{{ izin.personel.ad }} {{ izin.personel.soyad }}</strong> için
+    <strong>{{ izin.baslangic_zamani|date:"d.m.Y H:i" }}</strong> -
+    <strong>{{ izin.bitis_zamani|date:"d.m.Y H:i" }}</strong>
+    izin kaydını silmek istiyor musunuz?
+  </p>
+  <form method="post" style="display:flex; gap:8px;">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-primary" style="background:#dc3545;">Sil</button>
+    <a href="{% url 'stokapp:personel_izin_listesi' %}" class="btn btn-secondary">Vazgeç</a>
+  </form>
+</div>
+{% endblock %}

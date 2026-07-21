@@ -1,0 +1,10 @@
+
+# Aşağıdaki 3 satırı stokapp/urls.py dosyanızda en üste ekleyin (mevcut importların yanına):
+from .views_api import api_check_stok_kodu, api_shelves, api_quick_add
+
+# Ve urlpatterns listenizin SONUNA şu yolları ekleyin:
+urlpatterns += [
+    path('api/check-stok-kodu/', api_check_stok_kodu, name='api_check_stok_kodu'),
+    path('api/shelves/', api_shelves, name='api_shelves'),
+    path('api/quick-add/<str:kind>/', api_quick_add, name='api_quick_add'),
+]

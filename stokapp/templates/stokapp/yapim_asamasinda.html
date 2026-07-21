@@ -1,0 +1,9 @@
+{% extends "stokapp/base.html" %}
+{% block title %}{{ baslik }} — Ayarlar{% endblock %}
+{% block content %}
+<div class="card" style="max-width:560px;">
+  <h2 style="margin-top:0;">{{ baslik }}</h2>
+  <p style="color:#4b5563;line-height:1.6;">Bu bölüm şu anda geliştirme aşamasındadır. Yakında kullanıma sunulacaktır.</p>
+  <a href="{% url 'stokapp:genel_ayarlar' %}" class="btn btn-secondary">← Ayarlara dön</a>
+</div>
+{% endblock %}

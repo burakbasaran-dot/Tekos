@@ -1,0 +1,21 @@
+{% extends 'stokapp/base.html' %}
+
+{% block title %}Talebi Kapat{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:640px;">
+  <h2 style="margin-top:0;">Talebi Kapat</h2>
+  <div style="margin-bottom:12px; color:#6b7280;">
+    <strong>{{ talep.baslik }}</strong>
+  </div>
+  <form method="post">
+    {% csrf_token %}
+    <label style="font-weight:600; display:block; margin-bottom:6px;">Tamamlanma Zamanı</label>
+    <input type="datetime-local" name="tamamlanma_zamani" value="{{ default_dt }}" class="form-control" style="max-width:260px;">
+    <div style="margin-top:16px; display:flex; gap:10px;">
+      <button type="submit" class="btn btn-primary">Tamamlandı Olarak Kapat</button>
+      <a href="{% url 'stokapp:gelistirme_talep_listesi' %}" class="btn btn-secondary">İptal</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

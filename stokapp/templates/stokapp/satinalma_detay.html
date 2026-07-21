@@ -1,0 +1,159 @@
+{% extends "stokapp/base.html" %}
+{% load currency_filters %}
+{% load custom_filters %}
+{% block title %}Satın Alma Detay - {{ satinalma.satinalma_numarasi }}{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="margin: 0;">Satın Alma Detay: {{ satinalma.satinalma_numarasi }}</h2>
+        <a href="{% url 'stokapp:satinalma_listesi' %}" class="btn btn-secondary" style="padding: 8px 16px;">← Geri</a>
+    </div>
+    
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 15px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background: #fff3cd; color: #856404; border-left: 4px solid #ffc107;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+    
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+        <!-- Sol Taraf -->
+        <div>
+            <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <h3 style="margin: 0 0 20px 0; font-size: 18px; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px;">Satın Alma Bilgileri</h3>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Satın Alma Numarası</label>
+                        <div style="font-size: 16px; font-weight: 600; color: #111827;">{{ satinalma.satinalma_numarasi }}</div>
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Teslim Durumu</label>
+                        <div style="font-size: 16px; color: #111827;">
+                            <span style="padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; 
+                                {% if satinalma.teslim_durumu == 'TESLIM_ALINDI' %}background-color: #d1fae5; color: #065f46;
+                                {% elif satinalma.teslim_durumu == 'KISMI_TESLIM' %}background-color: #fef3c7; color: #92400e;
+                                {% else %}background-color: #fee2e2; color: #991b1b;{% endif %}">
+                                {{ satinalma.get_teslim_durumu_display }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Tedarikçi</label>
+                    <div style="font-size: 16px; color: #111827;">
+                        {% if satinalma.tedarikci %}
+                            {{ satinalma.tedarikci.ad }}
+                        {% else %}
+                            {{ satinalma.tedarikci_adi|default:"-" }}
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Lokasyon</label>
+                    <div style="font-size: 16px; color: #111827;">{{ satinalma.lokasyon.ad|default:"-" }}</div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Oluşturulma Tarihi</label>
+                        <div style="font-size: 16px; color: #111827;">{{ satinalma.olusturulma_tarihi|date:"d.m.Y" }}</div>
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Tamamlanması Beklenen Tarih</label>
+                        <div style="font-size: 16px; color: {% if satinalma.tamamlanma_tarihi %}#ef4444{% else %}#111827{% endif %};">
+                            {{ satinalma.tamamlanma_tarihi|date:"d.m.Y"|default:"-" }}
+                        </div>
+                    </div>
+                </div>
+                
+                {% if satinalma.etiketler %}
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Etiketler</label>
+                    <div style="font-size: 16px; color: #111827;">{{ satinalma.etiketler }}</div>
+                </div>
+                {% endif %}
+                
+                {% if satinalma.notlar %}
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Notlar</label>
+                    <div style="font-size: 16px; color: #111827; white-space: pre-wrap;">{{ satinalma.notlar }}</div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Stok Tablosu -->
+            <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px;">
+                <h3 style="margin: 0 0 20px 0; font-size: 18px; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px;">Stok</h3>
+                
+                <table style="width: 100%; border-collapse: collapse; background: white;">
+                    <thead>
+                        <tr style="background-color: #f3f4f6; border-bottom: 2px solid #e5e7eb;">
+                            <th style="padding: 10px; text-align: left; font-weight: 600;">Stok</th>
+                            <th style="padding: 10px; text-align: left; font-weight: 600;">Notlar</th>
+                            <th style="padding: 10px; text-align: left; font-weight: 600;">Miktar</th>
+                            <th style="padding: 10px; text-align: left; font-weight: 600;">Birim Fiyatı</th>
+                            <th style="padding: 10px; text-align: left; font-weight: 600;">Vergi (%)</th>
+                            <th style="padding: 10px; text-align: left; font-weight: 600;">Toplam Fiyat</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for kalem in kalemler %}
+                        <tr style="border-bottom: 1px solid #e5e7eb;">
+                            <td style="padding: 10px;">{{ kalem.stok_item.ad }}</td>
+                            <td style="padding: 10px;">{{ kalem.notlar|default:"-" }}</td>
+                            <td style="padding: 10px;">
+                                {{ kalem.miktar|format_miktar }} {{ kalem.stok_item.birim }}
+                            </td>
+                            <td style="padding: 10px;">{{ kalem.birim_fiyat|currency }} {{ satinalma.para_birimi }}</td>
+                            <td style="padding: 10px;">{{ kalem.vergi_yuzdesi|floatformat:2 }}%</td>
+                            <td style="padding: 10px; font-weight: 600;">{{ kalem.toplam_fiyat|currency }} {{ satinalma.para_birimi }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 40px; color: #6b7280;">
+                                Bu satın almada stok bulunmuyor.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Sağ Taraf - Özet -->
+        <div>
+            <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; position: sticky; top: 20px;">
+                <h3 style="margin: 0 0 20px 0;">Özet</h3>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Para Birimi</label>
+                    <div style="font-size: 16px; color: #111827; font-weight: 600;">{{ satinalma.para_birimi }}</div>
+                </div>
+                
+                <div style="border-top: 2px solid #e5e7eb; padding-top: 15px; margin-top: 20px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span>Ara Toplam:</span>
+                        <strong>{{ ara_toplam|currency }} {{ satinalma.para_birimi }}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span>Vergi:</span>
+                        <strong>{{ vergi|currency }} {{ satinalma.para_birimi }}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding-top: 10px; border-top: 2px solid #e5e7eb; font-size: 18px; font-weight: 600;">
+                        <span>Toplam:</span>
+                        <strong>{{ toplam|currency }} {{ satinalma.para_birimi }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

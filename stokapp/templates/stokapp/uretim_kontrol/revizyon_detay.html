@@ -1,0 +1,12 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Revizyon {{ archive.old_revision_no }} → {{ archive.new_revision_no }}{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>Revizyon arşivi</h2>
+  <p><strong>{{ archive.old_revision_no }}</strong> → <strong>{{ archive.new_revision_no }}</strong></p>
+  <p>{{ archive.change_note }}</p>
+  <p style="color:#64748b;font-size:13px;">{{ archive.changed_at|date:"d.m.Y H:i" }} — {{ archive.changed_by }}</p>
+  <pre style="background:#f8fafc;padding:16px;border-radius:8px;overflow:auto;font-size:12px;">{{ data|pprint }}</pre>
+  <a href="{% url 'stokapp:uretim_kontrol_ana' %}?product={{ archive.product_id }}&sub_part={{ archive.sub_part_id|default:'' }}" class="btn btn-secondary">Geri</a>
+</div>
+{% endblock %}

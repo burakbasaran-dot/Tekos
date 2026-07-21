@@ -1,0 +1,361 @@
+{% extends 'stokapp/base.html' %}
+{% load static %}
+
+{% block title %}Yeni Şikayet/Uygunsuzluk{% endblock %}
+
+{% block content %}
+<style>
+    .form-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        padding-bottom: 24px;
+        border-bottom: 2px solid #e5e7eb;
+    }
+    .form-header h1 {
+        font-size: 28px;
+        font-weight: 700;
+        color: #111827;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .form-section {
+        background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+        padding: 24px;
+        border-radius: 12px;
+        margin-bottom: 24px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .form-section h3 {
+        font-size: 18px;
+        font-weight: 600;
+        color: #111827;
+        margin: 0 0 20px 0;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+    }
+    .form-group {
+        margin-bottom: 20px;
+    }
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #374151;
+        font-size: 14px;
+    }
+    .form-group input[type="text"],
+    .form-group input[type="number"],
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 14px;
+        transition: all 0.2s ease;
+        background: white;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    .required-field::after {
+        content: " *";
+        color: #ef4444;
+    }
+    .upload-area {
+        background: white;
+        border: 2px dashed #d1d5db;
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        margin-top: 12px;
+    }
+    .upload-area:hover {
+        border-color: #3b82f6;
+        background: #f9fafb;
+    }
+</style>
+
+{{ urunler|json_script:"urunler-data" }}
+<div class="card" style="padding: 30px;">
+    <div class="form-header">
+        <h1><span style="font-size: 32px;">⚠️</span> Yeni Şikayet/Uygunsuzluk</h1>
+        <a href="{% url 'stokapp:complaint_listesi' %}" class="btn btn-secondary" style="padding: 10px 20px; border-radius: 8px;">← Geri</a>
+    </div>
+    
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <div class="form-section">
+            <h3>📋 Temel Bilgiler</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="required-field">{{ form.type.label }}</label>
+                    {{ form.type }}
+                    {% if form.type.errors %}
+                        <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.type.errors }}</div>
+                    {% endif %}
+                </div>
+            
+                <div class="form-group">
+                    <label class="required-field">{{ form.customer.label }}</label>
+                    {{ form.customer }}
+                    {% if form.customer.errors %}
+                        <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.customer.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label>{{ form.related_order.label }}</label>
+                    {{ form.related_order }}
+                    {% if form.related_order.errors %}
+                        <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.related_order.errors }}</div>
+                    {% endif %}
+                </div>
+            
+                <div class="form-group" style="position: relative;">
+                    <label class="required-field">{{ form.product.label }}</label>
+                    <input type="text" 
+                           id="urun-search-input" 
+                           class="form-control" 
+                           placeholder="Ürün adı veya stok kodu ile arama yapın..."
+                           autocomplete="off"
+                           style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;">
+                    <input type="hidden" name="{{ form.product.name }}" id="id_product" value="{{ form.product.value|default:'' }}" required>
+                    <div id="urun-dropdown" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #d1d5db; border-radius: 8px; max-height: 300px; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-top: 4px;"></div>
+                    {% if form.product.errors %}
+                        <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.product.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label>{{ form.product_revision.label }}</label>
+                    {{ form.product_revision }}
+                    {% if form.product_revision.errors %}
+                        <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.product_revision.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label>{{ form.lot_serial.label }}</label>
+                    {{ form.lot_serial }}
+                    {% if form.lot_serial.errors %}
+                        <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.lot_serial.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label class="required-field">{{ form.category.label }}</label>
+                    {{ form.category }}
+                    {% if form.category.errors %}
+                        <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.category.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label class="required-field">{{ form.severity.label }}</label>
+                    {{ form.severity }}
+                    {% if form.severity.errors %}
+                        <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.severity.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label>{{ form.affected_qty.label }}</label>
+                    {{ form.affected_qty }}
+                    {% if form.affected_qty.errors %}
+                        <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.affected_qty.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label class="required-field">{{ form.status.label }}</label>
+                    {{ form.status }}
+                    {% if form.status.errors %}
+                        <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.status.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="required-field">{{ form.description.label }}</label>
+                <textarea name="{{ form.description.name }}" id="{{ form.description.id_for_label }}" class="form-control" rows="8" required style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; font-family: inherit;">{{ form.description.value|default:'' }}</textarea>
+                {% if form.description.errors %}
+                    <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.description.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Fotoğraf ve Doküman Yükleme Bölümü -->
+        <div class="form-section">
+            <h3>📎 Ekler</h3>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+                <!-- Fotoğraf Yükleme -->
+                <div>
+                    <label style="display: block; margin-bottom: 12px; font-weight: 600; color: #374151; font-size: 14px;">📷 Fotoğraf Yükle</label>
+                    <input type="file" name="foto" id="id_foto" accept="image/*" class="form-control" onchange="previewPhoto(this)" style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: white;">
+                    <div id="foto-preview" style="margin-top: 12px; display: none;">
+                        <img id="foto-preview-img" src="" alt="Önizleme" style="max-width: 200px; max-height: 200px; border: 2px solid #e5e7eb; border-radius: 10px; padding: 8px; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    </div>
+                    <small style="color: #6b7280; display: block; margin-top: 8px; font-size: 12px;">JPEG, PNG veya JPG formatında, maksimum 5MB</small>
+                </div>
+                
+                <!-- PDF Doküman Yükleme -->
+                <div>
+                    <label style="display: block; margin-bottom: 12px; font-weight: 600; color: #374151; font-size: 14px;">📄 PDF Doküman Yükle</label>
+                    <input type="file" name="dokuman" id="id_dokuman" accept="application/pdf" class="form-control" onchange="previewDocument(this)" style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: white;">
+                    <input type="text" name="dokuman_notu" id="id_dokuman_notu" placeholder="Doküman notu (isteğe bağlı)" class="form-control" style="margin-top: 12px; width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; background: white;">
+                    <div id="dokuman-preview" style="margin-top: 12px; display: none;">
+                        <div style="padding: 14px; background: linear-gradient(135deg, #dbeafe 0%, #e0f2fe 100%); border-radius: 10px; display: flex; align-items: center; gap: 12px; border: 1px solid #bfdbfe;">
+                            <span style="font-size: 32px;">📄</span>
+                            <div>
+                                <strong id="dokuman-filename" style="color: #1e40af;"></strong>
+                                <br><small style="color: #6b7280; font-size: 12px;">PDF dosyası seçildi</small>
+                            </div>
+                        </div>
+                    </div>
+                    <small style="color: #6b7280; display: block; margin-top: 8px; font-size: 12px;">PDF formatında, maksimum 10MB</small>
+                </div>
+            </div>
+        </div>
+        
+        <div style="margin-top: 30px; display: flex; gap: 12px; padding-top: 24px; border-top: 2px solid #e5e7eb;">
+            <button type="submit" class="btn btn-primary" style="padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; box-shadow: 0 2px 8px rgba(46,204,113,0.3);">💾 Kaydet</button>
+            <a href="{% url 'stokapp:complaint_listesi' %}" class="btn btn-secondary" style="padding: 12px 24px; border-radius: 8px; font-size: 14px;">❌ İptal</a>
+        </div>
+    </form>
+</div>
+
+<script>
+// Ürün listesi - Django template'den gelen veri
+const urunlerData = JSON.parse(document.getElementById('urunler-data').textContent);
+const urunler = urunlerData || [];
+
+// Ürün arama ve autocomplete
+const urunSearchInput = document.getElementById('urun-search-input');
+const urunDropdown = document.getElementById('urun-dropdown');
+const urunHiddenInput = document.getElementById('id_product');
+
+function filtreleUrunler(arama) {
+    const aramaLower = arama.toLowerCase().trim();
+    if (!aramaLower) {
+        urunDropdown.style.display = 'none';
+        return;
+    }
+    
+    const eslesenler = urunler.filter(u => 
+        u.ad.toLowerCase().includes(aramaLower) || 
+        u.stok_kodu.toLowerCase().includes(aramaLower)
+    );
+    
+    if (eslesenler.length === 0) {
+        urunDropdown.innerHTML = '<div style="padding: 10px; color: #6b7280; text-align: center;">Ürün bulunamadı</div>';
+        urunDropdown.style.display = 'block';
+        return;
+    }
+    
+    urunDropdown.innerHTML = eslesenler.slice(0, 10).map(u => `
+        <div class="urun-item" 
+             data-id="${u.id}" 
+             data-kod="${u.stok_kodu}" 
+             data-ad="${u.ad}"
+             style="padding: 10px; cursor: pointer; border-bottom: 1px solid #f3f4f6; transition: background 0.2s;"
+             onmouseover="this.style.background='#f9fafb'"
+             onmouseout="this.style.background='white'">
+            <strong>${u.stok_kodu}</strong> - ${u.ad}
+        </div>
+    `).join('');
+    
+    urunDropdown.style.display = 'block';
+    
+    // Tıklama event'leri
+    urunDropdown.querySelectorAll('.urun-item').forEach(item => {
+        item.addEventListener('click', function() {
+            selectUrun(this.dataset.id, this.dataset.kod, this.dataset.ad);
+        });
+    });
+}
+
+function selectUrun(id, kod, ad) {
+    urunHiddenInput.value = id;
+    urunSearchInput.value = `${kod} - ${ad}`;
+    urunDropdown.style.display = 'none';
+}
+
+// Arama input event
+if (urunSearchInput && urunDropdown && urunHiddenInput) {
+    urunSearchInput.addEventListener('input', function() {
+        filtreleUrunler(this.value);
+    });
+    
+    // Dışarı tıklandığında dropdown'ı kapat
+    document.addEventListener('click', function(e) {
+        if (!urunSearchInput.contains(e.target) && !urunDropdown.contains(e.target)) {
+            urunDropdown.style.display = 'none';
+        }
+    });
+    
+    // Enter tuşu ile ilk sonucu seç
+    urunSearchInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const firstItem = urunDropdown.querySelector('.urun-item');
+            if (firstItem) {
+                firstItem.click();
+            }
+        }
+    });
+}
+
+function previewPhoto(input) {
+    const preview = document.getElementById('foto-preview');
+    const previewImg = document.getElementById('foto-preview-img');
+    
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        
+        reader.onload = function(e) {
+            previewImg.src = e.target.result;
+            preview.style.display = 'block';
+        }
+        
+        reader.readAsDataURL(input.files[0]);
+    } else {
+        preview.style.display = 'none';
+    }
+}
+
+function previewDocument(input) {
+    const preview = document.getElementById('dokuman-preview');
+    const filename = document.getElementById('dokuman-filename');
+    
+    if (input.files && input.files[0]) {
+        filename.textContent = input.files[0].name;
+        preview.style.display = 'block';
+    } else {
+        preview.style.display = 'none';
+    }
+}
+</script>
+{% endblock %}
+

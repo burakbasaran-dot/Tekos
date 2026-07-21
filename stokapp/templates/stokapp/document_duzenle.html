@@ -1,0 +1,187 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Belge Düzenle - {{ document.title }}{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>Belge Düzenle: {{ document.title }}</h2>
+        <a href="{% url 'stokapp:document_detay' document.pk %}" class="btn" style="background-color: #6b7280; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px;">
+            ← Geri
+        </a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 15px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background: #fff3cd; color: #856404; border-left: 4px solid #ffc107;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post" style="max-width: 900px;">
+        {% csrf_token %}
+        
+        <div style="display: grid; gap: 20px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #111827;">{{ form.type.label }} *</label>
+                    {{ form.type }}
+                    {% if form.type.errors %}
+                    <div style="color: #dc3545; font-size: 13px; margin-top: 5px;">{{ form.type.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #111827;">{{ form.risk_level.label }} *</label>
+                    {{ form.risk_level }}
+                    {% if form.risk_level.errors %}
+                    <div style="color: #dc3545; font-size: 13px; margin-top: 5px;">{{ form.risk_level.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div>
+                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #111827;">{{ form.title.label }} *</label>
+                {{ form.title }}
+                {% if form.title.errors %}
+                <div style="color: #dc3545; font-size: 13px; margin-top: 5px;">{{ form.title.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #111827;">{{ form.issuer_authority.label }} *</label>
+                    {{ form.issuer_authority }}
+                    {% if form.issuer_authority.errors %}
+                    <div style="color: #dc3545; font-size: 13px; margin-top: 5px;">{{ form.issuer_authority.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #111827;">{{ form.document_no.label }}</label>
+                    {{ form.document_no }}
+                    {% if form.document_no.errors %}
+                    <div style="color: #dc3545; font-size: 13px; margin-top: 5px;">{{ form.document_no.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
+                <div>
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #111827;">{{ form.issue_date.label }} *</label>
+                    {{ form.issue_date }}
+                    {% if form.issue_date.errors %}
+                    <div style="color: #dc3545; font-size: 13px; margin-top: 5px;">{{ form.issue_date.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #111827;">{{ form.valid_from.label }}</label>
+                    {{ form.valid_from }}
+                    {% if form.valid_from.errors %}
+                    <div style="color: #dc3545; font-size: 13px; margin-top: 5px;">{{ form.valid_from.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #111827;">{{ form.valid_until.label }}</label>
+                    {{ form.valid_until }}
+                    {% if form.valid_until.errors %}
+                    <div style="color: #dc3545; font-size: 13px; margin-top: 5px;">{{ form.valid_until.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div>
+                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #111827;">{{ form.description.label }}</label>
+                {{ form.description }}
+                {% if form.description.errors %}
+                <div style="color: #dc3545; font-size: 13px; margin-top: 5px;">{{ form.description.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #111827;">{{ form.owner_user.label }}</label>
+                    {{ form.owner_user }}
+                    {% if form.owner_user.errors %}
+                    <div style="color: #dc3545; font-size: 13px; margin-top: 5px;">{{ form.owner_user.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #111827;">{{ form.department.label }}</label>
+                    {{ form.department }}
+                    {% if form.department.errors %}
+                    <div style="color: #dc3545; font-size: 13px; margin-top: 5px;">{{ form.department.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #111827;">{{ form.confidentiality.label }}</label>
+                    {{ form.confidentiality }}
+                    {% if form.confidentiality.errors %}
+                    <div style="color: #dc3545; font-size: 13px; margin-top: 5px;">{{ form.confidentiality.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #111827;">{{ form.renewal_lead_days.label }}</label>
+                    {{ form.renewal_lead_days }}
+                    {% if form.renewal_lead_days.errors %}
+                    <div style="color: #dc3545; font-size: 13px; margin-top: 5px;">{{ form.renewal_lead_days.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div style="background-color: #eff6ff; padding: 15px; border-radius: 8px; border: 1px solid #bfdbfe;">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 10px;">
+                    {{ form.requires_original }}
+                    <span style="font-weight: 600; color: #1e40af;">{{ form.requires_original.label }}</span>
+                </label>
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                    {{ form.renewal_required }}
+                    <span style="font-weight: 600; color: #1e40af;">{{ form.renewal_required.label }}</span>
+                </label>
+            </div>
+            
+            <div>
+                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #111827;">{{ form.storage_location.label }}</label>
+                {{ form.storage_location }}
+                {% if form.storage_location.errors %}
+                <div style="color: #dc3545; font-size: 13px; margin-top: 5px;">{{ form.storage_location.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #111827;">{{ form.tags.label }}</label>
+                {{ form.tags }}
+                {% if form.tags.errors %}
+                <div style="color: #dc3545; font-size: 13px; margin-top: 5px;">{{ form.tags.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #111827;">{{ form.notes_internal.label }}</label>
+                {{ form.notes_internal }}
+                {% if form.notes_internal.errors %}
+                <div style="color: #dc3545; font-size: 13px; margin-top: 5px;">{{ form.notes_internal.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #e5e7eb; display: flex; gap: 10px;">
+            <button type="submit" style="padding: 12px 24px; background-color: #22c55e; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer;">
+                ✅ Kaydet
+            </button>
+            <a href="{% url 'stokapp:document_detay' document.pk %}" style="padding: 12px 24px; background-color: #6b7280; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; text-decoration: none; display: inline-block;">
+                ❌ İptal
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

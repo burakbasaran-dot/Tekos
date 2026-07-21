@@ -1,0 +1,377 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Stok Hareketleri{% endblock %}
+{% block content %}
+
+<style>
+  .filter-section {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    display: flex;
+    gap: 15px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+  }
+  
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    min-width: 200px;
+  }
+  
+  .filter-group label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+  }
+  
+  .filter-group input,
+  .filter-group select {
+    padding: 10px 12px;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+  }
+  
+  .filter-group input:focus,
+  .filter-group select:focus {
+    outline: none;
+    border-color: #2ecc71;
+  }
+  
+  .btn-filter {
+    padding: 10px 20px;
+    background: #2ecc71;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  
+  .btn-filter:hover {
+    background: #27ae60;
+  }
+  
+  .btn-clear {
+    padding: 10px 20px;
+    background: #f3f4f6;
+    color: #374151;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+  }
+  
+  .btn-clear:hover {
+    background: #e5e7eb;
+  }
+  
+  .badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  
+  .badge-giris {
+    background: #d1fae5;
+    color: #065f46;
+  }
+  
+  .badge-cikis {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+  
+  .badge-transfer {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+  
+  .badge-sayim {
+    background: #fef3c7;
+    color: #92400e;
+  }
+  
+  .badge-uretim {
+    background: #e9d5ff;
+    color: #6b21a8;
+  }
+  
+  .action-buttons {
+    display: flex;
+    gap: 8px;
+  }
+
+  .source-link-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    color: #2563eb;
+    text-decoration: underline;
+    cursor: pointer;
+    font: inherit;
+  }
+  
+  .btn-action {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s;
+  }
+  
+  .btn-edit {
+    background: #3b82f6;
+    color: white;
+  }
+  
+  .btn-edit:hover {
+    background: #2563eb;
+  }
+  
+  .btn-delete {
+    background: #ef4444;
+    color: white;
+  }
+  
+  .btn-delete:hover {
+    background: #dc2626;
+  }
+  
+  .pagination {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 20px;
+    align-items: center;
+  }
+  
+  .pagination a,
+  .pagination span {
+    padding: 8px 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    text-decoration: none;
+    color: #374151;
+    background: white;
+  }
+  
+  .pagination .current {
+    background: #2ecc71;
+    color: white;
+    border-color: #2ecc71;
+  }
+  
+  .pagination a:hover {
+    background: #f3f4f6;
+  }
+</style>
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+  <h1 style="margin: 0;">📋 Stok Hareketleri</h1>
+  <div style="display:flex; gap:8px;">
+    {% with qs=request.GET.urlencode %}
+    <a href="{% url 'stokapp:stok_hareket_listesi_export_excel' %}{% if qs %}?{{ qs }}{% endif %}" class="btn btn-secondary">📊 Excel</a>
+    <a href="{% url 'stokapp:stok_hareket_listesi_export_pdf' %}{% if qs %}?{{ qs }}{% endif %}" class="btn btn-secondary">📄 PDF</a>
+    {% endwith %}
+  </div>
+</div>
+
+<div class="filter-section">
+  <form method="get" style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; width: 100%;">
+    {% if stok_ids %}
+    <input type="hidden" name="stok_ids" value="{{ stok_ids }}">
+    {% endif %}
+    <div class="filter-group">
+      <label for="search">Ara (Stok Kodu, Ad, Referans)</label>
+      <input type="text" 
+             id="search" 
+             name="search" 
+             value="{{ search }}" 
+             placeholder="Arama yapın...">
+    </div>
+    
+    <div class="filter-group">
+      <label for="hareket_tipi">Hareket Tipi</label>
+      <select id="hareket_tipi" name="hareket_tipi">
+        <option value="">Tümü</option>
+        {% for tip_kod, tip_ad in hareket_tipleri %}
+          <option value="{{ tip_kod }}" {% if hareket_tipi == tip_kod %}selected{% endif %}>
+            {{ tip_ad }}
+          </option>
+        {% endfor %}
+      </select>
+    </div>
+    
+    <div style="display: flex; gap: 10px;">
+      <button type="submit" class="btn-filter">🔍 Filtrele</button>
+      <a href="{% url 'stokapp:stok_hareket_listesi' %}" class="btn-clear">🔄 Temizle</a>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <table style="width: 100%; border-collapse: collapse;">
+    <thead>
+      <tr style="background: #f9fafb; border-bottom: 2px solid #e5e7eb;">
+        <th style="padding: 12px; text-align: left; font-weight: 600;">Tarih</th>
+        <th style="padding: 12px; text-align: left; font-weight: 600;">Stok Kodu</th>
+        <th style="padding: 12px; text-align: left; font-weight: 600;">Ürün Adı</th>
+        <th style="padding: 12px; text-align: left; font-weight: 600;">Hareket Tipi</th>
+        <th style="padding: 12px; text-align: right; font-weight: 600;">Miktar</th>
+        <th style="padding: 12px; text-align: right; font-weight: 600;">Önceki Stok</th>
+        <th style="padding: 12px; text-align: right; font-weight: 600;">Sonraki Stok</th>
+        <th style="padding: 12px; text-align: left; font-weight: 600;">Referans</th>
+        <th style="padding: 12px; text-align: center; font-weight: 600;">İşlemler</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for hareket in hareketler %}
+      <tr style="border-bottom: 1px solid #e5e7eb; transition: background 0.2s;" 
+          onmouseover="this.style.background='#f9fafb'" 
+          onmouseout="this.style.background='white'">
+        <td style="padding: 12px;">
+          <button
+            type="button"
+            class="source-link-btn hareket-source-btn"
+            data-tarih="{{ hareket.tarih|date:'d.m.Y H:i' }}"
+            data-kaynak="{{ hareket.kaynak_baslik }}"
+            data-detay="{{ hareket.kaynak_detay }}"
+            data-referans="{{ hareket.referans_no|default:'-' }}"
+            data-tip="{{ hareket.get_hareket_tipi_display }}"
+          >{{ hareket.tarih|date:"d.m.Y H:i" }}</button>
+        </td>
+        <td style="padding: 12px; font-weight: 600;">{{ hareket.stok_item.stok_kodu }}</td>
+        <td style="padding: 12px;">{{ hareket.stok_item.ad }}</td>
+        <td style="padding: 12px;">
+          {% if hareket.hareket_tipi == 'GIRIS' or hareket.hareket_tipi == 'URETIM_GIRIS' or hareket.hareket_tipi == 'URETIM_IADE' %}
+            <span class="badge badge-giris">📥 {{ hareket.get_hareket_tipi_display }}</span>
+          {% elif hareket.hareket_tipi == 'CIKIS' or hareket.hareket_tipi == 'URETIM_CIKIS' %}
+            <span class="badge badge-cikis">📤 {{ hareket.get_hareket_tipi_display }}</span>
+          {% elif hareket.hareket_tipi == 'TRANSFER' %}
+            <span class="badge badge-transfer">🔄 {{ hareket.get_hareket_tipi_display }}</span>
+          {% elif hareket.hareket_tipi == 'SAYIM' %}
+            <span class="badge badge-sayim">📊 {{ hareket.get_hareket_tipi_display }}</span>
+          {% else %}
+            <span class="badge badge-uretim">🏭 {{ hareket.get_hareket_tipi_display }}</span>
+          {% endif %}
+        </td>
+        <td style="padding: 12px; text-align: right; font-weight: 600;">
+          {{ hareket.miktar|floatformat:"-3" }} {{ hareket.birim }}
+        </td>
+        <td style="padding: 12px; text-align: right; color: #6b7280;">
+          {{ hareket.onceki_stok|floatformat:"-3" }}
+        </td>
+        <td style="padding: 12px; text-align: right; font-weight: 600; color: #2ecc71;">
+          {{ hareket.sonraki_stok|floatformat:"-3" }}
+        </td>
+        <td style="padding: 12px; color: #6b7280;">
+          {{ hareket.referans_no|default:"-" }}
+        </td>
+        <td style="padding: 12px;">
+          <div class="action-buttons">
+            <a href="{% url 'stokapp:stok_hareket_duzenle' hareket.pk %}" class="btn-action btn-edit" title="Düzenle">
+              ✏️ Düzenle
+            </a>
+            <a href="{% url 'stokapp:stok_hareket_sil' hareket.pk %}" class="btn-action btn-delete" title="Sil">
+              🗑️ Sil
+            </a>
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="9" style="padding: 40px; text-align: center; color: #6b7280;">
+          <div style="font-size: 48px; margin-bottom: 16px;">📭</div>
+          <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">Henüz stok hareketi bulunmuyor</div>
+          <div style="font-size: 14px;">Stok giriş/çıkış işlemleri burada görüntülenecektir.</div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if hareketler.has_other_pages %}
+<div class="pagination">
+  {% if hareketler.has_previous %}
+    <a href="?page=1{% if search %}&search={{ search }}{% endif %}{% if hareket_tipi %}&hareket_tipi={{ hareket_tipi }}{% endif %}">« İlk</a>
+    <a href="?page={{ hareketler.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if hareket_tipi %}&hareket_tipi={{ hareket_tipi }}{% endif %}">‹ Önceki</a>
+  {% endif %}
+  
+  <span class="current">
+    Sayfa {{ hareketler.number }} / {{ hareketler.paginator.num_pages }}
+  </span>
+  
+  {% if hareketler.has_next %}
+    <a href="?page={{ hareketler.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if hareket_tipi %}&hareket_tipi={{ hareket_tipi }}{% endif %}">Sonraki ›</a>
+    <a href="?page={{ hareketler.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}{% if hareket_tipi %}&hareket_tipi={{ hareket_tipi }}{% endif %}">Son »</a>
+  {% endif %}
+</div>
+{% endif %}
+
+<div id="hareketSourceModal" style="display:none; position:fixed; z-index:1002; left:0; top:0; width:100%; height:100%; overflow:auto; background:rgba(0,0,0,.4);">
+  <div style="background:#fff; margin:8% auto; padding:20px; border:1px solid #888; width:min(520px,95%); border-radius:10px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+      <h3 style="margin:0;">Hareket Kaynağı</h3>
+      <button type="button" id="hareketSourceClose" style="border:none; background:none; font-size:22px; cursor:pointer;">&times;</button>
+    </div>
+    <div style="display:grid; grid-template-columns:140px 1fr; gap:8px; font-size:14px;">
+      <div style="font-weight:600; color:#6b7280;">Tarih</div><div id="hsTarih">-</div>
+      <div style="font-weight:600; color:#6b7280;">Hareket tipi</div><div id="hsTip">-</div>
+      <div style="font-weight:600; color:#6b7280;">Kaynak</div><div id="hsKaynak">-</div>
+      <div style="font-weight:600; color:#6b7280;">Detay</div><div id="hsDetay">-</div>
+      <div style="font-weight:600; color:#6b7280;">Referans</div><div id="hsReferans">-</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function () {
+    const modal = document.getElementById('hareketSourceModal');
+    const closeBtn = document.getElementById('hareketSourceClose');
+    if (!modal || !closeBtn) return;
+
+    const hsTarih = document.getElementById('hsTarih');
+    const hsTip = document.getElementById('hsTip');
+    const hsKaynak = document.getElementById('hsKaynak');
+    const hsDetay = document.getElementById('hsDetay');
+    const hsReferans = document.getElementById('hsReferans');
+
+    document.querySelectorAll('.hareket-source-btn').forEach((btn) => {
+      btn.addEventListener('click', function () {
+        hsTarih.textContent = this.dataset.tarih || '-';
+        hsTip.textContent = this.dataset.tip || '-';
+        hsKaynak.textContent = this.dataset.kaynak || '-';
+        hsDetay.textContent = this.dataset.detay || '-';
+        hsReferans.textContent = this.dataset.referans || '-';
+        modal.style.display = 'block';
+      });
+    });
+
+    closeBtn.addEventListener('click', function () {
+      modal.style.display = 'none';
+    });
+    window.addEventListener('click', function (event) {
+      if (event.target === modal) modal.style.display = 'none';
+    });
+  })();
+</script>
+
+{% endblock %}
+

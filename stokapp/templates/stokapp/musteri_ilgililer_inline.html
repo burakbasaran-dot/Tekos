@@ -1,0 +1,142 @@
+{# Beklenen bağlam: ilgililer_initial (liste, json_script için) #}
+<div style="margin-top: 28px; max-width: 100%;">
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+        <h3 style="margin: 0; font-size: 1.1rem;">İlgili kişiler</h3>
+        <button type="button" class="btn btn-success" id="btnIlgiliEkle" style="padding: 6px 14px;">+ Satır ekle</button>
+    </div>
+    <p style="font-size: 13px; color: #6c757d; margin-bottom: 10px;">Adı soyadı yazılan satırlar kaydedilir; <strong style="color:#1d4ed8;">e-posta girilen ilgili kişiler</strong> teklif ve sipariş onay mail alıcı listesinde ayrıca seçilebilir.</p>
+    <input type="hidden" name="ilgililer" id="ilgililerInput" value="[]">
+    <div class="tdk-ilgililer-scroll">
+        <table class="table table-bordered table-sm" style="font-size: 14px; margin-bottom: 0;" id="ilgiliTable">
+            <thead class="table-light">
+                <tr>
+                    <th class="tdk-has-help" style="min-width: 160px;" data-help="Müşteri tarafındaki yetkili kişinin adı soyadı. Boş satırlar kaydedilmez.">Adı Soyadı</th>
+                    <th class="tdk-has-help" style="min-width: 120px;" data-help="Kişinin firmadaki görevi (örn. Satın Alma Müdürü).">Görevi</th>
+                    <th class="tdk-has-help" style="min-width: 120px;" data-help="İlgili kişinin doğrudan telefon numarası.">Telefon</th>
+                    <th class="tdk-has-help" style="min-width: 180px;" data-help="Teklif ve sipariş onay maillerinde alıcı olarak seçilebilir.">E-posta</th>
+                    <th class="tdk-has-help" style="min-width: 200px;" data-help="Bu kişi hakkında dahili not; müşteriye gönderilmez.">Özel not</th>
+                    <th style="width: 56px;"></th>
+                </tr>
+            </thead>
+            <tbody id="ilgiliBody"></tbody>
+        </table>
+    </div>
+</div>
+{{ ilgililer_initial|json_script:"musteri-ilgililer-initial" }}
+<script>
+(function () {
+    var body = document.getElementById('ilgiliBody');
+    var inp = document.getElementById('ilgililerInput');
+    var btn = document.getElementById('btnIlgiliEkle');
+    var seedEl = document.getElementById('musteri-ilgililer-initial');
+    var initial = [];
+    try {
+        initial = seedEl ? JSON.parse(seedEl.textContent) : [];
+    } catch (e) {
+        initial = [];
+    }
+    if (!Array.isArray(initial)) initial = [];
+
+    function gather() {
+        var out = [];
+        body.querySelectorAll('tr').forEach(function (tr) {
+            var ad = tr.querySelector('.ilg-ad').value.trim();
+            if (!ad) return;
+            out.push({
+                ad_soyad: ad,
+                gorev: tr.querySelector('.ilg-gorev').value.trim(),
+                telefon: tr.querySelector('.ilg-tel').value.trim(),
+                email: tr.querySelector('.ilg-mail').value.trim(),
+                ozel_not: tr.querySelector('.ilg-not').value.trim()
+            });
+        });
+        return out;
+    }
+
+    function syncHidden() {
+        inp.value = JSON.stringify(gather());
+    }
+
+    var ILG_HELP = {
+        ad: 'Müşteri tarafındaki yetkili kişinin adı soyadı. Boş satırlar kaydedilmez.',
+        gorev: 'Kişinin firmadaki görevi (örn. Satın Alma Müdürü).',
+        telefon: 'İlgili kişinin doğrudan telefon numarası.',
+        email: 'Teklif ve sipariş onay maillerinde alıcı olarak seçilebilir.',
+        not: 'Bu kişi hakkında dahili not; müşteriye gönderilmez.'
+    };
+
+    function cell(child, helpKey) {
+        var td = document.createElement('td');
+        if (helpKey && ILG_HELP[helpKey]) {
+            td.className = 'tdk-has-help';
+            td.setAttribute('data-help', ILG_HELP[helpKey]);
+        }
+        td.appendChild(child);
+        return td;
+    }
+
+    function addRow(data) {
+        var d = data || {};
+        var tr = document.createElement('tr');
+
+        function mkInput(cls, val, inputType) {
+            var i = document.createElement('input');
+            i.type = inputType || 'text';
+            i.className = 'form-control ' + cls;
+            i.value = val != null ? String(val) : '';
+            i.addEventListener('input', syncHidden);
+            return i;
+        }
+        var ta = document.createElement('textarea');
+        ta.className = 'form-control ilg-not';
+        ta.rows = 2;
+        ta.value = d.ozel_not != null ? String(d.ozel_not) : '';
+        ta.addEventListener('input', syncHidden);
+
+        tr.appendChild(cell(mkInput('ilg-ad', d.ad_soyad), 'ad'));
+        tr.appendChild(cell(mkInput('ilg-gorev', d.gorev), 'gorev'));
+        tr.appendChild(cell(mkInput('ilg-tel', d.telefon), 'telefon'));
+        tr.appendChild(cell(mkInput('ilg-mail', d.email, 'email'), 'email'));
+
+        var tdNot = document.createElement('td');
+        tdNot.className = 'tdk-has-help';
+        tdNot.setAttribute('data-help', ILG_HELP.not);
+        tdNot.appendChild(ta);
+        tr.appendChild(tdNot);
+
+        var delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.className = 'btn btn-outline-danger btn-sm ilg-sil';
+        delBtn.title = 'Satırı sil';
+        delBtn.textContent = '✕';
+        delBtn.addEventListener('click', function () {
+            tr.remove();
+            syncHidden();
+            if (!body.querySelector('tr')) addRow(null);
+        });
+        var tdDel = document.createElement('td');
+        tdDel.appendChild(delBtn);
+        tr.appendChild(tdDel);
+
+        body.appendChild(tr);
+        syncHidden();
+    }
+
+    btn.addEventListener('click', function () {
+        addRow(null);
+    });
+
+    var form = inp.closest('form');
+    if (form) {
+        form.addEventListener('submit', function () {
+            syncHidden();
+        });
+    }
+
+    if (initial.length) {
+        initial.forEach(addRow);
+    } else {
+        addRow(null);
+    }
+})();
+</script>

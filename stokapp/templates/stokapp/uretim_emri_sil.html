@@ -1,0 +1,230 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Üretim Emri Sil{% endblock %}
+{% block content %}
+
+<style>
+  .delete-card {
+    max-width: 800px;
+    margin: 30px auto;
+  }
+  
+  .warning-box {
+    background: #fef3c7;
+    border-left: 4px solid #f59e0b;
+    border-radius: 8px;
+    padding: 16px;
+    margin: 20px 0;
+  }
+  
+  .error-box {
+    background: #fee2e2;
+    border-left: 4px solid #dc2626;
+    border-radius: 8px;
+    padding: 16px;
+    margin: 20px 0;
+  }
+  
+  .info-box {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 20px 0;
+  }
+  
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  .info-row:last-child {
+    border-bottom: none;
+  }
+  
+  .info-label {
+    font-weight: 600;
+    color: #6b7280;
+  }
+  
+  .info-value {
+    font-weight: 600;
+    color: #111827;
+  }
+  
+  .action-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 30px;
+  }
+  
+  .btn {
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+    border: none;
+    cursor: pointer;
+    font-size: 15px;
+  }
+  
+  .btn-cancel {
+    background: #f3f4f6;
+    color: #374151;
+    border: 2px solid #e5e7eb;
+  }
+  
+  .btn-cancel:hover {
+    background: #e5e7eb;
+  }
+  
+  .btn-delete {
+    background: #dc2626;
+    color: white;
+  }
+  
+  .btn-delete:hover {
+    background: #b91c1c;
+  }
+  
+  .stok-hareket-list {
+    margin-top: 15px;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  
+  .stok-hareket-item {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 8px;
+    font-size: 13px;
+  }
+</style>
+
+<div class="card delete-card">
+    <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 2px solid #fee2e2;">
+        <span style="font-size: 48px;">⚠️</span>
+        <h1 style="margin: 0; color: #dc2626;">Üretim Emri Sil</h1>
+    </div>
+    
+    {% if emir.durum == 'TAMAMLANDI' %}
+    <div class="error-box">
+        <strong style="color: #dc2626; display: block; margin-bottom: 10px;">
+            ⚠️ Bu üretim emri silinemiyor!
+        </strong>
+        <p style="margin: 0;">
+            Tamamlanmış üretim emirleri silinemez çünkü stok girişi yapılmıştır. 
+            Eğer gerçekten silmek istiyorsanız, önce ilgili stok hareketlerini kontrol edin.
+        </p>
+    </div>
+    
+    <div style="text-align: center; margin-top: 30px;">
+        <a href="{% url 'stokapp:uretim_emri_detay' emir.pk %}" class="btn btn-cancel">
+            ← Geri Dön
+        </a>
+    </div>
+    
+    {% else %}
+    
+    <div class="warning-box">
+        <strong>⚠️ Uyarı:</strong> Bu işlem geri alınamaz! Üretim emri silindiğinde:
+        <ul style="margin: 10px 0 0 20px;">
+            <li>İlişkili tüm üretim aşamaları silinecektir</li>
+            {% if emir.durum == 'BASLADI' %}
+            <li>Başlatılmış emirler için hammadde stokları geri alınacaktır</li>
+            {% endif %}
+            <li>İlişkili stok hareketleri silinecektir</li>
+        </ul>
+    </div>
+    
+    <div class="info-box">
+        <div class="info-row">
+            <span class="info-label">Emir No:</span>
+            <span class="info-value">{{ emir.emir_no }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Ürün:</span>
+            <span class="info-value">{{ emir.recete.urun.stok_kodu }} - {{ emir.recete.urun.ad }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Miktar:</span>
+            <span class="info-value">{{ emir.miktar }} {{ emir.recete.urun.birim }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Durum:</span>
+            <span class="info-value">
+                <span style="padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;
+                    {% if emir.durum == 'TAMAMLANDI' %}background: #d4edda; color: #155724;
+                    {% elif emir.durum == 'BASLADI' %}background: #fff3cd; color: #856404;
+                    {% elif emir.durum == 'IPTAL' %}background: #f8d7da; color: #721c24;
+                    {% else %}background: #d1ecf1; color: #0c5460;{% endif %}">
+                    {{ emir.get_durum_display }}
+                </span>
+            </span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Planlanan Başlangıç:</span>
+            <span class="info-value">{{ emir.planlanan_baslama|date:"d.m.Y H:i" }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Planlanan Bitiş:</span>
+            <span class="info-value">{{ emir.planlanan_bitis|date:"d.m.Y H:i" }}</span>
+        </div>
+        {% if emir.gerceklesen_baslama %}
+        <div class="info-row">
+            <span class="info-label">Gerçekleşen Başlangıç:</span>
+            <span class="info-value">{{ emir.gerceklesen_baslama|date:"d.m.Y H:i" }}</span>
+        </div>
+        {% endif %}
+        {% if stok_hareket_sayisi > 0 %}
+        <div class="info-row">
+            <span class="info-label">İlişkili Stok Hareketleri:</span>
+            <span class="info-value" style="color: #dc2626;">{{ stok_hareket_sayisi }} kayıt</span>
+        </div>
+        {% endif %}
+    </div>
+    
+    {% if stok_hareket_sayisi > 0 %}
+    <div style="margin-top: 20px;">
+        <strong style="color: #dc2626; display: block; margin-bottom: 10px;">
+            ⚠️ Silinecek Stok Hareketleri:
+        </strong>
+        <div class="stok-hareket-list">
+            {% for hareket in stok_hareketleri %}
+            <div class="stok-hareket-item">
+                <strong>{{ hareket.stok_item.stok_kodu }}</strong> - 
+                {{ hareket.get_hareket_tipi_display }} - 
+                {{ hareket.miktar|floatformat:"-3" }} {{ hareket.birim }} - 
+                {{ hareket.tarih|date:"d.m.Y H:i" }}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <form method="post">
+        {% csrf_token %}
+        <div class="action-buttons">
+            <a href="{% url 'stokapp:uretim_emri_detay' emir.pk %}" class="btn btn-cancel">
+                ✕ İptal
+            </a>
+            <button type="submit" 
+                    class="btn btn-delete" 
+                    onclick="return confirm('Bu üretim emrini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz!');">
+                🗑️ Sil
+            </button>
+        </div>
+    </form>
+    
+    {% endif %}
+</div>
+
+{% endblock %}
+

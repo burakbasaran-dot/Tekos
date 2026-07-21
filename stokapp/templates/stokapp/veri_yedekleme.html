@@ -1,0 +1,90 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Veri Yedekleme{% endblock %}
+{% block content %}
+<style>
+    .yedekleme-header h1 {
+        margin: 0;
+        font-size: 28px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .yedekleme-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 30px;
+    }
+    @media (max-width: 768px) {
+        .yedekleme-grid { grid-template-columns: 1fr; }
+    }
+</style>
+
+<div class="card" style="padding: 30px;">
+    <div class="yedekleme-header" style="margin-bottom: 30px;">
+        <h1><span style="font-size: 32px;">💾</span> Veri Yedekleme</h1>
+        <p style="color:#6b7280; margin: 8px 0 0 0;">Program alt yapısı ve veritabanı yedeklerini buradan yönetebilirsiniz.</p>
+    </div>
+
+    <div class="card" style="padding: 30px; margin-bottom: 0; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 2px solid #0ea5e9;">
+        <div class="yedekleme-grid">
+            <div style="background: white; padding: 24px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <h3 style="margin-top: 0; margin-bottom: 20px; color: #0369a1; font-size: 18px; font-weight: 600;">📦 Yedekleme</h3>
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <div>
+                        <form method="post" action="{% url 'stokapp:yedekle_altyapi' %}" style="margin-bottom: 10px;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-primary" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="return confirm('Program alt yapısını yedeklemek istediğinizden emin misiniz? Bu işlem sıfır veri ile yeni bir alt yapı dosyası oluşturacak.');">
+                                <span>🏗️</span>
+                                <span>Program Alt Yapısını Yedekle</span>
+                            </button>
+                        </form>
+                        <p style="font-size: 12px; color: #6b7280; margin: 5px 0 0 0;">Yapılandırmaları, ayarları ve şablonları yedekler (veri içermez)</p>
+                    </div>
+                    <div>
+                        <form method="post" action="{% url 'stokapp:yedekle_veriler' %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="return confirm('Program verilerini yedeklemek istediğinizden emin misiniz? Bu işlem tüm veritabanı verilerini içeren bir dosya oluşturacak.');">
+                                <span>📊</span>
+                                <span>Program Verilerini Yedekle</span>
+                            </button>
+                        </form>
+                        <p style="font-size: 12px; color: #6b7280; margin: 5px 0 0 0;">Tüm stok, sipariş, üretim ve diğer verileri yedekler</p>
+                    </div>
+                </div>
+            </div>
+
+            <div style="background: white; padding: 24px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <h3 style="margin-top: 0; margin-bottom: 20px; color: #0369a1; font-size: 18px; font-weight: 600;">🔄 Geri Yükleme</h3>
+                <div style="display: flex; flex-direction: column; gap: 15px;">
+                    <div>
+                        <form method="post" action="{% url 'stokapp:geri_yukle_altyapi' %}" enctype="multipart/form-data" style="margin-bottom: 10px;">
+                            {% csrf_token %}
+                            <div style="display: flex; flex-direction: column; gap: 10px;">
+                                <input type="file" name="backup_file" accept=".zip,.json" required style="padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                <button type="submit" class="btn btn-warning" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; background: #f59e0b; color: white;" onclick="return confirm('⚠️ DİKKAT: Program alt yapısını geri yüklemek mevcut ayarları ve yapılandırmaları SİLECEKTİR. Devam etmek istediğinizden emin misiniz?');">
+                                    <span>🏗️</span>
+                                    <span>Alt Yapıyı Geri Yükle</span>
+                                </button>
+                            </div>
+                        </form>
+                        <p style="font-size: 12px; color: #6b7280; margin: 5px 0 0 0;">Önce alt yapı yedeğini yükleyin, sonra verileri geri yükleyin</p>
+                    </div>
+                    <div>
+                        <form method="post" action="{% url 'stokapp:geri_yukle_veriler' %}" enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <div style="display: flex; flex-direction: column; gap: 10px;">
+                                <input type="file" name="backup_file" accept=".zip,.json" required style="padding: 8px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+                                <button type="submit" class="btn btn-danger" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; background: #ef4444; color: white;" onclick="return confirm('⚠️ DİKKAT: Program verilerini geri yüklemek mevcut TÜM VERİLERİ SİLECEK ve yedekten geri yükleyecektir. Bu işlem geri alınamaz! Devam etmek istediğinizden emin misiniz?');">
+                                    <span>📊</span>
+                                    <span>Verileri Geri Yükle</span>
+                                </button>
+                            </div>
+                        </form>
+                        <p style="font-size: 12px; color: #6b7280; margin: 5px 0 0 0;">En son yedeklenen verilerle tüm sistemi geri yükler</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

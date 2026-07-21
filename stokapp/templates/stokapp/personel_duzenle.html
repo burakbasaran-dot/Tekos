@@ -1,0 +1,223 @@
+{% extends "stokapp/base.html" %}
+{% load static %}
+{% block title %}Personel Düzenle - {{ personel.ad }} {{ personel.soyad }}{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <a href="{% url 'stokapp:personel_listesi' %}" class="btn" style="background-color: #6b7280; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px;">
+                ← Geri
+            </a>
+            <h2 style="margin: 0;">Personel Düzenle: {{ personel.ad }} {{ personel.soyad }}</h2>
+        </div>
+    </div>
+    
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 15px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background: #fff3cd; color: #856404; border-left: 4px solid #ffc107;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+    
+    <form method="post" enctype="multipart/form-data" style="max-width: 1200px;">
+        {% csrf_token %}
+        
+        <div style="display: grid; grid-template-columns: 1fr 200px; gap: 20px; margin-bottom: 30px;">
+            <!-- Sol Taraf - Form Alanları -->
+            <div>
+                <!-- Temel Bilgiler -->
+                <div style="background-color: #f9fafb; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3 style="margin: 0 0 15px 0; font-size: 18px; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px;">Temel Bilgiler</h3>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.personel_no.label }}</label>
+                            {{ form.personel_no }}
+                            {% if form.personel_no.errors %}
+                                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.personel_no.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.sicil_no.label }}</label>
+                            {{ form.sicil_no }}
+                            {% if form.sicil_no.errors %}
+                                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.sicil_no.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.ad.label }}</label>
+                            {{ form.ad }}
+                            {% if form.ad.errors %}
+                                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.ad.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.soyad.label }}</label>
+                            {{ form.soyad }}
+                            {% if form.soyad.errors %}
+                                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.soyad.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.gorev.label }}</label>
+                            {{ form.gorev }}
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.saatlik_ucret.label }}</label>
+                            {{ form.saatlik_ucret }}
+                        </div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.telefon.label }}</label>
+                            {{ form.telefon }}
+                            {% if form.telefon.errors %}
+                                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.telefon.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.cinsiyet.label }}</label>
+                            {{ form.cinsiyet }}
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.email.label }}</label>
+                            {{ form.email }}
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.ozel_kod.label }}</label>
+                        {{ form.ozel_kod }}
+                    </div>
+                </div>
+                
+                <!-- Tab Yapısı -->
+                <div style="margin-bottom: 20px;">
+                    <div style="display: flex; border-bottom: 2px solid #e5e7eb; margin-bottom: 20px;">
+                        <button type="button" class="tab-button active" onclick="showTab('nufus')" style="padding: 12px 20px; border: none; background: none; cursor: pointer; border-bottom: 2px solid #3b82f6; color: #3b82f6; font-weight: 600;">
+                            Nüfus / Adres Bilgileri
+                        </button>
+                    </div>
+                    
+                    <div id="nufus-tab" class="tab-content">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                            <div>
+                                <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.dogum_tarihi.label }}</label>
+                                {{ form.dogum_tarihi }}
+                            </div>
+                            <div>
+                                <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.medeni_hali.label }}</label>
+                                {{ form.medeni_hali }}
+                            </div>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                            <div>
+                                <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.kan_grubu.label }}</label>
+                                {{ form.kan_grubu }}
+                            </div>
+                            <div>
+                                <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.tc_kimlik_no.label }}</label>
+                                {{ form.tc_kimlik_no }}
+                            </div>
+                        </div>
+                        
+                        <h4 style="margin: 20px 0 15px 0; font-size: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;">Adres Bilgileri</h4>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 600;">Adres</label>
+                            {{ form.adres }}
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                            <div>
+                                <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.sehir.label }}</label>
+                                {{ form.sehir }}
+                            </div>
+                            <div>
+                                <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.posta_kodu.label }}</label>
+                                {{ form.posta_kodu }}
+                            </div>
+                            <div>
+                                <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.ulke.label }}</label>
+                                {{ form.ulke }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Sağ Taraf - Fotoğraf -->
+            <div>
+                <div style="background-color: #f9fafb; padding: 15px; border-radius: 8px; text-align: center;">
+                    <label style="display: block; margin-bottom: 10px; font-weight: 600;">{{ form.fotograf.label }}</label>
+                    <div id="foto-preview" style="width: 180px; height: 220px; margin: 0 auto 15px; border: 2px dashed #d1d5db; border-radius: 8px; display: flex; align-items: center; justify-content: center; background-color: white; overflow: hidden;">
+                        {% if personel.fotograf %}
+                            <img src="{{ personel.fotograf.url }}" 
+                                 alt="{{ personel.ad }} {{ personel.soyad }}" 
+                                 style="width: 100%; height: 100%; object-fit: cover;">
+                        {% else %}
+                            <span style="color: #9ca3af;">Fotoğraf Yükleyin</span>
+                        {% endif %}
+                    </div>
+                    {{ form.fotograf }}
+                    {% if form.fotograf.errors %}
+                        <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.fotograf.errors }}</div>
+                    {% endif %}
+                    <small style="color: #6b7280; font-size: 12px; display: block; margin-top: 10px;">Yeni fotoğraf yüklemek için seçin. Boş bırakırsanız mevcut fotoğraf korunur.</small>
+                </div>
+            </div>
+        </div>
+        
+        <div style="margin-top: 30px; display: flex; gap: 10px;">
+            <button type="submit" class="btn btn-primary" style="background-color: #3b82f6; border-color: #3b82f6; padding: 10px 20px;">Güncelle</button>
+            <a href="{% url 'stokapp:personel_listesi' %}" class="btn" style="background-color: #6b7280; color: white; padding: 10px 20px; text-decoration: none; margin-left: 10px;">İptal</a>
+        </div>
+    </form>
+</div>
+
+<style>
+.tab-button {
+    transition: all 0.2s;
+}
+.tab-button.active {
+    border-bottom-color: #3b82f6 !important;
+    color: #3b82f6 !important;
+}
+.tab-content {
+    display: block;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Fotoğraf önizleme
+    const fotoInput = document.querySelector('#id_fotograf');
+    const fotoPreview = document.getElementById('foto-preview');
+    
+    if (fotoInput) {
+        fotoInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    fotoPreview.innerHTML = `<img src="${e.target.result}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 6px;">`;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

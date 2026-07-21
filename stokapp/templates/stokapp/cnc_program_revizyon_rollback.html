@@ -1,0 +1,50 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Revizyon Geri Al - {{ revision.revision_code }}{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>Revizyon Geri Al</h2>
+        <a href="{% url 'stokapp:cnc_program_detay' program.program_id %}" class="btn" style="background-color: #6b7280; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px;">
+            ← Geri
+        </a>
+    </div>
+
+    <div style="background-color: #fef3c7; border: 2px solid #f59e0b; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+        <h3 style="margin: 0 0 10px 0; color: #92400e;">⚠️ Uyarı</h3>
+        <p style="margin: 0; color: #78350f;">
+            <strong>{{ revision.revision_code }}</strong> revizyonunu aktif yapmak istediğinizden emin misiniz?
+            <br><br>
+            Mevcut aktif revizyon otomatik olarak pasif yapılacak ve bu revizyon aktif hale gelecektir.
+        </p>
+    </div>
+
+    <div style="background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+        <h4 style="margin: 0 0 15px 0;">Revizyon Bilgileri</h4>
+        <div style="display: grid; gap: 10px;">
+            <div><strong>Revizyon Kodu:</strong> {{ revision.revision_code }}</div>
+            <div><strong>Revizyon Tipi:</strong> {{ revision.get_revision_type_display }}</div>
+            <div><strong>Oluşturulma:</strong> {{ revision.created_at|date:"d.m.Y H:i" }}</div>
+            <div><strong>Oluşturan:</strong> {{ revision.created_by.get_full_name|default:revision.created_by.username }}</div>
+            {% if revision.revision_note %}
+            <div style="margin-top: 10px;">
+                <strong>Revizyon Notu:</strong>
+                <div style="background-color: #f9fafb; padding: 10px; border-radius: 6px; margin-top: 5px; white-space: pre-wrap;">{{ revision.revision_note }}</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <form method="post" style="max-width: 600px;">
+        {% csrf_token %}
+        
+        <div style="margin-top: 30px; display: flex; gap: 10px;">
+            <button type="submit" style="padding: 12px 24px; background-color: #f59e0b; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer;">
+                ✅ Aktif Yap
+            </button>
+            <a href="{% url 'stokapp:cnc_program_detay' program.program_id %}" style="padding: 12px 24px; background-color: #6b7280; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; text-decoration: none; display: inline-block;">
+                ❌ İptal
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

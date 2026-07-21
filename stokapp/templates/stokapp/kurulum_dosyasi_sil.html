@@ -1,0 +1,69 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Kurulum Dosyası Sil - {{ dosya.urun.stok_kodu }}{% endblock %}
+{% block content %}
+<div class="card">
+    <h2>🗑️ Kurulum Dosyası Sil</h2>
+    
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 15px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background: #fff3cd; color: #856404; border-left: 4px solid #ffc107;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+    
+    <div style="background: #fee2e2; border: 2px solid #ef4444; border-radius: 12px; padding: 24px; margin-bottom: 30px;">
+        <h3 style="margin: 0 0 15px 0; color: #991b1b; font-size: 18px;">⚠️ Kurulum Dosyasını Silmek İstediğinizden Emin misiniz?</h3>
+        <p style="margin: 0; color: #7f1d1d; line-height: 1.6;">
+            Bu işlem geri alınamaz. Kurulum dosyası ve tüm arşivlenmiş versiyonlar kalıcı olarak silinecektir.
+        </p>
+    </div>
+    
+    <div style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; margin-bottom: 30px;">
+        <h3 style="margin: 0 0 20px 0; font-size: 18px; color: #111827; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px;">
+            Kurulum Dosyası Bilgileri
+        </h3>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+            <div>
+                <label style="display: block; font-weight: 600; color: #6b7280; font-size: 13px; margin-bottom: 5px;">Ürün</label>
+                <div style="font-size: 16px; color: #111827; font-weight: 600;">{{ dosya.urun.stok_kodu }}</div>
+                <div style="font-size: 14px; color: #6b7280; margin-top: 2px;">{{ dosya.urun.ad }}</div>
+            </div>
+            
+            <div>
+                <label style="display: block; font-weight: 600; color: #6b7280; font-size: 13px; margin-bottom: 5px;">Ürün Parçası</label>
+                <div style="font-size: 16px; color: #111827;">{{ dosya.urun_parcasi }}</div>
+            </div>
+            
+            <div>
+                <label style="display: block; font-weight: 600; color: #6b7280; font-size: 13px; margin-bottom: 5px;">Versiyon</label>
+                <div style="font-size: 16px; color: #3b82f6; font-weight: 600;">v{{ dosya.versiyon }}</div>
+            </div>
+            
+            <div>
+                <label style="display: block; font-weight: 600; color: #6b7280; font-size: 13px; margin-bottom: 5px;">İstasyon</label>
+                <div style="font-size: 16px; color: #111827;">{{ dosya.istasyon.ad|default:"-" }}</div>
+            </div>
+        </div>
+    </div>
+    
+    <form method="post" style="display: flex; gap: 10px; justify-content: flex-end;">
+        {% csrf_token %}
+        <a href="{% url 'stokapp:kurulum_dosyasi_detay' dosya.pk %}" 
+           class="btn" 
+           style="background-color: #6b7280; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px;">
+            İptal
+        </a>
+        <button type="submit" 
+                class="btn" 
+                style="background-color: #ef4444; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+            🗑️ Evet, Sil
+        </button>
+    </form>
+</div>
+{% endblock %}
+

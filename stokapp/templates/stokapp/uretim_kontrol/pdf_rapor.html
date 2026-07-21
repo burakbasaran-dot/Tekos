@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Üretim Kontrol Raporu</title>
+<style>
+body { font-family: Arial, sans-serif; font-size: 11px; color: #111; }
+h1 { font-size: 18px; margin-bottom: 4px; }
+.meta { margin-bottom: 20px; }
+.meta td { padding: 4px 12px 4px 0; }
+table.data { width: 100%; border-collapse: collapse; margin-top: 16px; }
+table.data th, table.data td { border: 1px solid #ccc; padding: 6px; text-align: left; }
+table.data th { background: #eee; }
+.ok { color: green; font-weight: bold; }
+.nok { color: red; font-weight: bold; }
+.sign { margin-top: 40px; }
+</style>
+</head>
+<body>
+<h1>TEKOS — Üretim Kontrol Raporu</h1>
+<table class="meta">
+  <tr><td><strong>Ürün:</strong></td><td>{{ session.product.stok_kodu }} — {{ session.product.ad }}</td></tr>
+  <tr><td><strong>Alt parça:</strong></td><td>{% if session.sub_part %}{{ session.sub_part.stok_kodu }}{% else %}—{% endif %}</td></tr>
+  <tr><td><strong>Sipariş:</strong></td><td>{% if session.order %}{{ session.order.siparis_numarasi }}{% else %}—{% endif %}</td></tr>
+  <tr><td><strong>İş emri:</strong></td><td>{% if session.work_order %}{{ session.work_order.emir_no }}{% else %}—{% endif %}</td></tr>
+  <tr><td><strong>Plan revizyonu:</strong></td><td>{{ session.control_plan_revision_no }}</td></tr>
+  <tr><td><strong>Kontrol tarihi:</strong></td><td>{{ session.control_date }}</td></tr>
+  <tr><td><strong>Kontrolcü:</strong></td><td>{{ session.inspector.get_full_name|default:session.inspector.username }}</td></tr>
+  <tr><td><strong>Genel sonuç:</strong></td><td>{{ session.get_final_result_display|default:"—" }}</td></tr>
+</table>
+<table class="data">
+  <thead>
+    <tr>
+      <th>No</th><th>Kontrol noktası</th><th>Nominal</th><th>Alt</th><th>Üst</th>
+      <th>Ölçülen</th><th>Sapma</th><th>Durum</th><th>Not</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in results %}
+    <tr>
+      <td>{{ r.step.step_no }}</td>
+      <td>{{ r.step.title }}</td>
+      <td>{{ r.step.nominal_value }} {{ r.step.nominal_unit }}</td>
+      <td>{{ r.lower_limit }}</td>
+      <td>{{ r.upper_limit }}</td>
+      <td>{{ r.measured_value|default:"—" }}</td>
+      <td>{{ r.deviation|default:"—" }}</td>
+      <td class="{% if r.status == 'OK' %}ok{% elif r.status == 'NOK' %}nok{% endif %}">{{ r.get_status_display }}</td>
+      <td>{{ r.measurement_note }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+<div class="sign">
+  <p>Kontrol eden: _________________________ &nbsp;&nbsp; Onay: _________________________</p>
+  <p>Tarih: _________________________</p>
+</div>
+</body>
+</html>

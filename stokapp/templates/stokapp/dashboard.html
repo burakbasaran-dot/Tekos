@@ -1,0 +1,1195 @@
+{% extends "stokapp/base.html" %}
+{% load currency_filters %}
+{% block title %}Stok Dashboard{% endblock %}
+{% block content %}
+<style>
+    .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }
+    .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .stat-card { text-align: center; }
+    .stat-number { font-size: 2em; font-weight: bold; margin: 10px 0; }
+    .dashboard-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 20px; }
+    .dashboard-info { display: flex; gap: 20px; flex-wrap: wrap; }
+    .info-card { background: white; padding: 12px 20px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); text-align: center; min-width: 150px; }
+    .info-card h4 { margin: 0 0 8px 0; font-size: 0.9em; color: #666; font-weight: 600; }
+    .info-card .info-value { font-size: 1.2em; font-weight: bold; color: #34495e; }
+    .kritik { color: #e74c3c; }
+    .uyari { color: #f39c12; }
+    .iyi { color: #27ae60; }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+    th { background: #34495e; color: white; }
+    .stok-yok { background: #ffebee; }
+    .kritik-stok { background: #fff3e0; }
+    .dashboard-tablo-collapsed .dashboard-tablo-row-ekstra { display: none; }
+    .dashboard-tablo-aksiyon {
+        margin-top: 14px;
+        padding-top: 12px;
+        border-top: 1px solid #eee;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+    }
+    .dashboard-tablo-aksiyon button {
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        border: 1px solid #34495e;
+        background: #fff;
+        color: #34495e;
+        font-size: 14px;
+    }
+    .dashboard-tablo-aksiyon button:hover {
+        background: #34495e;
+        color: #fff;
+    }
+    .dashboard-tablo-uyari {
+        width: 100%;
+        margin: 0;
+        font-size: 13px;
+        color: #666;
+    }
+    .dashboard-ozet-sutunlar {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+        margin-bottom: 20px;
+        align-items: stretch;
+    }
+    @media (max-width: 960px) {
+        .dashboard-ozet-sutunlar { grid-template-columns: 1fr; }
+    }
+    .dashboard-ozet-satinalma-termin {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 14px;
+        margin-bottom: 20px;
+        align-items: stretch;
+    }
+    @media (max-width: 960px) {
+        .dashboard-ozet-satinalma-termin { grid-template-columns: 1fr; }
+    }
+    .dashboard-ozet-kutu .satinalma-termin-yakin-etiket {
+        color: #15803d;
+        font-weight: 800;
+        font-size: 11px;
+        white-space: nowrap;
+    }
+    .dashboard-ozet-kutu .satinalma-termin-gecikti-etiket {
+        color: #b91c1c;
+        font-weight: 800;
+        font-size: 11px;
+        white-space: nowrap;
+    }
+    .dashboard-ozet-kutu {
+        border-radius: 16px;
+        padding: 0;
+        font-size: 12px;
+        line-height: 1.45;
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        box-shadow:
+            0 1px 2px rgba(0, 0, 0, 0.04),
+            0 8px 24px -6px rgba(15, 23, 42, 0.1);
+        position: relative;
+        min-height: 0;
+        overflow: hidden;
+        transition: transform 0.22s ease, box-shadow 0.22s ease;
+        background: linear-gradient(155deg, rgba(255, 255, 255, 0.97) 0%, rgba(248, 250, 252, 0.92) 100%);
+    }
+    .dashboard-ozet-kutu:hover {
+        transform: translateY(-2px);
+        box-shadow:
+            0 2px 4px rgba(0, 0, 0, 0.05),
+            0 16px 40px -12px rgba(15, 23, 42, 0.14);
+    }
+    .dashboard-ozet-kutu::before {
+        content: "";
+        display: block;
+        height: 3px;
+        width: 100%;
+        background: linear-gradient(90deg, #94a3b8, #cbd5e1);
+        opacity: 0.85;
+    }
+    .dashboard-ozet-kutu.critical-tint {
+        background: linear-gradient(160deg, #fff5f5 0%, #ffe4e6 55%, #fecdd3 100%);
+        border-color: rgba(244, 63, 94, 0.22);
+    }
+    .dashboard-ozet-kutu.critical-tint::before {
+        background: linear-gradient(90deg, #f43f5e, #fb7185);
+    }
+    .dashboard-ozet-kutu.warn-tint {
+        background: linear-gradient(160deg, #fffbeb 0%, #fef3c7 55%, #fde68a 100%);
+        border-color: rgba(245, 158, 11, 0.28);
+    }
+    .dashboard-ozet-kutu.warn-tint::before {
+        background: linear-gradient(90deg, #f59e0b, #fbbf24);
+    }
+    .dashboard-ozet-kutu.ok-tint {
+        background: linear-gradient(160deg, #f0fdf4 0%, #dcfce7 55%, #bbf7d0 100%);
+        border-color: rgba(34, 197, 94, 0.2);
+    }
+    .dashboard-ozet-kutu.ok-tint::before {
+        background: linear-gradient(90deg, #22c55e, #4ade80);
+    }
+    .dashboard-ozet-kutu.talep-tint {
+        background: linear-gradient(160deg, #eff6ff 0%, #dbeafe 55%, #bfdbfe 100%);
+        border-color: rgba(59, 130, 246, 0.22);
+    }
+    .dashboard-ozet-kutu.talep-tint::before {
+        background: linear-gradient(90deg, #3b82f6, #60a5fa);
+    }
+    .dashboard-ozet-inner {
+        padding: 12px 14px 14px;
+        position: relative;
+    }
+    .dashboard-ozet-top {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 4px;
+    }
+    .dashboard-ozet-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.35rem;
+        line-height: 1;
+        flex-shrink: 0;
+        background: rgba(255, 255, 255, 0.65);
+        border: 1px solid rgba(255, 255, 255, 0.85);
+        box-shadow:
+            inset 0 1px 0 rgba(255, 255, 255, 0.9),
+            0 4px 12px rgba(15, 23, 42, 0.08);
+    }
+    .dashboard-ozet-kutu.critical-tint .dashboard-ozet-icon {
+        background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), #fecaca);
+    }
+    .dashboard-ozet-kutu.warn-tint .dashboard-ozet-icon {
+        background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), #fde68a);
+    }
+    .dashboard-ozet-kutu.ok-tint .dashboard-ozet-icon {
+        background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), #bbf7d0);
+    }
+    .dashboard-ozet-kutu.talep-tint .dashboard-ozet-icon {
+        background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), #bfdbfe);
+    }
+    .dashboard-ozet-headtext {
+        flex: 1;
+        min-width: 0;
+    }
+    .dashboard-ozet-kutu .dashboard-ozet-close {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 2;
+        width: 28px;
+        height: 28px;
+        border: none;
+        background: rgba(255, 255, 255, 0.55);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+        cursor: pointer;
+        font-size: 18px;
+        line-height: 1;
+        color: #64748b;
+        border-radius: 999px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+        transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+    }
+    .dashboard-ozet-kutu .dashboard-ozet-close:hover {
+        background: rgba(255, 255, 255, 0.95);
+        color: #0f172a;
+        transform: scale(1.06);
+    }
+    .dashboard-ozet-kutu h4 {
+        margin: 0 28px 2px 0;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #475569;
+    }
+    .dashboard-ozet-kutu.critical-tint h4 { color: #9f1239; }
+    .dashboard-ozet-kutu.warn-tint h4 { color: #92400e; }
+    .dashboard-ozet-kutu.ok-tint h4 { color: #166534; }
+    .dashboard-ozet-kutu.talep-tint h4 { color: #1e40af; }
+    .dashboard-ozet-kutu .ozet-sayi {
+        font-size: 1.65rem;
+        font-weight: 800;
+        line-height: 1.1;
+        letter-spacing: -0.03em;
+        font-variant-numeric: tabular-nums;
+    }
+    .dashboard-ozet-kutu.critical-tint .ozet-sayi { color: #be123c; }
+    .dashboard-ozet-kutu.warn-tint .ozet-sayi { color: #c2410c; }
+    .dashboard-ozet-kutu.ok-tint .ozet-sayi { color: #15803d; }
+    .dashboard-ozet-kutu.talep-tint .ozet-sayi { color: #1d4ed8; }
+    .dashboard-ozet-kutu .ozet-alt {
+        margin-top: 8px;
+        color: #64748b;
+        font-size: 11px;
+    }
+    .dashboard-ozet-kutu .ozet-alt a,
+    .dashboard-ozet-kutu .ozet-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        color: #0f172a;
+        font-weight: 600;
+        font-size: 10px;
+        text-decoration: none;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.75);
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+        transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+        vertical-align: middle;
+    }
+    .dashboard-ozet-kutu .ozet-alt a:hover,
+    .dashboard-ozet-kutu .ozet-link:hover {
+        background: #fff;
+        transform: translateY(-1px);
+        box-shadow: 0 3px 10px rgba(15, 23, 42, 0.1);
+    }
+    .dashboard-ozet-kutu .ozet-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 8px;
+    }
+    .dashboard-ozet-kutu .ozet-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 11px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(15, 23, 42, 0.07);
+        font-size: 11px;
+        font-weight: 600;
+        color: #475569;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+    .dashboard-ozet-kutu .ozet-chip-label {
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-size: 9px;
+        color: #64748b;
+        font-weight: 700;
+    }
+    .dashboard-ozet-kutu .ozet-chip-val {
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+        font-size: 13px;
+        color: #0f172a;
+    }
+    .dashboard-ozet-kutu .ozet-muted-hint {
+        color: #94a3b8;
+        font-weight: 500;
+        font-size: 10px;
+        margin: 6px 0 0 0;
+    }
+    .dashboard-ozet-kutu .ozet-talep-aksiyon {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        margin-top: 10px;
+    }
+    .dashboard-ozet-kutu ul.ozet-mini-liste {
+        margin: 8px 0 0 0;
+        padding: 8px 10px 8px 28px;
+        max-height: 7.5em;
+        overflow-y: auto;
+        font-size: 11px;
+        list-style-position: outside;
+        background: rgba(255, 255, 255, 0.45);
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.7);
+        scrollbar-width: thin;
+        scrollbar-color: rgba(100, 116, 139, 0.4) transparent;
+    }
+    .dashboard-ozet-kutu ul.ozet-mini-liste::-webkit-scrollbar {
+        width: 5px;
+    }
+    .dashboard-ozet-kutu ul.ozet-mini-liste::-webkit-scrollbar-thumb {
+        background: rgba(100, 116, 139, 0.35);
+        border-radius: 99px;
+    }
+    .dashboard-ozet-kutu ul.ozet-mini-liste li {
+        margin-bottom: 5px;
+        color: #334155;
+    }
+    .dashboard-ozet-kutu ul.ozet-mini-liste li:last-child { margin-bottom: 0; }
+    .dashboard-ozet-kutu ul.ozet-mini-liste a {
+        color: #1d4ed8;
+        text-decoration: none;
+        font-weight: 700;
+        padding: 0;
+        border-radius: 0;
+        background: none;
+        border: none;
+        box-shadow: none;
+        font-size: inherit;
+    }
+    .dashboard-ozet-kutu ul.ozet-mini-liste a:hover {
+        text-decoration: underline;
+        transform: none;
+        box-shadow: none;
+    }
+    .dashboard-ozet-kutu .termin-badge { font-size: 10px; color: #64748b; }
+    .dashboard-ozet-kutu .termin-gecikti { color: #dc2626; font-weight: 800; }
+    .chart-container { position: relative; height: 300px; margin-top: 20px; }
+    .chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; margin-bottom: 20px; }
+    .alert-banner {
+        padding: 15px 20px;
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        animation: slideDown 0.3s ease-out;
+    }
+    .alert-banner.critical {
+        background: #f8d7da;
+        border-left-color: #dc3545;
+    }
+    .alert-banner .alert-content {
+        flex: 1;
+    }
+    .alert-banner .alert-title {
+        font-weight: bold;
+        font-size: 16px;
+        margin-bottom: 5px;
+        color: #856404;
+    }
+    .alert-banner.critical .alert-title {
+        color: #721c24;
+    }
+    .alert-banner .alert-message {
+        color: #856404;
+        font-size: 14px;
+    }
+    .alert-banner.critical .alert-message {
+        color: #721c24;
+    }
+    .alert-banner .alert-link {
+        color: #856404;
+        text-decoration: underline;
+        margin-left: 10px;
+        font-weight: 600;
+    }
+    .alert-banner.critical .alert-link {
+        color: #721c24;
+    }
+    .alert-banner .alert-close {
+        background: none;
+        border: none;
+        font-size: 24px;
+        cursor: pointer;
+        color: #856404;
+        padding: 0;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: background 0.2s;
+    }
+    .alert-banner .alert-close:hover {
+        background: rgba(0,0,0,0.1);
+    }
+    .alert-banner.critical .alert-close {
+        color: #721c24;
+    }
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>
+
+{% if tekora_aktif and tekora_onay_bekleyen_sayisi %}
+<div class="alert-banner" id="tekoraMailBanner" style="background:#eff6ff;border-left:4px solid #3b82f6;">
+    <div class="alert-content">
+        <div class="alert-title" style="color:#1e40af;">TEKORA onay bekleyen mail algıladı</div>
+        <div class="alert-message" style="color:#1e3a8a;">
+            {{ tekora_onay_bekleyen_sayisi }} adet mail kaydı <strong>onay bekliyor</strong>.
+            <a href="{% url 'stokapp:ai_approval_center' %}" class="alert-link" style="color:#1d4ed8;">TEKORA — Onay Merkezi →</a>
+        </div>
+        {% if tekora_onay_bekleyen_ozet %}
+        <div style="margin-top:10px;font-size:13px;color:#334155;">
+            <strong>Son kayıtlar:</strong>
+            {% for r in tekora_onay_bekleyen_ozet %}
+                <span style="margin-right:10px;color:#2563eb;">{{ r.title }}</span>{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    <button type="button" class="alert-close" onclick="document.getElementById('tekoraMailBanner').style.display='none'" style="color:#1e40af;">×</button>
+</div>
+{% endif %}
+
+<!-- Süresi Dolmuş Sigorta Uyarısı -->
+{% if suresi_dolan_sigortalar %}
+<div class="alert-banner critical" id="suresiDolanSigortaBanner">
+    <div class="alert-content">
+        <div class="alert-title">🛡️ Süresi Dolmuş Sigorta Poliçeleri</div>
+        <div class="alert-message">
+            {{ suresi_dolan_sigortalar|length }} adet sigorta poliçesinin süresi dolmuş. Lütfen arşivleyin veya yenileyin.
+            <a href="{% url 'stokapp:sigorta_listesi' %}" class="alert-link">Sigortalar sayfasına git →</a>
+        </div>
+    </div>
+    <button class="alert-close" onclick="document.getElementById('suresiDolanSigortaBanner').style.display='none'">×</button>
+</div>
+{% endif %}
+
+<!-- Yaklaşan Sigorta Uyarısı -->
+{% if yaklasan_sigortalar %}
+<div class="alert-banner" id="yaklasanSigortaBanner">
+    <div class="alert-content">
+        <div class="alert-title">🛡️ Yaklaşan Sigorta Poliçesi Uyarısı</div>
+        <div class="alert-message">
+            {{ yaklasan_sigortalar|length }} adet sigorta poliçesinin süresi 1 hafta içinde dolacak. Lütfen kontrol edin.
+            <a href="{% url 'stokapp:sigorta_listesi' %}" class="alert-link">Sigortalar sayfasına git →</a>
+        </div>
+        <div style="margin-top: 10px; font-size: 13px;">
+            <strong>Yaklaşan Poliçeler:</strong>
+            <ul style="margin: 5px 0 0 20px; padding: 0;">
+                {% for sigorta in yaklasan_sigortalar %}
+                <li style="margin-bottom: 5px;">
+                    <strong>{{ sigorta.varlik_adi }}</strong> - Poliçe No: {{ sigorta.police_no }}
+                    (Bitiş: {{ sigorta.police_bitis_tarihi|date:"d.m.Y" }})
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    <button class="alert-close" onclick="document.getElementById('yaklasanSigortaBanner').style.display='none'">×</button>
+</div>
+{% endif %}
+
+<!-- Süresi Dolmuş Araç Belgeleri Uyarısı -->
+{% if suresi_dolan_arac_belgeler %}
+<div class="alert-banner critical" id="suresiDolanAracBelgelerBanner">
+    <div class="alert-content">
+        <div class="alert-title">🚗 Süresi Dolmuş Araç Belgeleri</div>
+        <div class="alert-message">
+            {{ suresi_dolan_arac_belgeler|length }} adet araç belgesinin süresi dolmuş. Lütfen yenileyin.
+            <a href="{% url 'stokapp:arac_listesi' %}" class="alert-link">Araçlar sayfasına git →</a>
+        </div>
+        <div style="margin-top: 10px; font-size: 13px;">
+            <strong>Süresi Dolan Belgeler:</strong>
+            <ul style="margin: 5px 0 0 20px; padding: 0;">
+                {% for belge in suresi_dolan_arac_belgeler|slice:":5" %}
+                <li style="margin-bottom: 5px;">
+                    <strong>{{ belge.arac.plaka }}</strong> - {{ belge.get_belge_turu_display }}
+                    (Bitiş: {{ belge.gecerlilik_bitis|date:"d.m.Y" }})
+                </li>
+                {% endfor %}
+                {% if suresi_dolan_arac_belgeler|length > 5 %}
+                <li style="margin-bottom: 5px; color: #6b7280;">... ve {{ suresi_dolan_arac_belgeler|length|add:"-5" }} belge daha</li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+    <button class="alert-close" onclick="document.getElementById('suresiDolanAracBelgelerBanner').style.display='none'">×</button>
+</div>
+{% endif %}
+
+<!-- Yaklaşan Araç Belgeleri Uyarısı -->
+{% if yaklasan_arac_belgeler %}
+<div class="alert-banner" id="yaklasanAracBelgelerBanner">
+    <div class="alert-content">
+        <div class="alert-title">🚗 Yaklaşan Araç Belgeleri (7 Gün İçinde)</div>
+        <div class="alert-message">
+            {{ yaklasan_arac_belgeler|length }} adet araç belgesinin süresi 7 gün içinde dolacak. Lütfen kontrol edin.
+            <a href="{% url 'stokapp:arac_listesi' %}" class="alert-link">Araçlar sayfasına git →</a>
+        </div>
+        <div style="margin-top: 10px; font-size: 13px;">
+            <strong>Yaklaşan Belgeler:</strong>
+            <ul style="margin: 5px 0 0 20px; padding: 0;">
+                {% for belge in yaklasan_arac_belgeler|slice:":5" %}
+                <li style="margin-bottom: 5px;">
+                    <strong>{{ belge.arac.plaka }}</strong> - {{ belge.get_belge_turu_display }}
+                    (Bitiş: {{ belge.gecerlilik_bitis|date:"d.m.Y" }})
+                </li>
+                {% endfor %}
+                {% if yaklasan_arac_belgeler|length > 5 %}
+                <li style="margin-bottom: 5px; color: #6b7280;">... ve {{ yaklasan_arac_belgeler|length|add:"-5" }} belge daha</li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+    <button class="alert-close" onclick="document.getElementById('yaklasanAracBelgelerBanner').style.display='none'">×</button>
+</div>
+{% endif %}
+
+<!-- Süresi Dolmuş Personel Belgeleri Uyarısı -->
+{% if suresi_dolan_personel_belgeleri %}
+<div class="alert-banner critical" id="suresiDolanPersonelBelgeleriBanner">
+    <div class="alert-content">
+        <div class="alert-title">🧾 Süresi Dolmuş Personel Belgeleri</div>
+        <div class="alert-message">
+            {{ suresi_dolan_personel_belgeleri|length }} adet personel belgesinin yenileme tarihi geçmiş.
+            <a href="{% url 'stokapp:personel_listesi' %}" class="alert-link">Personel sayfasına git →</a>
+        </div>
+        <div style="margin-top: 10px; font-size: 13px;">
+            <strong>Belgeler:</strong>
+            <ul style="margin: 5px 0 0 20px; padding: 0;">
+                {% for belge in suresi_dolan_personel_belgeleri|slice:":5" %}
+                <li style="margin-bottom: 5px;">
+                    <strong>{{ belge.personel.ad }} {{ belge.personel.soyad }}</strong> - {{ belge.belge_adi }}
+                    (Yenileme: {{ belge.yenileme_tarihi|date:"d.m.Y" }})
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    <button class="alert-close" onclick="document.getElementById('suresiDolanPersonelBelgeleriBanner').style.display='none'">×</button>
+</div>
+{% endif %}
+
+<!-- Yaklaşan Personel Belgeleri Uyarısı -->
+{% if yaklasan_personel_belgeleri %}
+<div class="alert-banner" id="yaklasanPersonelBelgeleriBanner">
+    <div class="alert-content">
+        <div class="alert-title">🧾 Yaklaşan Personel Belgesi Yenilemeleri</div>
+        <div class="alert-message">
+            {{ yaklasan_personel_belgeleri|length }} adet personel belgesi için yenileme yaklaşmış.
+            <a href="{% url 'stokapp:personel_listesi' %}" class="alert-link">Personel sayfasına git →</a>
+        </div>
+        <div style="margin-top: 10px; font-size: 13px;">
+            <strong>Hatırlatmalar:</strong>
+            <ul style="margin: 5px 0 0 20px; padding: 0;">
+                {% for belge in yaklasan_personel_belgeleri|slice:":5" %}
+                <li style="margin-bottom: 5px;">
+                    <strong>{{ belge.personel.ad }} {{ belge.personel.soyad }}</strong> - {{ belge.belge_adi }}
+                    (Yenileme: {{ belge.yenileme_tarihi|date:"d.m.Y" }}, {{ belge.hatirlatma_gun_once }} gün önceden)
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    <button class="alert-close" onclick="document.getElementById('yaklasanPersonelBelgeleriBanner').style.display='none'">×</button>
+</div>
+{% endif %}
+
+<!-- Gecikmiş Ödemeler Uyarısı -->
+{% if gecikmis_odemeler %}
+<div class="alert-banner critical" id="gecikmisOdemelerBanner">
+    <div class="alert-content">
+        <div class="alert-title">💰 Gecikmiş Ödemeler</div>
+        <div class="alert-message">
+            {{ gecikmis_odemeler|length }} adet ödeme gecikmiş durumda. Acilen ödenmelidir!
+            <a href="{% url 'stokapp:aylik_odemeler_listesi' %}" class="alert-link">Ödemeler sayfasına git →</a>
+        </div>
+        <div style="margin-top: 10px; font-size: 13px;">
+            <strong>Gecikmiş Ödemeler:</strong>
+            <ul style="margin: 5px 0 0 20px; padding: 0;">
+                {% for odeme in gecikmis_odemeler|slice:":5" %}
+                <li style="margin-bottom: 5px;">
+                    <strong>{{ odeme.odeme_aciklamasi }}</strong> - {{ odeme.tutar|currency }} ₺
+                    (Tarih: {{ odeme.odeme_tarihi|date:"d.m.Y" }})
+                </li>
+                {% endfor %}
+                {% if gecikmis_odemeler|length > 5 %}
+                <li style="margin-bottom: 5px; color: #6b7280;">... ve {{ gecikmis_odemeler|length|add:"-5" }} ödeme daha</li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+    <button class="alert-close" onclick="document.getElementById('gecikmisOdemelerBanner').style.display='none'">×</button>
+</div>
+{% endif %}
+
+<!-- Yaklaşan Ödemeler Uyarısı -->
+{% if yaklasan_odemeler %}
+<div class="alert-banner" id="yaklasanOdemelerBanner">
+    <div class="alert-content">
+        <div class="alert-title">💰 Yaklaşan Ödemeler (7 Gün İçinde)</div>
+        <div class="alert-message">
+            {{ yaklasan_odemeler|length }} adet ödemenin vadesi yaklaşıyor (kendi hatırlatma gününe göre). Lütfen kontrol edin.
+            <a href="{% url 'stokapp:aylik_odemeler_listesi' %}" class="alert-link">Ödemeler sayfasına git →</a>
+        </div>
+        <div style="margin-top: 10px; font-size: 13px;">
+            <strong>Yaklaşan Ödemeler:</strong>
+            <ul style="margin: 5px 0 0 20px; padding: 0;">
+                {% for odeme in yaklasan_odemeler|slice:":5" %}
+                <li style="margin-bottom: 5px;">
+                    <strong>{{ odeme.odeme_aciklamasi }}</strong> - {{ odeme.tutar|currency }} ₺
+                    (Tarih: {{ odeme.odeme_tarihi|date:"d.m.Y" }})
+                </li>
+                {% endfor %}
+                {% if yaklasan_odemeler|length > 5 %}
+                <li style="margin-bottom: 5px; color: #6b7280;">... ve {{ yaklasan_odemeler|length|add:"-5" }} ödeme daha</li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+    <button class="alert-close" onclick="document.getElementById('yaklasanOdemelerBanner').style.display='none'">×</button>
+</div>
+{% endif %}
+
+<!-- Kritik stok, stoksuz ve talep: kompakt üç sütun -->
+<div class="dashboard-ozet-sutunlar">
+    <div class="dashboard-ozet-kutu {% if kritik_stok_sayisi > 0 %}critical-tint{% else %}ok-tint{% endif %}" id="dashOzetiKritik">
+        <button type="button" class="dashboard-ozet-close" onclick="document.getElementById('dashOzetiKritik').style.display='none'" title="Gizle">×</button>
+        <div class="dashboard-ozet-inner">
+            <div class="dashboard-ozet-top">
+                <span class="dashboard-ozet-icon" aria-hidden="true">{% if kritik_stok_sayisi > 0 %}⚠️{% else %}✓{% endif %}</span>
+                <div class="dashboard-ozet-headtext">
+                    <h4>Kritik stok</h4>
+                    <div class="ozet-sayi">{{ kritik_stok_sayisi }}</div>
+                </div>
+            </div>
+            {% if kritik_stok_sayisi > 0 %}
+            <p class="ozet-alt">Ürün minimum seviyede veya altında. <a href="{% url 'stokapp:kritik_stok_raporu' %}">Rapor</a></p>
+            {% else %}
+            <p class="ozet-alt">Kritik stok kaydı yok.</p>
+            {% endif %}
+        </div>
+    </div>
+    <div class="dashboard-ozet-kutu {% if stoksuz_urun_sayisi > 0 %}critical-tint{% else %}ok-tint{% endif %}" id="dashOzetiStoksuz">
+        <button type="button" class="dashboard-ozet-close" onclick="document.getElementById('dashOzetiStoksuz').style.display='none'" title="Gizle">×</button>
+        <div class="dashboard-ozet-inner">
+            <div class="dashboard-ozet-top">
+                <span class="dashboard-ozet-icon" aria-hidden="true">{% if stoksuz_urun_sayisi > 0 %}📦{% else %}✓{% endif %}</span>
+                <div class="dashboard-ozet-headtext">
+                    <h4>Stoksuz ürün</h4>
+                    <div class="ozet-sayi">{{ stoksuz_urun_sayisi }}</div>
+                </div>
+            </div>
+            {% if stoksuz_urun_sayisi > 0 %}
+            <p class="ozet-alt">Stokta miktar sıfır. <a href="{% url 'stokapp:kritik_stok_raporu' %}">Rapor</a></p>
+            {% else %}
+            <p class="ozet-alt">Stoksuz ürün yok.</p>
+            {% endif %}
+        </div>
+    </div>
+    <div class="dashboard-ozet-kutu {% if talep_onay_bekleyen_sayisi or talep_termin_dikkat_sayisi %}warn-tint{% else %}talep-tint{% endif %}" id="dashOzetiTalep">
+        <button type="button" class="dashboard-ozet-close" onclick="document.getElementById('dashOzetiTalep').style.display='none'" title="Gizle">×</button>
+        <div class="dashboard-ozet-inner">
+            <div class="dashboard-ozet-top">
+                <span class="dashboard-ozet-icon" aria-hidden="true">📋</span>
+                <div class="dashboard-ozet-headtext">
+                    <h4>Talep yönetimi</h4>
+                    <div class="ozet-chips">
+                        <span class="ozet-chip" title="Yeni veya incelemede"><span class="ozet-chip-label">Onay</span><span class="ozet-chip-val">{{ talep_onay_bekleyen_sayisi }}</span></span>
+                        <span class="ozet-chip" title="Termin {{ talep_termin_gun }} gün veya gecikmiş"><span class="ozet-chip-label">Termin</span><span class="ozet-chip-val">{{ talep_termin_dikkat_sayisi }}</span></span>
+                    </div>
+                </div>
+            </div>
+            <p class="ozet-muted-hint">Yeni / incelemede · Önümüzdeki {{ talep_termin_gun }} gün veya gecikmiş termin</p>
+            <div class="ozet-talep-aksiyon">
+                {% if talep_onay_bekleyen_sayisi or talep_termin_dikkat_sayisi %}
+                <a class="ozet-link" href="{% url 'stokapp:talep_listesi' %}?acik=1">Açık talepler</a>
+                {% endif %}
+                <a class="ozet-link" href="{% url 'stokapp:talep_listesi' %}">Tümü</a>
+            </div>
+        {% if talep_onay_bekleyen_ozet %}
+        <ul class="ozet-mini-liste">
+            {% for t in talep_onay_bekleyen_ozet %}
+            <li><a href="{% url 'stokapp:talep_detay' t.pk %}">{{ t.talep_no }}</a> — {{ t.baslik|truncatechars:32 }} <span class="termin-badge">({{ t.get_durum_display }})</span></li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        {% if talep_termin_dikkat_ozet %}
+        <ul class="ozet-mini-liste">
+            {% for t in talep_termin_dikkat_ozet %}
+            <li>
+                <a href="{% url 'stokapp:talep_detay' t.pk %}">{{ t.talep_no }}</a>
+                {% if t.istenen_termin %}
+                    {% if t.istenen_termin < dashboard_bugun %}
+                    <span class="termin-gecikti">· {{ t.istenen_termin|date:"d.m.Y" }} gecikti</span>
+                    {% else %}
+                    <span class="termin-badge">· Termin {{ t.istenen_termin|date:"d.m.Y" }}</span>
+                    {% endif %}
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        {% elif talep_termin_dikkat_sayisi == 0 %}
+        <p class="ozet-alt" style="margin-top:8px;">Önümüzdeki {{ talep_termin_gun }} gün içinde veya gecikmiş termin uyarısı yok.</p>
+        {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Satın alma terminleri: bugün / yarın yeşil, geçmiş kırmızı -->
+<div class="dashboard-ozet-satinalma-termin">
+    <div class="dashboard-ozet-kutu ok-tint" id="dashOzetiSatinalmaYakin">
+        <button type="button" class="dashboard-ozet-close" onclick="document.getElementById('dashOzetiSatinalmaYakin').style.display='none'" title="Gizle">×</button>
+        <div class="dashboard-ozet-inner">
+            <div class="dashboard-ozet-top">
+                <span class="dashboard-ozet-icon" aria-hidden="true">🛒</span>
+                <div class="dashboard-ozet-headtext">
+                    <h4>Satınalma — teslim yakın</h4>
+                    <div class="ozet-sayi">{{ satinalma_termin_yakin_sayisi }}</div>
+                </div>
+            </div>
+            <p class="ozet-muted-hint">Tamamlanması beklenen tarih <strong>bugün</strong> veya <strong>yarın</strong> (teslimatı bekleyen siparişler)</p>
+            <div class="ozet-talep-aksiyon">
+                <a class="ozet-link" href="{% url 'stokapp:satinalma_listesi' %}">Satınalmalar →</a>
+            </div>
+            {% if satinalma_termin_yakin_ozet %}
+            <ul class="ozet-mini-liste">
+                {% for s in satinalma_termin_yakin_ozet %}
+                <li>
+                    <a href="{% url 'stokapp:satinalma_detay' s.pk %}">{{ s.satinalma_numarasi }}</a>
+                    —
+                    {% if s.tedarikci %}{{ s.tedarikci.ad|truncatechars:28 }}{% else %}{{ s.tedarikci_adi|truncatechars:28 }}{% endif %}
+                    <span class="satinalma-termin-yakin-etiket">
+                        {% if s.tamamlanma_tarihi == dashboard_bugun %}
+                            · Bugün
+                        {% elif s.tamamlanma_tarihi == dashboard_yarin %}
+                            · Yarın
+                        {% elif s.tamamlanma_tarihi %}
+                            · {{ s.tamamlanma_tarihi|date:"d.m.Y" }}
+                        {% endif %}
+                    </span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% elif satinalma_termin_yakin_sayisi == 0 %}
+            <p class="ozet-alt" style="margin-top:8px;">Yakın terminli teslimat bekleyen satınalma yok.</p>
+            {% endif %}
+        </div>
+    </div>
+    <div class="dashboard-ozet-kutu {% if satinalma_termin_gecmis_sayisi > 0 %}critical-tint{% else %}ok-tint{% endif %}" id="dashOzetiSatinalmaGecmis">
+        <button type="button" class="dashboard-ozet-close" onclick="document.getElementById('dashOzetiSatinalmaGecmis').style.display='none'" title="Gizle">×</button>
+        <div class="dashboard-ozet-inner">
+            <div class="dashboard-ozet-top">
+                <span class="dashboard-ozet-icon" aria-hidden="true">{% if satinalma_termin_gecmis_sayisi > 0 %}⏰{% else %}✓{% endif %}</span>
+                <div class="dashboard-ozet-headtext">
+                    <h4>Satınalma — termin gecikti</h4>
+                    <div class="ozet-sayi">{{ satinalma_termin_gecmis_sayisi }}</div>
+                </div>
+            </div>
+            <p class="ozet-muted-hint">Tamamlanması beklenen tarih <strong>geçmiş</strong>; teslimat hâlâ bekleniyor</p>
+            <div class="ozet-talep-aksiyon">
+                <a class="ozet-link" href="{% url 'stokapp:satinalma_listesi' %}">Satınalmalar →</a>
+            </div>
+            {% if satinalma_termin_gecmis_ozet %}
+            <ul class="ozet-mini-liste">
+                {% for s in satinalma_termin_gecmis_ozet %}
+                <li>
+                    <a href="{% url 'stokapp:satinalma_detay' s.pk %}">{{ s.satinalma_numarasi }}</a>
+                    —
+                    {% if s.tedarikci %}{{ s.tedarikci.ad|truncatechars:28 }}{% else %}{{ s.tedarikci_adi|truncatechars:28 }}{% endif %}
+                    <span class="satinalma-termin-gecikti-etiket">⚠ {{ s.tamamlanma_tarihi|date:"d.m.Y" }} geçti</span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% elif satinalma_termin_gecmis_sayisi == 0 %}
+            <p class="ozet-alt" style="margin-top:8px;">Termini geçmiş teslimat bekleyen satınalma yok.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-header">
+    <h1>📊 Stok Dashboard</h1>
+    <div class="dashboard-info">
+        <div class="info-card">
+            <h4>📅 Tarih</h4>
+            <div class="info-value">{{ bugun_tarih }}</div>
+        </div>
+        {% if eur_kur %}
+        <div class="info-card">
+            <h4>💶 Euro/TL</h4>
+            <div class="info-value">{{ eur_kur|tr_decimal:"4" }}</div>
+        </div>
+        {% endif %}
+        {% if usd_kur %}
+        <div class="info-card">
+            <h4>💵 Dolar/TL</h4>
+            <div class="info-value">{{ usd_kur|tr_decimal:"4" }}</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="dashboard">
+    <div class="card stat-card">
+        <h3>Toplam Ürün</h3>
+        <div class="stat-number">{{ toplam_urun_sayisi }}</div>
+    </div>
+    <div class="card stat-card">
+        <h3>Kritik Stok</h3>
+        <div class="stat-number kritik">{{ kritik_stok_sayisi }}</div>
+    </div>
+    <div class="card stat-card">
+        <h3>Stoksuz Ürün</h3>
+        <div class="stat-number kritik">{{ stoksuz_urun_sayisi }}</div>
+    </div>
+    <div class="card stat-card">
+        <h3>Toplam Stok Değeri</h3>
+        <div class="stat-number iyi">{{ toplam_stok_degeri|currency }} TL</div>
+    </div>
+</div>
+
+<!-- Grafikler -->
+<div class="chart-grid">
+    <!-- Kategori Bazında Stok Dağılımı -->
+    <div class="card">
+        <h3>📊 Kategori Bazında Stok Dağılımı</h3>
+        <div class="chart-container">
+            <canvas id="kategoriChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Stok Durumu Dağılımı -->
+    <div class="card">
+        <h3>📈 Stok Durumu Dağılımı</h3>
+        <div class="chart-container">
+            <canvas id="durumChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="chart-grid">
+    <!-- Kategori Bazında Stok Değeri -->
+    <div class="card">
+        <h3>💰 Kategori Bazında Stok Değeri</h3>
+        <div class="chart-container">
+            <canvas id="degerChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Son 30 Günlük Hareketler -->
+    <div class="card">
+        <h3>📉 Son 30 Günlük Stok Hareketleri</h3>
+        <div class="chart-container">
+            <canvas id="hareketChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+    <div class="card dashboard-tablo-collapsed" id="dashboard-kritik-stok-card">
+        <h3>⚠️ Kritik Stoklar</h3>
+        <table>
+            <tr><th>Ürün</th><th>Mevcut</th><th>Min.</th><th>Durum</th></tr>
+            {% for item in kritik_stoklar %}
+            <tr class="{% if forloop.counter > dashboard_tablo_ilk %}dashboard-tablo-row-ekstra{% endif %} {% if item.mevcut_miktar == 0 %}stok-yok{% else %}kritik-stok{% endif %}">
+                <td>{{ item.stok_kodu }} - {{ item.ad }}</td>
+                <td>{{ item.mevcut_miktar }}</td>
+                <td>{{ item.minimum_stok }}</td>
+                <td>{% if item.mevcut_miktar == 0 %}❌ STOK YOK{% else %}⚠️ KRİTİK{% endif %}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4">🎉 Kritik stok bulunmuyor!</td></tr>
+            {% endfor %}
+        </table>
+        {% if kritik_stoklar|length > dashboard_tablo_ilk %}
+        <div class="dashboard-tablo-aksiyon">
+            <button type="button" class="dashboard-btn-tum-liste">Tüm liste</button>
+            <button type="button" class="dashboard-btn-daralt" hidden>Listeyi daralt</button>
+            {% if kritik_stoklar_toplam > dashboard_tablo_max %}
+            <p class="dashboard-tablo-uyari dashboard-kritik-kesit-uyari" hidden>Toplam {{ kritik_stoklar_toplam }} kritik ürün kayıtlı; bu tabloda en fazla {{ dashboard_tablo_max }} satır gösterilir. Tam liste için <a href="{% url 'stokapp:kritik_stok_raporu' %}">kritik stok raporu</a>.</p>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="card dashboard-tablo-collapsed" id="dashboard-son-hareket-card">
+        <h3>📋 Son Hareketler</h3>
+        <table>
+            <tr><th>Tarih</th><th>Ürün</th><th>Hareket</th><th>Miktar</th></tr>
+            {% for hareket in son_hareketler %}
+            <tr class="{% if forloop.counter > dashboard_tablo_ilk %}dashboard-tablo-row-ekstra{% endif %}">
+                <td>{{ hareket.tarih|date:"d.m.Y H:i" }}</td>
+                <td>{{ hareket.stok_item.stok_kodu }}</td>
+                <td>{{ hareket.get_hareket_tipi_display }}</td>
+                <td>{{ hareket.miktar }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4">Henüz hareket kaydı yok</td></tr>
+            {% endfor %}
+        </table>
+        {% if son_hareketler|length > dashboard_tablo_ilk %}
+        <div class="dashboard-tablo-aksiyon">
+            <button type="button" class="dashboard-btn-tum-liste">Tüm liste</button>
+            <button type="button" class="dashboard-btn-daralt" hidden>Listeyi daralt</button>
+            {% if son_hareketler|length >= dashboard_tablo_max %}
+            <p class="dashboard-tablo-uyari">Bu listede en son {{ dashboard_tablo_max }} hareket gösterilir.</p>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script>
+// Chart.js yüklendikten sonra grafikleri oluştur
+function initCharts() {
+    // Chart.js'in yüklendiğini kontrol et
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js yüklenemedi! 3 saniye sonra tekrar denenecek...');
+        setTimeout(initCharts, 3000);
+        return;
+    }
+
+    console.log('Chart.js yüklendi, grafikler oluşturuluyor...');
+
+    try {
+        // Kategori Bazında Stok Dağılımı (Pie Chart)
+        const kategoriChartEl = document.getElementById('kategoriChart');
+        if (kategoriChartEl) {
+            try {
+                const kategoriData = JSON.parse('{{ kategori_stoklari_json|escapejs }}');
+                console.log('Kategori verisi:', kategoriData);
+                
+                const kategoriLabels = kategoriData.map(k => k.kategori__ad || 'Kategori Yok');
+                const kategoriValues = kategoriData.map(k => k.urun_sayisi || 0);
+                
+                if (kategoriLabels.length > 0 && kategoriValues.some(v => v > 0)) {
+                    const kategoriCtx = kategoriChartEl.getContext('2d');
+                    new Chart(kategoriCtx, {
+                        type: 'pie',
+                        data: {
+                            labels: kategoriLabels,
+                            datasets: [{
+                                data: kategoriValues,
+                                backgroundColor: [
+                                    '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', 
+                                    '#9966FF', '#FF9F40', '#FF6384', '#C9CBCF'
+                                ]
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom'
+                                }
+                            }
+                        }
+                    });
+                    console.log('Kategori grafiği oluşturuldu');
+                } else {
+                    kategoriChartEl.parentElement.innerHTML = '<p style="text-align: center; padding: 20px; color: #999;">Henüz kategori verisi bulunmuyor.</p>';
+                }
+            } catch (e) {
+                console.error('Kategori grafiği hatası:', e);
+                kategoriChartEl.parentElement.innerHTML = '<p style="text-align: center; padding: 20px; color: #999;">Grafik yüklenemedi: ' + e.message + '</p>';
+            }
+        } else {
+            console.error('kategoriChart elementi bulunamadı!');
+        }
+
+        // Stok Durumu Dağılımı (Doughnut Chart)
+        const durumChartEl = document.getElementById('durumChart');
+        if (durumChartEl) {
+            try {
+                const normalStok = {{ normal_stok_sayisi|default:0 }};
+                const kritikStok = {{ kritik_stok_sayisi|default:0 }};
+                const stoksuzUrun = {{ stoksuz_urun_sayisi|default:0 }};
+                
+                console.log('Durum verisi:', {normalStok, kritikStok, stoksuzUrun});
+                
+                const durumCtx = durumChartEl.getContext('2d');
+                new Chart(durumCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Normal Stok', 'Kritik Stok', 'Stoksuz'],
+                        datasets: [{
+                            data: [normalStok, kritikStok, stoksuzUrun],
+                            backgroundColor: ['#27ae60', '#f39c12', '#e74c3c']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+                console.log('Durum grafiği oluşturuldu');
+            } catch (e) {
+                console.error('Durum grafiği hatası:', e);
+                durumChartEl.parentElement.innerHTML = '<p style="text-align: center; padding: 20px; color: #999;">Grafik yüklenemedi: ' + e.message + '</p>';
+            }
+        } else {
+            console.error('durumChart elementi bulunamadı!');
+        }
+
+        // Kategori Bazında Stok Değeri (Bar Chart)
+        const degerChartEl = document.getElementById('degerChart');
+        if (degerChartEl) {
+            try {
+                const degerData = JSON.parse('{{ kategori_degerleri_json|escapejs }}');
+                console.log('Değer verisi:', degerData);
+                
+                const degerLabels = degerData.map(d => d.kategori || 'Kategori Yok');
+                const degerValues = degerData.map(d => parseFloat(d.deger || 0));
+                
+                if (degerLabels.length > 0 && degerValues.some(v => v > 0)) {
+                    const degerCtx = degerChartEl.getContext('2d');
+                    new Chart(degerCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: degerLabels,
+                            datasets: [{
+                                label: 'Stok Değeri (TL)',
+                                data: degerValues,
+                                backgroundColor: '#36A2EB'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: false
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
+                            }
+                        }
+                    });
+                    console.log('Değer grafiği oluşturuldu');
+                } else {
+                    degerChartEl.parentElement.innerHTML = '<p style="text-align: center; padding: 20px; color: #999;">Henüz kategori değer verisi bulunmuyor.</p>';
+                }
+            } catch (e) {
+                console.error('Kategori değer grafiği hatası:', e);
+                degerChartEl.parentElement.innerHTML = '<p style="text-align: center; padding: 20px; color: #999;">Grafik yüklenemedi: ' + e.message + '</p>';
+            }
+        } else {
+            console.error('degerChart elementi bulunamadı!');
+        }
+
+        // Son 30 Günlük Hareketler (Line Chart)
+        const hareketChartEl = document.getElementById('hareketChart');
+        if (hareketChartEl) {
+            try {
+                const hareketData = JSON.parse('{{ gunluk_hareketler_json|escapejs }}');
+                console.log('Hareket verisi:', hareketData);
+                
+                const hareketLabels = hareketData.map(h => {
+                    if (h.gun) {
+                        const date = new Date(h.gun);
+                        return date.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit' });
+                    }
+                    return '';
+                }).filter(label => label);
+                const girisData = hareketData.map(h => parseFloat(h.giris || 0));
+                const cikisData = hareketData.map(h => parseFloat(h.cikis || 0));
+                
+                if (hareketLabels.length > 0) {
+                    const hareketCtx = hareketChartEl.getContext('2d');
+                    new Chart(hareketCtx, {
+                        type: 'line',
+                        data: {
+                            labels: hareketLabels,
+                            datasets: [{
+                                label: 'Giriş',
+                                data: girisData,
+                                borderColor: '#27ae60',
+                                backgroundColor: 'rgba(39, 174, 96, 0.1)',
+                                tension: 0.4
+                            }, {
+                                label: 'Çıkış',
+                                data: cikisData,
+                                borderColor: '#e74c3c',
+                                backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                                tension: 0.4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'top'
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
+                            }
+                        }
+                    });
+                    console.log('Hareket grafiği oluşturuldu');
+                } else {
+                    hareketChartEl.parentElement.innerHTML = '<p style="text-align: center; padding: 20px; color: #999;">Son 30 günde hareket kaydı bulunmuyor.</p>';
+                }
+            } catch (e) {
+                console.error('Hareket grafiği hatası:', e);
+                hareketChartEl.parentElement.innerHTML = '<p style="text-align: center; padding: 20px; color: #999;">Grafik yüklenemedi: ' + e.message + '</p>';
+            }
+        } else {
+            console.error('hareketChart elementi bulunamadı!');
+        }
+    } catch (error) {
+        console.error('Grafik oluşturma genel hatası:', error);
+    }
+}
+
+// DOM hazır olduğunda ve Chart.js yüklendikten sonra çalıştır
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(initCharts, 500); // Chart.js'in yüklenmesi için bekle
+    });
+} else {
+    setTimeout(initCharts, 500);
+}
+
+(function () {
+    function setupDashboardCollapsible(card) {
+        if (!card) return;
+        var extraRows = card.querySelectorAll('.dashboard-tablo-row-ekstra');
+        if (!extraRows.length) return;
+        var btnExpand = card.querySelector('.dashboard-btn-tum-liste');
+        var btnCollapse = card.querySelector('.dashboard-btn-daralt');
+        var kesitUyari = card.querySelector('.dashboard-kritik-kesit-uyari');
+        if (!btnExpand || !btnCollapse) return;
+        btnExpand.addEventListener('click', function () {
+            card.classList.remove('dashboard-tablo-collapsed');
+            btnExpand.hidden = true;
+            btnCollapse.hidden = false;
+            if (kesitUyari) kesitUyari.hidden = false;
+        });
+        btnCollapse.addEventListener('click', function () {
+            card.classList.add('dashboard-tablo-collapsed');
+            btnExpand.hidden = false;
+            btnCollapse.hidden = true;
+            if (kesitUyari) kesitUyari.hidden = true;
+        });
+    }
+    setupDashboardCollapsible(document.getElementById('dashboard-kritik-stok-card'));
+    setupDashboardCollapsible(document.getElementById('dashboard-son-hareket-card'));
+})();
+
+</script>
+{% endblock %}

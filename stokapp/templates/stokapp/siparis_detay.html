@@ -1,0 +1,237 @@
+{% extends "stokapp/base.html" %}
+{% load currency_filters %}
+{% block title %}Sipariş Detay - {{ siparis.siparis_numarasi }}{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="margin: 0;">Sipariş Detay: {{ siparis.siparis_numarasi }}</h2>
+        <div style="display: flex; gap: 10px;">
+            <a href="{% url 'stokapp:siparis_maliyetleri' siparis.pk %}" class="btn" style="background-color: #1e40af; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px;">💰 Sipariş Maliyetleri</a>
+            <a href="{% url 'stokapp:siparis_listesi' %}" class="btn btn-secondary" style="padding: 8px 16px;">← Geri</a>
+        </div>
+    </div>
+    
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 15px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background: #fff3cd; color: #856404; border-left: 4px solid #ffc107;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+    
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+        <!-- Sol Taraf -->
+        <div>
+            <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <h3 style="margin: 0 0 20px 0; font-size: 18px; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px;">Sipariş Bilgileri</h3>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Sipariş Numarası</label>
+                        <div style="font-size: 16px; font-weight: 600; color: #111827;">{{ siparis.siparis_numarasi }}</div>
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Sipariş Durumu</label>
+                        <div style="font-size: 16px; color: #111827;">
+                            <span style="padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; 
+                                {% if siparis.siparis_durumu == 'ONAY_BEKLIYOR' %}background-color: #fef3c7; color: #92400e;
+                                {% elif siparis.siparis_durumu == 'ONAYLANDI' %}background-color: #d1fae5; color: #065f46;
+                                {% elif siparis.siparis_durumu == 'RED' %}background-color: #fee2e2; color: #991b1b;
+                                {% else %}background-color: #dbeafe; color: #1e40af;{% endif %}">
+                                {{ siparis.get_siparis_durumu_display }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Müşteri</label>
+                    <div style="font-size: 16px; color: #111827;">
+                        {% if siparis.musteri %}
+                            {{ siparis.musteri.ad }}
+                        {% else %}
+                            {{ siparis.musteri_adi|default:"-" }}
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Oluşturulma Tarihi</label>
+                        <div style="font-size: 16px; color: #111827;">{{ siparis.olusturulma_tarihi|date:"d.m.Y" }}</div>
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Tamamlanma Tarihi</label>
+                        <div style="font-size: 16px; color: {% if siparis.tamamlanma_tarihi %}#ef4444{% else %}#111827{% endif %};">
+                            {{ siparis.tamamlanma_tarihi|date:"d.m.Y"|default:"-" }}
+                        </div>
+                    </div>
+                </div>
+                
+                {% if siparis.etiketler %}
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Etiketler</label>
+                    <div style="font-size: 16px; color: #111827;">{{ siparis.etiketler }}</div>
+                </div>
+                {% endif %}
+
+                {% if siparis.kaynak_teklif_id %}
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Kaynak teklif</label>
+                    <div style="font-size: 16px;">
+                        <a href="{% url 'stokapp:teklif_detay' siparis.kaynak_teklif.pk %}" style="color:#2563eb; font-weight:600;">{{ siparis.kaynak_teklif.teklif_no }}</a>
+                        — {{ siparis.kaynak_teklif.ad }}
+                    </div>
+                </div>
+                {% endif %}
+                {% if siparis.siparis_mektubu %}
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Sipariş mektubu (PDF)</label>
+                    <div style="font-size: 16px;">
+                        <a href="{{ siparis.siparis_mektubu.url }}" target="_blank" style="color:#2563eb; font-weight:600;">Dosyayı aç / indir</a>
+                    </div>
+                </div>
+                {% elif siparis.kaynak_teklif and siparis.kaynak_teklif.siparis_mektubu %}
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Teklifteki sipariş mektubu (PDF)</label>
+                    <div style="font-size: 16px;">
+                        <a href="{{ siparis.kaynak_teklif.siparis_mektubu.url }}" target="_blank" style="color:#2563eb; font-weight:600;">Dosyayı aç / indir</a>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if siparis.aciklama %}
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Açıklama</label>
+                    <div style="font-size: 16px; color: #111827; white-space: pre-wrap;">{{ siparis.aciklama }}</div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Durum Bilgileri -->
+            <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <h3 style="margin: 0 0 20px 0; font-size: 18px; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px;">Durum Bilgileri</h3>
+                
+                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Stok Durumu</label>
+                        <span style="padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; background-color: #d1fae5; color: #065f46;">
+                            {{ siparis.get_stok_durumu_display }}
+                        </span>
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Hammadde Durumu</label>
+                        <span style="padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; background-color: #d1fae5; color: #065f46;">
+                            {{ siparis.get_hammadde_durumu_display }}
+                        </span>
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Üretim Durumu</label>
+                        <span style="padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; background-color: #d1fae5; color: #065f46;">
+                            ✓ {{ siparis.get_uretim_durumu_display }}
+                        </span>
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Teslimat Durumu</label>
+                        <span style="padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; background-color: #d1fae5; color: #065f46;">
+                            {{ siparis.get_teslimat_durumu_display }}
+                        </span>
+                    </div>
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Fatura Durumu</label>
+                        <span style="padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; background-color: #dbeafe; color: #1e40af;">
+                            {{ siparis.get_fatura_durumu_display }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Ürünler Tablosu -->
+            <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px;">
+                <h3 style="margin: 0 0 20px 0; font-size: 18px; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px;">Ürünler</h3>
+                
+                <table style="width: 100%; border-collapse: collapse; background: white;">
+                    <thead>
+                        <tr style="background-color: #34495e; border-bottom: 2px solid #2c3e50;">
+                            <th style="padding: 10px; text-align: left; font-weight: 600; color: #ffffff; background-color: #34495e;">Ürün</th>
+                            <th style="padding: 10px; text-align: left; font-weight: 600; color: #ffffff; background-color: #34495e;">Miktar</th>
+                            <th style="padding: 10px; text-align: left; font-weight: 600; color: #ffffff; background-color: #34495e;">Birim Fiyat</th>
+                            <th style="padding: 10px; text-align: left; font-weight: 600; color: #ffffff; background-color: #34495e;">İndirim (%)</th>
+                            <th style="padding: 10px; text-align: left; font-weight: 600; color: #ffffff; background-color: #34495e;">Toplam</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for kalem in kalemler %}
+                        <tr style="border-bottom: 1px solid #e5e7eb;">
+                            <td style="padding: 10px;">
+                                {% if kalem.stok_item %}
+                                    <a href="{% url 'stokapp:stok_ekle' kalem.stok_item.pk %}" style="color:#2563eb; font-weight:600; text-decoration:none;">
+                                        <strong>{{ kalem.stok_item.stok_kodu }}</strong> — {{ kalem.stok_item.ad }}
+                                    </a>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td style="padding: 10px;">
+                                {% if kalem.miktar|floatformat:0 == kalem.miktar|floatformat:2 %}
+                                    {{ kalem.miktar|floatformat:0 }}
+                                {% else %}
+                                    {{ kalem.miktar|floatformat:2 }}
+                                {% endif %}
+                                {{ kalem.stok_item.birim }}
+                            </td>
+                            <td style="padding: 10px;">{{ kalem.birim_fiyat|currency }} {{ siparis.para_birimi }}</td>
+                            <td style="padding: 10px;">
+                                {% if kalem.indirim_yuzdesi > 0 %}
+                                    {{ kalem.indirim_yuzdesi|floatformat:2 }}%
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td style="padding: 10px; font-weight: 600;">{{ kalem.toplam|currency }} {{ siparis.para_birimi }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" style="text-align: center; padding: 40px; color: #6b7280;">
+                                Bu siparişte ürün bulunmuyor.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Sağ Taraf - Özet -->
+        <div>
+            <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; position: sticky; top: 20px;">
+                <h3 style="margin: 0 0 20px 0;">Özet</h3>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Para Birimi</label>
+                    <div style="font-size: 16px; color: #111827; font-weight: 600;">{{ siparis.para_birimi }}</div>
+                </div>
+                
+                <div style="border-top: 2px solid #e5e7eb; padding-top: 15px; margin-top: 20px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span>Ara Toplam:</span>
+                        <strong>{{ ara_toplam|currency }} {{ siparis.para_birimi }}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span>Vergi (20%):</span>
+                        <strong>{{ vergi|currency }} {{ siparis.para_birimi }}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding-top: 10px; border-top: 2px solid #e5e7eb; font-size: 18px; font-weight: 600;">
+                        <span>Toplam:</span>
+                        <strong>{{ toplam|currency }} {{ siparis.para_birimi }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

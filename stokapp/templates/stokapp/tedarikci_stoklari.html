@@ -1,0 +1,121 @@
+{% extends "stokapp/base.html" %}
+{% load custom_filters %}
+{% load currency_filters %}
+{% block title %}Tedarikçi Stokları - {{ tedarikci.ad }}{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="margin: 0;">📦 {{ tedarikci.ad }} - Stoklar</h2>
+        <div style="display: flex; gap: 10px;">
+            <button id="satinalmaOlusturBtn" class="btn btn-primary" style="padding: 8px 16px; display: none;" onclick="satinalmaOlustur()">
+                ➕ Satınalma Siparişi Oluştur
+            </button>
+            <a href="{% url 'stokapp:tedarikci_listesi' %}" class="btn btn-secondary" style="padding: 8px 16px;">← Geri</a>
+        </div>
+    </div>
+    
+    <div style="background-color: #f9fafb; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Tedarikçi Adı</label>
+                <div style="font-size: 16px; font-weight: 600; color: #111827;">{{ tedarikci.ad }}</div>
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Toplam Stok Sayısı</label>
+                <div style="font-size: 16px; color: #111827;">{{ stoklar|length }} ürün</div>
+            </div>
+        </div>
+    </div>
+    
+    <p style="color: #6b7280; margin-bottom: 20px;">
+        Bu tedarikçiye ait stoklar listelenmektedir. İhtiyacınız olan ürünleri seçip satınalma siparişi oluşturabilirsiniz.
+    </p>
+    
+    {% if stoklar %}
+    <table style="width: 100%; border-collapse: collapse; background: white;">
+        <thead>
+            <tr style="background-color: #f9fafb; border-bottom: 2px solid #e5e7eb;">
+                <th style="padding: 12px; text-align: left; font-weight: 600; width: 50px;">
+                    <input type="checkbox" id="selectAllStok" onchange="toggleAllStoklar(this.checked)">
+                </th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Stok Kodu</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Ürün Adı</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Kategori</th>
+                <th style="padding: 12px; text-align: right; font-weight: 600;">Mevcut Stok</th>
+                <th style="padding: 12px; text-align: right; font-weight: 600;">Birim</th>
+                <th style="padding: 12px; text-align: right; font-weight: 600;">Alış Fiyatı</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for stok in stoklar %}
+            <tr style="border-bottom: 1px solid #e5e7eb;">
+                <td style="padding: 12px;">
+                    <input type="checkbox" class="stok-checkbox" 
+                           value="{{ stok.id }}" 
+                           data-stok-kodu="{{ stok.stok_kodu }}"
+                           data-stok-adi="{{ stok.ad }}"
+                           data-birim="{{ stok.birim }}"
+                           data-alis-fiyati="{{ stok.alis_fiyati|default:0 }}"
+                           data-para-birimi="{{ stok.alis_para_birimi|default:'TRY' }}"
+                           onchange="updateSatinalmaButton()">
+                </td>
+                <td style="padding: 12px;">{{ stok.stok_kodu }}</td>
+                <td style="padding: 12px;">{{ stok.ad }}</td>
+                <td style="padding: 12px;">{{ stok.kategori.ad|default:"-" }}</td>
+                <td style="padding: 12px; text-align: right;">{{ stok.mevcut_miktar|format_miktar }} {{ stok.birim }}</td>
+                <td style="padding: 12px; text-align: right;">{{ stok.birim }}</td>
+                <td style="padding: 12px; text-align: right;">{{ stok.alis_fiyati|currency }} {{ stok.alis_para_birimi|default:'TRY' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="padding: 40px; text-align: center; color: #6b7280;">
+        <p>Bu tedarikçiye ait stok bulunmamaktadır.</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function toggleAllStoklar(checked) {
+    const checkboxes = document.querySelectorAll('.stok-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = checked;
+    });
+    updateSatinalmaButton();
+}
+
+function updateSatinalmaButton() {
+    const checkedBoxes = document.querySelectorAll('.stok-checkbox:checked');
+    const btn = document.getElementById('satinalmaOlusturBtn');
+    
+    if (checkedBoxes.length > 0) {
+        btn.style.display = 'inline-block';
+    } else {
+        btn.style.display = 'none';
+    }
+}
+
+function satinalmaOlustur() {
+    const checkedBoxes = document.querySelectorAll('.stok-checkbox:checked');
+    
+    if (checkedBoxes.length === 0) {
+        alert('Lütfen en az bir ürün seçin.');
+        return;
+    }
+    
+    // Seçili ürünleri URL parametreleri olarak hazırla
+    // Miktar olarak 1 kullanacağız, kullanıcı formda değiştirebilir
+    const params = new URLSearchParams();
+    checkedBoxes.forEach((checkbox, index) => {
+        params.append(`malzeme_${index}`, checkbox.value);
+        params.append(`miktar_${index}`, '1'); // Varsayılan miktar 1, kullanıcı formda değiştirebilir
+    });
+    
+    // Satınalma ekle sayfasına yönlendir
+    window.location.href = `{% url 'stokapp:satinalma_ekle' %}?${params.toString()}&planlama=1`;
+}
+</script>
+
+{% endblock %}
+

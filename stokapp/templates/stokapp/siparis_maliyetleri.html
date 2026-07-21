@@ -1,0 +1,109 @@
+{% extends "stokapp/base.html" %}
+{% load currency_filters %}
+{% load custom_filters %}
+{% block title %}Sipariş Maliyetleri - {{ siparis.siparis_numarasi }}{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="margin: 0;">Sipariş Maliyetleri: {{ siparis.siparis_numarasi }}</h2>
+        <div style="display:flex; gap:8px;">
+            <a href="{% url 'stokapp:siparis_maliyetleri_export_pdf' siparis.pk %}" class="btn btn-secondary" style="padding: 8px 16px;">📄 PDF</a>
+            <a href="{% url 'stokapp:siparis_detay' siparis.pk %}" class="btn btn-secondary" style="padding: 8px 16px;">← Sipariş Detayına Dön</a>
+        </div>
+    </div>
+    
+    <div style="background-color: #f9fafb; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Sipariş Numarası</label>
+                <div style="font-size: 16px; font-weight: 600; color: #111827;">{{ siparis.siparis_numarasi }}</div>
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Müşteri</label>
+                <div style="font-size: 16px; color: #111827;">{{ siparis.musteri_adi|default:siparis.musteri.ad }}</div>
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Toplam Maliyet</label>
+                <div style="font-size: 18px; font-weight: 600; color: #1e40af;">{{ genel_toplam|currency }} TRY</div>
+            </div>
+        </div>
+    </div>
+    
+    {% if maliyetler %}
+    <table style="width: 100%; border-collapse: collapse; background: white;">
+        <thead>
+            <tr style="background-color: #f9fafb; border-bottom: 2px solid #e5e7eb;">
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Maliyet Tipi</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Açıklama</th>
+                <th style="padding: 12px; text-align: right; font-weight: 600;">Miktar</th>
+                <th style="padding: 12px; text-align: right; font-weight: 600;">Birim Fiyat</th>
+                <th style="padding: 12px; text-align: right; font-weight: 600;">Toplam</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Para Birimi</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Kayıt Tarihi</th>
+                <th style="padding: 12px; text-align: center; font-weight: 600;">İşlemler</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for maliyet in maliyetler %}
+            <tr style="border-bottom: 1px solid #e5e7eb; {% if maliyet.maliyet_tipi == 'MALZEME' %}background-color: #f0f9ff;{% else %}background-color: #fef3c7;{% endif %}">
+                <td style="padding: 12px;">
+                    <span style="padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;
+                        {% if maliyet.maliyet_tipi == 'MALZEME' %}background-color: #3b82f6; color: white;{% else %}background-color: #f59e0b; color: white;{% endif %}">
+                        {{ maliyet.get_maliyet_tipi_display }}
+                    </span>
+                </td>
+                <td style="padding: 12px;">
+                    <div style="font-weight: 600;">{{ maliyet.aciklama }}</div>
+                    {% if maliyet.aciklama_detay %}
+                    <div style="font-size: 11px; color: #6b7280; margin-top: 4px;">{{ maliyet.aciklama_detay|truncatewords:10 }}</div>
+                    {% endif %}
+                </td>
+                <td style="padding: 12px; text-align: right;">{{ maliyet.miktar|format_miktar }} {{ maliyet.birim }}</td>
+                <td style="padding: 12px; text-align: right;">{{ maliyet.birim_fiyat|currency }} {{ maliyet.para_birimi }}</td>
+                <td style="padding: 12px; text-align: right; font-weight: 600;">{{ maliyet.toplam|currency }} {{ maliyet.para_birimi }}</td>
+                <td style="padding: 12px;">{{ maliyet.para_birimi }}</td>
+                <td style="padding: 12px;">{{ maliyet.kayit_tarihi|date:"d.m.Y" }}</td>
+                <td style="padding: 12px; text-align: center;">
+                    <a href="{% url 'stokapp:siparis_maliyeti_duzenle' siparis.pk maliyet.pk %}" 
+                       class="btn" 
+                       style="background-color: #3b82f6; color: white; padding: 4px 8px; border-radius: 4px; text-decoration: none; font-size: 12px;">
+                        ✏️ Düzenle
+                    </a>
+                    <a href="{% url 'stokapp:siparis_maliyeti_sil' siparis.pk maliyet.pk %}" 
+                       class="btn" 
+                       style="background-color: #ef4444; color: white; padding: 4px 8px; border-radius: 4px; text-decoration: none; font-size: 12px;"
+                       onclick="return confirm('Bu maliyeti silmek istediğinizden emin misiniz?');">
+                        🗑️ Sil
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <!-- Toplamlar -->
+    <div style="margin-top: 20px; padding: 20px; background-color: #f9fafb; border-radius: 8px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px;">
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Toplam Malzeme Maliyeti</label>
+                <div style="font-size: 18px; font-weight: 600; color: #3b82f6;">{{ malzeme_toplam|currency }} TRY</div>
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Toplam Operasyon Maliyeti</label>
+                <div style="font-size: 18px; font-weight: 600; color: #f59e0b;">{{ operasyon_toplam|currency }} TRY</div>
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Genel Toplam</label>
+                <div style="font-size: 20px; font-weight: 700; color: #1e40af;">{{ genel_toplam|currency }} TRY</div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div style="padding: 40px; text-align: center; color: #6b7280;">
+        <p>Bu sipariş için henüz maliyet kaydı bulunmamaktadır.</p>
+        <p style="font-size: 12px; margin-top: 10px;">Üretim emri oluşturulduğunda maliyetler otomatik olarak kaydedilir.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

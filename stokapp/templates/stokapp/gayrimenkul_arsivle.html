@@ -1,0 +1,33 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Gayrimenkul arşivle — {{ gm.ad }}{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="max-width: 600px; margin: 0 auto;">
+        <div style="text-align: center; margin-bottom: 24px;">
+            <div style="font-size: 56px; margin-bottom: 12px;">📦</div>
+            <h2 style="margin: 0; color: #374151;">Gayrimenkulu arşivle</h2>
+        </div>
+        <div style="background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+            <p style="margin: 0; color: #92400e; font-size: 16px;">
+                <strong>{{ gm.ad }}</strong> kaydını arşivlemek istediğinizden emin misiniz?
+            </p>
+            <p style="margin: 12px 0 0; color: #92400e; font-size: 14px;">
+                Arşivlenen kayıtlar varsayılan listede gizlenir; veriler silinmez, liste filtreinden “Arşiv” ile görüntülenebilir.
+            </p>
+        </div>
+        <div style="background: #f9fafb; border-radius: 8px; padding: 18px; margin-bottom: 24px; font-size: 14px;">
+            <div><strong>İl / İlçe:</strong> {{ gm.il }} / {{ gm.ilce }}</div>
+            <div style="margin-top: 8px;"><strong>Tip:</strong> {{ gm.get_tip_display }}</div>
+        </div>
+        <form method="post" style="display: flex; gap: 10px; justify-content: center;">
+            {% csrf_token %}
+            <button type="submit" style="background-color: #6b7280; color: white; padding: 12px 24px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer;">
+                📦 Evet, arşivle
+            </button>
+            <a href="{% url 'stokapp:gayrimenkul_detay' gm.pk %}" style="background-color: #22c55e; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-size: 16px; font-weight: 600; display: inline-block;">
+                İptal
+            </a>
+        </form>
+    </div>
+</div>
+{% endblock %}

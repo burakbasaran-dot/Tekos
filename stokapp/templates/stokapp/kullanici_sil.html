@@ -1,0 +1,25 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Kullanıcı sil{% endblock %}
+{% block content %}
+<div class="card" style="max-width:520px;">
+    <h2 style="margin-top:0;color:#b91c1c;">Kullanıcıyı sil</h2>
+    <p>Bu işlem geri alınamaz.</p>
+    <p><strong>{{ kullanici.get_full_name|default:kullanici.username }}</strong> <span style="color:#64748b;">(@{{ kullanici.username }})</span></p>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 15px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary" style="background:#dc2626;border:none;">Evet, sil</button>
+        <a href="{% url 'stokapp:kullanici_listesi' %}" class="btn btn-secondary">Vazgeç</a>
+    </form>
+</div>
+{% endblock %}

@@ -1,0 +1,14 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Belge Sil{% endblock %}
+{% block content %}
+<div class="card">
+    <h2>Belgeyi Sil</h2>
+    <p><strong>{{ belge.belge_adi }}</strong> belgesini kalıcı olarak silmek istiyor musunuz?</p>
+    <form method="post">
+        {% csrf_token %}
+        {% if arsivli %}<input type="hidden" name="arsivli" value="true">{% endif %}
+        <button type="submit" class="btn" style="background:#ef4444; color:#fff;">🗑️ Sil</button>
+        <a href="{% url 'stokapp:personel_belgeleri' personel.pk %}{% if arsivli %}?arsivli=true{% endif %}" class="btn" style="background:#6b7280; color:#fff; text-decoration:none;">İptal</a>
+    </form>
+</div>
+{% endblock %}

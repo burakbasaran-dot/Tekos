@@ -1,0 +1,32 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Yeni Belge Türü Ekle{% endblock %}
+{% block content %}
+{% include "stokapp/includes/tdk_form_styles.html" %}
+
+<div class="tdk-page">
+  <div class="tdk-header">
+    <div>
+      <h1>📋 Yeni Belge Türü</h1>
+      <p>Belge türü kodu, kategori ve varsayılan hatırlatma ayarlarını tanımlayın.</p>
+    </div>
+    <a href="{% url 'stokapp:document_type_listesi' %}" class="btn btn-secondary">← Geri</a>
+  </div>
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="tdk-alert {% if message.tags == 'error' %}tdk-alert-error{% elif message.tags == 'warning' %}tdk-alert-warning{% else %}tdk-alert-success{% endif %}">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="post" class="tdk-form-card">
+    {% csrf_token %}
+    {% include "stokapp/includes/document_type_form_body.html" %}
+    <div class="tdk-footer">
+      <a href="{% url 'stokapp:document_type_listesi' %}" class="btn btn-secondary">İptal</a>
+      <button type="submit" class="btn btn-primary">💾 Kaydet</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

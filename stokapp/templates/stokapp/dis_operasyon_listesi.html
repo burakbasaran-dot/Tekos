@@ -1,0 +1,136 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Dış Operasyonlar{% endblock %}
+{% block content %}
+<div class="card">
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:18px;">
+    <h2 style="margin:0;">Dış Operasyonlar</h2>
+    <a href="{% url 'stokapp:dis_operasyon_ekle' %}" class="btn btn-primary">+ Yeni Dış Operasyon</a>
+  </div>
+
+  <form method="get" style="display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; margin-bottom:16px;">
+    <div>
+      <label style="display:block;font-size:12px;color:#6b7280;">Arama</label>
+      <input type="text" name="q" value="{{ filtre.q|default:'' }}" placeholder="No / stok kodu" style="padding:8px;border:1px solid #e5e7eb;border-radius:8px;min-width:160px;">
+    </div>
+    <div>
+      <label style="display:block;font-size:12px;color:#6b7280;">Operasyon tipi</label>
+      <select name="operasyon_tipi" style="padding:8px;border-radius:8px;border:1px solid #e5e7eb;">
+        <option value="">—</option>
+        {% for t in tipler %}
+        <option value="{{ t.pk }}" {% if selected_tip_id == t.pk %}selected{% endif %}>{{ t.ad }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label style="display:block;font-size:12px;color:#6b7280;">Tedarikçi</label>
+      <select name="tedarikci" style="padding:8px;border-radius:8px;border:1px solid #e5e7eb;max-width:200px;">
+        <option value="">—</option>
+        {% for ted in tedarikciler %}
+        <option value="{{ ted.pk }}" {% if selected_ted_id == ted.pk %}selected{% endif %}>{{ ted.ad|truncatechars:40 }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label style="display:block;font-size:12px;color:#6b7280;">Durum</label>
+      <select name="durum" style="padding:8px;border-radius:8px;border:1px solid #e5e7eb;">
+        <option value="">—</option>
+        {% for c,l in durum_secenekleri %}
+        <option value="{{ c }}" {% if filtre.durum == c %}selected{% endif %}>{{ l }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label style="display:block;font-size:12px;color:#6b7280;">Kalite</label>
+      <select name="kalite_durumu" style="padding:8px;border-radius:8px;border:1px solid #e5e7eb;">
+        <option value="">—</option>
+        {% for c,l in kalite_secenekleri %}
+        <option value="{{ c }}" {% if filtre.kalite_durumu == c %}selected{% endif %}>{{ l }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label style="display:block;font-size:12px;color:#6b7280;">Gönderim başlangıç</label>
+      <input type="date" name="tarih_bas" value="{{ filtre.tarih_bas|default:'' }}" style="padding:8px;border-radius:8px;border:1px solid #e5e7eb;">
+    </div>
+    <div>
+      <label style="display:block;font-size:12px;color:#6b7280;">Gönderim bitiş</label>
+      <input type="date" name="tarih_bit" value="{{ filtre.tarih_bit|default:'' }}" style="padding:8px;border-radius:8px;border:1px solid #e5e7eb;">
+    </div>
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px;">
+      <input type="checkbox" name="geciken" value="1" {% if filtre.geciken == '1' %}checked{% endif %}> Gecikenler
+    </label>
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px;">
+      <input type="checkbox" name="acik" value="1" {% if filtre.acik == '1' %}checked{% endif %}> Açık operasyonlar
+    </label>
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px;">
+      <input type="checkbox" name="kalite_bekleyen" value="1" {% if filtre.kalite_bekleyen == '1' %}checked{% endif %}> Kalite bekleyen
+    </label>
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px;">
+      <input type="checkbox" name="f_arsiv" value="1" {% if filtre.f_arsiv == '1' %}checked{% endif %}> Arşivlenmiş
+    </label>
+    <button type="submit" class="btn btn-secondary">Filtrele</button>
+    <a href="{% url 'stokapp:dis_operasyon_listesi' %}" class="btn btn-secondary">Sıfırla</a>
+  </form>
+
+  <div style="overflow-x:auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>Operasyon No</th>
+          <th>Stok Kodu</th>
+          <th>Ürün</th>
+          <th>Operasyon Tipi</th>
+          <th>Tedarikçi</th>
+          <th>Gönderim</th>
+          <th>Beklenen Dönüş</th>
+          <th>Gönderilen</th>
+          <th>Dönen</th>
+          <th>Fire / Eksik</th>
+          <th>Durum</th>
+          <th>Kalite</th>
+          <th>Maliyet</th>
+          <th>İşlem</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        {% with op=row.op %}
+        <tr>
+          <td><a href="{% url 'stokapp:dis_operasyon_detay' op.pk %}">{{ op.operasyon_no }}</a></td>
+          <td>{{ op.stok_item.stok_kodu }}</td>
+          <td>{{ op.stok_item.ad|truncatechars:32 }}</td>
+          <td>{{ op.operasyon_tipi.ad }}</td>
+          <td>{{ op.tedarikci.ad|truncatechars:24 }}</td>
+          <td>{{ op.gonderim_tarihi|date:"d.m.Y" }}</td>
+          <td>{{ op.beklenen_donus_tarihi|date:"d.m.Y"|default:"—" }}</td>
+          <td>{{ op.gonderilen_miktar }} {{ op.birim }}</td>
+          <td>{{ op.toplam_donen_miktar }} {{ op.birim }}</td>
+          <td>{{ op.toplam_fire_miktar }} / {{ op.toplam_eksik_miktar }}</td>
+          <td>
+            {{ op.get_durum_display }}
+            {% for e in row.etiketler %}
+              {% if e == 'gecikti' %}<span style="margin-left:4px;padding:2px 6px;background:#fee2e2;color:#991b1b;border-radius:6px;font-size:10px;font-weight:700;">Gecikti</span>{% endif %}
+              {% if e == 'eksik_donus' %}<span style="margin-left:4px;padding:2px 6px;background:#fef3c7;color:#92400e;border-radius:6px;font-size:10px;font-weight:700;">Eksik dönüş</span>{% endif %}
+            {% endfor %}
+          </td>
+          <td>{{ op.get_kalite_durumu_display }}</td>
+          <td>{{ row.toplam_maliyet }} {{ op.get_para_birimi_display }}</td>
+          <td style="white-space:nowrap;">
+            <a class="btn btn-secondary" style="padding:4px 8px;font-size:12px;" href="{% url 'stokapp:dis_operasyon_detay' op.pk %}">Detay</a>
+            {% if op.durum == 'TASLAK' %}
+            <a class="btn btn-secondary" style="padding:4px 8px;font-size:12px;" href="{% url 'stokapp:dis_operasyon_duzenle' op.pk %}">Düzenle</a>
+            {% endif %}
+            {% if op.durum != 'TASLAK' and op.durum != 'IPTAL' and op.durum != 'ARSIV' %}
+            <a class="btn btn-primary" style="padding:4px 8px;font-size:12px;" href="{% url 'stokapp:dis_operasyon_donus_al' op.pk %}">Dönüş</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endwith %}
+        {% empty %}
+        <tr><td colspan="14" style="text-align:center;padding:32px;color:#6b7280;">Kayıt bulunamadı.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

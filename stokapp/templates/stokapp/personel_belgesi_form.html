@@ -1,0 +1,70 @@
+{% extends "stokapp/base.html" %}
+{% block title %}{% if is_edit %}Personel Belgesi Düzenle{% else %}Personel Belgesi Ekle{% endif %}{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <div style="display:flex; align-items:center; gap:12px;">
+            <a href="{% url 'stokapp:personel_belgeleri' personel.pk %}" class="btn" style="background:#6b7280; color:#fff; text-decoration:none; padding:8px 16px; border-radius:6px;">← Geri</a>
+            <h2 style="margin:0;">{% if is_edit %}Belge Düzenle{% else %}Yeni Belge Ekle{% endif %} - {{ personel.ad }} {{ personel.soyad }}</h2>
+        </div>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" style="max-width:900px;">
+        {% csrf_token %}
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px;">
+            <div>
+                <label>{{ form.belge_adi.label }}</label>
+                {{ form.belge_adi }}
+                <div style="color:#dc2626; font-size:13px;">{{ form.belge_adi.errors }}</div>
+            </div>
+            <div>
+                <label>{{ form.belge_no.label }}</label>
+                {{ form.belge_no }}
+            </div>
+            <div style="grid-column:1 / -1;">
+                <label>{{ form.belge_dosyasi.label }}</label>
+                {{ form.belge_dosyasi }}
+                {% if is_edit and belge.belge_dosyasi %}
+                <div style="margin-top:6px;"><a href="{{ belge.belge_dosyasi.url }}" target="_blank">Mevcut dosyayı aç</a></div>
+                {% endif %}
+            </div>
+            <div style="grid-column:1 / -1;">
+                <label>{{ form.aciklama.label }}</label>
+                {{ form.aciklama }}
+            </div>
+            <div style="grid-column:1 / -1; display:flex; align-items:center; gap:8px;">
+                {{ form.yenileme_gerekli }} <label for="id_yenileme_gerekli">{{ form.yenileme_gerekli.label }}</label>
+            </div>
+            <div id="yenilemeAlanlari">
+                <label>{{ form.yenileme_tarihi.label }}</label>
+                {{ form.yenileme_tarihi }}
+                <div style="color:#dc2626; font-size:13px;">{{ form.yenileme_tarihi.errors }}</div>
+            </div>
+            <div id="hatirlatmaAlani">
+                <label>{{ form.hatirlatma_gun_once.label }}</label>
+                {{ form.hatirlatma_gun_once }}
+                <div style="color:#dc2626; font-size:13px;">{{ form.hatirlatma_gun_once.errors }}</div>
+            </div>
+        </div>
+        <div style="margin-top:20px;">
+            <button type="submit" class="btn btn-primary" style="background:#22c55e; border-color:#22c55e;">Kaydet</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    (function () {
+        const checkbox = document.getElementById("id_yenileme_gerekli");
+        const yenileme = document.getElementById("yenilemeAlanlari");
+        const hatirlatma = document.getElementById("hatirlatmaAlani");
+        if (!checkbox || !yenileme || !hatirlatma) return;
+        function sync() {
+            const show = checkbox.checked;
+            yenileme.style.display = show ? "block" : "none";
+            hatirlatma.style.display = show ? "block" : "none";
+        }
+        checkbox.addEventListener("change", sync);
+        sync();
+    })();
+</script>
+{% endblock %}

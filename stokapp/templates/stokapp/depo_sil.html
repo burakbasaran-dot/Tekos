@@ -1,0 +1,25 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Depo Sil{% endblock %}
+{% block content %}
+<div class="card">
+    <h2>🗑️ Depo Sil: {{ depo.ad }}</h2>
+    
+    <div style="padding: 20px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107; margin-bottom: 20px;">
+        <strong>⚠️ Uyarı:</strong> Bu depoyu silmek istediğinizden emin misiniz?
+        <ul style="margin-top: 10px; margin-bottom: 0;">
+            <li>Bu depoda <strong>{{ stok_sayisi }} ürün</strong> bulunuyor.</li>
+            <li>Bu depoda <strong>{{ raf_sayisi }} raf</strong> bulunuyor.</li>
+            <li>Depo silindiğinde, bu depodaki ürünlerin depo bilgisi temizlenecek.</li>
+            <li>Bu depodaki tüm raflar silinecek.</li>
+        </ul>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+            <a href="{% url 'stokapp:depo_duzenle' depo.pk %}" class="btn btn-secondary">İptal</a>
+            <button type="submit" class="btn btn-secondary" style="background: #dc3545; color: white;">🗑️ Evet, Sil</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

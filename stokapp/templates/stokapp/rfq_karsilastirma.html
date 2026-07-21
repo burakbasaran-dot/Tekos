@@ -1,0 +1,216 @@
+{% extends "stokapp/base.html" %}
+{% load custom_filters %}
+{% block title %}{{ rfq.rfq_no }} — Karşılaştırma{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+        <div>
+            <h2 style="margin:0;">📊 Teklif Karşılaştırması</h2>
+            <div style="color:#6b7280; margin-top:4px;">{{ rfq.rfq_no }} — {{ rfq.baslik }}</div>
+        </div>
+        <a href="{% url 'stokapp:rfq_detay' rfq.pk %}" class="btn btn-secondary" style="padding:8px 14px;">← Geri</a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding:12px; margin-bottom:15px; border-radius:8px;
+            {% if message.tags == 'error' %}background:#f8d7da; color:#721c24; border-left:4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background:#fff3cd; color:#856404; border-left:4px solid #ffc107;
+            {% else %}background:#d4edda; color:#155724; border-left:4px solid #28a745;{% endif %}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Lejant + toplu seçim -->
+    <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:14px;">
+        <span style="display:inline-block; padding:4px 10px; background:#dcfce7; color:#166534; border-radius:6px; font-size:12px; font-weight:600;">En Ucuz (TRY)</span>
+        <span style="display:inline-block; padding:4px 10px; background:#dbeafe; color:#1e40af; border-radius:6px; font-size:12px; font-weight:600;">En Kısa Termin</span>
+        <span style="display:inline-block; padding:4px 10px; background:linear-gradient(135deg,#dcfce7 0 50%,#dbeafe 50% 100%); color:#111827; border-radius:6px; font-size:12px; font-weight:600;">Hem Ucuz Hem Hızlı</span>
+        <div style="margin-left:auto; display:flex; gap:8px;">
+            <button type="button" onclick="topluSec('fiyat')" class="btn btn-secondary" style="padding:6px 14px;">⚡ Tüm satırlarda en ucuzu seç</button>
+            <button type="button" onclick="topluSec('termin')" class="btn btn-secondary" style="padding:6px 14px;">⏱ Tüm satırlarda en kısa termini seç</button>
+            <button type="button" onclick="seciliTemizle()" class="btn btn-secondary" style="padding:6px 14px;">✕ Temizle</button>
+        </div>
+    </div>
+
+    <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse; background:white;">
+            <thead>
+                <tr style="background:#34495e; color:white;">
+                    <th style="padding:10px; text-align:left; min-width:240px; position:sticky; left:0; background:#34495e;">Kalem</th>
+                    <th style="padding:10px; text-align:right;">Miktar</th>
+                    {% for bag in bags %}
+                    <th style="padding:10px; text-align:center; min-width:170px;">
+                        {{ bag.gosterim_adi }}
+                        {% if bag.durum != 'TEKLIF_GIRDI' %}
+                            <br><span style="font-size:10px; opacity:0.8;">({{ bag.get_durum_display }})</span>
+                        {% endif %}
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in matrix %}
+                <tr style="border-bottom:1px solid #e5e7eb;" data-kalem-id="{{ row.kalem.pk }}">
+                    <td style="padding:10px; position:sticky; left:0; background:white; border-right:1px solid #e5e7eb;">
+                        <strong>{{ row.kalem.kalem_adi }}</strong>
+                        {% if row.kalem.stok_item %}<br><small style="color:#6b7280;">{{ row.kalem.stok_item.stok_kodu }}</small>{% endif %}
+                    </td>
+                    <td style="padding:10px; text-align:right;">{{ row.kalem.miktar|format_decimal }} {{ row.kalem.birim }}</td>
+                    {% for h in row.hucreler %}
+                        {% with bag=h.bag tk=h.tk %}
+                        <td style="padding:10px; text-align:center; border-left:1px solid #f3f4f6;
+                            {% if tk and tk.birim_fiyat is not None and bag.pk == row.min_fiyat_bag_id and bag.pk == row.min_termin_bag_id %}background:linear-gradient(135deg,#dcfce7 0 50%,#dbeafe 50% 100%);
+                            {% elif tk and tk.birim_fiyat is not None and bag.pk == row.min_fiyat_bag_id %}background:#dcfce7;
+                            {% elif tk and tk.teslim_suresi_gun is not None and bag.pk == row.min_termin_bag_id %}background:#dbeafe;
+                            {% endif %}">
+                            {% if tk and tk.birim_fiyat is not None %}
+                                <div style="font-weight:700;">{{ tk.birim_fiyat|floatformat:2 }} {{ tk.para_birimi }}</div>
+                                {% if h.try_karsilik and tk.para_birimi != 'TRY' and tk.para_birimi != 'TL' %}
+                                    <div style="font-size:11px; color:#6b7280;">≈ ₺{{ h.try_karsilik|floatformat:2 }}</div>
+                                {% endif %}
+                                <div style="font-size:11px; margin-top:3px;">
+                                    {% if tk.teslim_suresi_gun is not None %}{{ tk.teslim_suresi_gun }} gün{% else %}<span style="color:#9ca3af;">termin yok</span>{% endif %}
+                                </div>
+                                <label style="display:inline-flex; gap:4px; align-items:center; margin-top:6px; cursor:pointer; font-size:11px;">
+                                    <input type="radio" name="kalem_{{ row.kalem.pk }}" value="{{ tk.pk }}" data-kalem-id="{{ row.kalem.pk }}" data-bag-id="{{ bag.pk }}" data-fiyat="{{ h.try_karsilik|default_if_none:'' }}" data-termin="{{ tk.teslim_suresi_gun|default_if_none:'' }}">
+                                    Seç
+                                </label>
+                                {% if tk.notlar %}
+                                    <div style="font-size:10px; color:#6b7280; margin-top:3px;" title="{{ tk.notlar }}">📝</div>
+                                {% endif %}
+                            {% else %}
+                                <span style="color:#9ca3af; font-size:12px;">— teklif yok —</span>
+                            {% endif %}
+                        </td>
+                        {% endwith %}
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Özet ve aksiyon -->
+    <div id="ozetKart" style="margin-top:20px; padding:16px; background:#f9fafb; border-radius:8px;">
+        <h4 style="margin-top:0;">Seçim Özeti</h4>
+        <div id="ozetIcerik" style="color:#6b7280;">Henüz kalem seçilmedi.</div>
+    </div>
+
+    <form method="post" action="{% url 'stokapp:rfq_siparise_donustur' rfq.pk %}" id="donusturForm" style="margin-top:18px; display:flex; gap:10px; justify-content:flex-end;">
+        {% csrf_token %}
+        <button type="button" onclick="seciliKaydet()" class="btn btn-secondary" style="padding:10px 20px;">💾 Seçimleri Kaydet</button>
+        <button type="submit" {% if rfq.durum == 'SIPARISE_DONUSTURULDU' %}disabled{% endif %} class="btn btn-primary" style="padding:10px 20px; background:#22c55e; {% if rfq.durum == 'SIPARISE_DONUSTURULDU' %}opacity:0.5;{% endif %}">📋 Siparişe Dönüştür →</button>
+    </form>
+</div>
+
+<script>
+const SECILI_INITIAL = {{ secili_map_json|safe }};
+
+function getCookie(n) {
+    const c = document.cookie.split('; ').find(x => x.startsWith(n + '='));
+    return c ? decodeURIComponent(c.split('=')[1]) : '';
+}
+
+function uygulaInitial() {
+    Object.entries(SECILI_INITIAL).forEach(([kalemId, tkId]) => {
+        const r = document.querySelector(`input[name=kalem_${kalemId}][value="${tkId}"]`);
+        if (r) r.checked = true;
+    });
+    ozetGuncelle();
+}
+
+function topluSec(mod) {
+    document.querySelectorAll('tbody tr').forEach(tr => {
+        const kalemId = tr.dataset.kalemId;
+        const radios = tr.querySelectorAll(`input[name=kalem_${kalemId}]`);
+        let best = null;
+        let bestVal = null;
+        radios.forEach(r => {
+            const v = parseFloat(mod === 'fiyat' ? r.dataset.fiyat : r.dataset.termin);
+            if (isFinite(v)) {
+                if (best === null || v < bestVal) {
+                    best = r; bestVal = v;
+                }
+            }
+        });
+        if (best) best.checked = true;
+    });
+    ozetGuncelle();
+}
+
+function seciliTemizle() {
+    document.querySelectorAll('input[type=radio]').forEach(r => r.checked = false);
+    ozetGuncelle();
+}
+
+function ozetGuncelle() {
+    const grup = {};
+    let toplam = 0;
+    let satir = 0;
+    document.querySelectorAll('input[type=radio]:checked').forEach(r => {
+        satir += 1;
+        const f = parseFloat(r.dataset.fiyat);
+        if (isFinite(f)) toplam += f;
+        const bag = r.dataset.bagId;
+        grup[bag] = (grup[bag] || 0) + 1;
+    });
+    if (satir === 0) {
+        document.getElementById('ozetIcerik').textContent = 'Henüz kalem seçilmedi.';
+        return;
+    }
+    const dist = Object.entries(grup).map(([bag, n]) => `Tedarikçi #${bag}: ${n} kalem`).join(' · ');
+    document.getElementById('ozetIcerik').innerHTML = `<strong>${satir}</strong> kalem seçildi. ${dist} <br>Tahmini toplam (TRY): <strong>₺${toplam.toFixed(2)}</strong>`;
+}
+
+function seciliKaydet() {
+    const out = {};
+    document.querySelectorAll('input[type=radio]:checked').forEach(r => {
+        out[r.dataset.kalemId] = parseInt(r.value);
+    });
+    const fd = new FormData();
+    fd.append('secimler', JSON.stringify(out));
+    fetch("{% url 'stokapp:rfq_kazananlari_kaydet' rfq.pk %}", {
+        method: 'POST',
+        body: fd,
+        headers: { 'X-CSRFToken': getCookie('csrftoken') }
+    }).then(r => r.json()).then(d => {
+        if (d.success) {
+            alert('Seçimler kaydedildi.');
+        } else {
+            alert('Hata: ' + (d.error || 'Bilinmeyen.'));
+        }
+    });
+}
+
+document.addEventListener('change', e => {
+    if (e.target.type === 'radio') ozetGuncelle();
+});
+
+// Form submit'te otomatik kaydet
+const donusturForm = document.getElementById('donusturForm');
+let donusturSubmitBypass = false;
+donusturForm.addEventListener('submit', e => {
+    if (donusturSubmitBypass) return;
+    // Kullanıcı önce kaydetmeden direkt sipariş'e dönüştürmek isteyebilir;
+    // o yüzden her durumda son seçimleri kaydedip sonra submit ediyoruz.
+    e.preventDefault();
+    const out = {};
+    document.querySelectorAll('input[type=radio]:checked').forEach(r => {
+        out[r.dataset.kalemId] = parseInt(r.value);
+    });
+    if (Object.keys(out).length === 0) {
+        if (!confirm('Hiç kalem seçmediniz. Yine de devam etmek ister misiniz?')) return;
+    }
+    const fd = new FormData();
+    fd.append('secimler', JSON.stringify(out));
+    fetch("{% url 'stokapp:rfq_kazananlari_kaydet' rfq.pk %}", {
+        method: 'POST', body: fd, headers: { 'X-CSRFToken': getCookie('csrftoken') }
+    }).finally(() => {
+        donusturSubmitBypass = true;
+        donusturForm.submit();
+    });
+});
+
+document.addEventListener('DOMContentLoaded', uygulaInitial);
+</script>
+{% endblock %}

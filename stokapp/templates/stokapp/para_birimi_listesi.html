@@ -1,0 +1,73 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Para Birimi Yönetimi{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>💱 Para Birimi Yönetimi</h2>
+        <a href="{% url 'stokapp:para_birimi_ekle' %}" class="btn btn-primary">➕ Yeni Para Birimi Ekle</a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 15px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background: #fff3cd; color: #856404; border-left: 4px solid #ffc107;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <table>
+        <thead>
+            <tr>
+                <th>Sembol</th>
+                <th>Kod</th>
+                <th>Ad</th>
+                <th>Durum</th>
+                <th>Stok Sayısı</th>
+                <th>İşlemler</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for bilgi in para_birimi_bilgileri %}
+            <tr>
+                <td>
+                    <strong style="font-size: 18px;">{{ bilgi.para_birimi.sembol }}</strong>
+                </td>
+                <td>
+                    <strong>{{ bilgi.para_birimi.kod }}</strong>
+                </td>
+                <td>{{ bilgi.para_birimi.ad }}</td>
+                <td>
+                    {% if bilgi.para_birimi.aktif %}
+                        <span style="padding: 4px 12px; background: #d4edda; color: #155724; border-radius: 12px; font-weight: 600;">
+                            Aktif
+                        </span>
+                    {% else %}
+                        <span style="padding: 4px 12px; background: #f8d7da; color: #721c24; border-radius: 12px; font-weight: 600;">
+                            Pasif
+                        </span>
+                    {% endif %}
+                </td>
+                <td>
+                    <span style="padding: 4px 12px; background: #d4edda; color: #155724; border-radius: 12px; font-weight: 600;">
+                        {{ bilgi.stok_sayisi }} ürün
+                    </span>
+                </td>
+                <td>
+                    <a href="{% url 'stokapp:para_birimi_duzenle' bilgi.para_birimi.pk %}" class="btn btn-secondary" style="padding: 6px 12px; font-size: 13px; margin-right: 5px;">✏️ Düzenle</a>
+                    <a href="{% url 'stokapp:para_birimi_sil' bilgi.para_birimi.pk %}" class="btn btn-secondary" style="padding: 6px 12px; font-size: 13px; background: #dc3545; color: white;">🗑️ Sil</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 40px; color: #6b7280;">
+                    Henüz para birimi bulunmuyor. <a href="{% url 'stokapp:para_birimi_ekle' %}">İlk para birimini oluşturun</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

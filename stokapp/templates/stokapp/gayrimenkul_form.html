@@ -1,0 +1,189 @@
+{% extends "stokapp/base.html" %}
+{% block title %}{% if is_edit %}Gayrimenkul Düzenle{% else %}Yeni Gayrimenkul{% endif %}{% endblock %}
+{% block content %}
+{% include "stokapp/includes/tdk_form_styles.html" %}
+
+<div class="tdk-page">
+  <div class="tdk-header">
+    <div>
+      <h1>{% if is_edit %}✏️ Gayrimenkul Düzenle: {{ gm.ad }}{% else %}🏢 Yeni Gayrimenkul{% endif %}</h1>
+      <p>Gayrimenkul tanımı, konum, finansal ve sigorta bilgilerini tek ekrandan yönetin.</p>
+    </div>
+    <a href="{% if is_edit %}{% url 'stokapp:gayrimenkul_detay' gm.pk %}{% else %}{% url 'stokapp:gayrimenkul_listesi' %}{% endif %}" class="btn btn-secondary">← Geri</a>
+  </div>
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="tdk-alert {% if message.tags == 'error' %}tdk-alert-error{% elif message.tags == 'warning' %}tdk-alert-warning{% else %}tdk-alert-success{% endif %}">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="post" class="tdk-form-card">
+    {% csrf_token %}
+
+    <section class="tdk-section">
+      <h2 class="tdk-section-title">
+        <span class="tdk-section-icon">🏢</span>
+        Temel Bilgiler
+      </h2>
+      <div class="tdk-grid">
+        <div class="tdk-field tdk-has-help" data-help="Gayrimenkul tanım adı. Listelerde ve raporlarda görünür.">
+          <label class="tdk-label required" for="{{ form.ad.id_for_label }}">{{ form.ad.label }}</label>
+          {{ form.ad }}
+          {% if form.ad.errors %}<div class="tdk-error">{{ form.ad.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Gayrimenkul türü (ofis, depo, arsa vb.).">
+          <label class="tdk-label required" for="{{ form.tip.id_for_label }}">{{ form.tip.label }}</label>
+          {{ form.tip }}
+          {% if form.tip.errors %}<div class="tdk-error">{{ form.tip.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Mülkiyet durumu (mülk, kiralık vb.).">
+          <label class="tdk-label required" for="{{ form.sahiplik_tipi.id_for_label }}">{{ form.sahiplik_tipi.label }}</label>
+          {{ form.sahiplik_tipi }}
+          {% if form.sahiplik_tipi.errors %}<div class="tdk-error">{{ form.sahiplik_tipi.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Gayrimenkul kullanım durumu (aktif kullanımda, boş vb.).">
+          <label class="tdk-label required" for="{{ form.kullanim_durumu.id_for_label }}">{{ form.kullanim_durumu.label }}</label>
+          {{ form.kullanim_durumu }}
+          {% if form.kullanim_durumu.errors %}<div class="tdk-error">{{ form.kullanim_durumu.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Gayrimenkul il bilgisi. Tapu ve vergi kayıtlarında referans olur.">
+          <label class="tdk-label required" for="{{ form.il.id_for_label }}">{{ form.il.label }}</label>
+          {{ form.il }}
+          {% if form.il.errors %}<div class="tdk-error">{{ form.il.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Gayrimenkul ilçe bilgisi.">
+          <label class="tdk-label required" for="{{ form.ilce.id_for_label }}">{{ form.ilce.label }}</label>
+          {{ form.ilce }}
+          {% if form.ilce.errors %}<div class="tdk-error">{{ form.ilce.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help full" data-help="Tam açık adres bilgisi.">
+          <label class="tdk-label required" for="{{ form.adres.id_for_label }}">{{ form.adres.label }}</label>
+          {{ form.adres }}
+          {% if form.adres.errors %}<div class="tdk-error">{{ form.adres.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Tapu ada/parsel bilgisi.">
+          <label class="tdk-label" for="{{ form.ada_parsel.id_for_label }}">{{ form.ada_parsel.label }}</label>
+          {{ form.ada_parsel }}
+          {% if form.ada_parsel.errors %}<div class="tdk-error">{{ form.ada_parsel.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Tapu numarası. Resmi kayıtlarda referans olur.">
+          <label class="tdk-label" for="{{ form.tapu_no.id_for_label }}">{{ form.tapu_no.label }}</label>
+          {{ form.tapu_no }}
+          {% if form.tapu_no.errors %}<div class="tdk-error">{{ form.tapu_no.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Gayrimenkul alanı (m²).">
+          <label class="tdk-label" for="{{ form.metrekare.id_for_label }}">{{ form.metrekare.label }}</label>
+          {{ form.metrekare }}
+          {% if form.metrekare.errors %}<div class="tdk-error">{{ form.metrekare.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Gayrimenkulden sorumlu kişi.">
+          <label class="tdk-label" for="{{ form.sorumlu_kisi.id_for_label }}">{{ form.sorumlu_kisi.label }}</label>
+          {{ form.sorumlu_kisi }}
+          {% if form.sorumlu_kisi.errors %}<div class="tdk-error">{{ form.sorumlu_kisi.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help full" data-help="Gayrimenkul hakkında genel açıklama.">
+          <label class="tdk-label" for="{{ form.aciklama.id_for_label }}">{{ form.aciklama.label }}</label>
+          {{ form.aciklama }}
+          {% if form.aciklama.errors %}<div class="tdk-error">{{ form.aciklama.errors }}</div>{% endif %}
+        </div>
+      </div>
+    </section>
+
+    <section class="tdk-section">
+      <h2 class="tdk-section-title">
+        <span class="tdk-section-icon green">💰</span>
+        Finansal ve Takip Bilgileri
+      </h2>
+      <div class="tdk-grid">
+        <div class="tdk-field tdk-has-help" data-help="Alış veya kira bedeli. Finansal raporlarda kullanılır.">
+          <label class="tdk-label" for="{{ form.alis_veya_kira_bedeli.id_for_label }}">{{ form.alis_veya_kira_bedeli.label }}</label>
+          {{ form.alis_veya_kira_bedeli }}
+          {% if form.alis_veya_kira_bedeli.errors %}<div class="tdk-error">{{ form.alis_veya_kira_bedeli.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Bedelin para birimi (TRY, USD vb.).">
+          <label class="tdk-label" for="{{ form.para_birimi.id_for_label }}">{{ form.para_birimi.label }}</label>
+          {{ form.para_birimi }}
+          {% if form.para_birimi.errors %}<div class="tdk-error">{{ form.para_birimi.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Kira başlangıç tarihi. Kiralık mülklerde geçerlidir.">
+          <label class="tdk-label" for="{{ form.kira_baslangic_tarihi.id_for_label }}">{{ form.kira_baslangic_tarihi.label }}</label>
+          {{ form.kira_baslangic_tarihi }}
+          {% if form.kira_baslangic_tarihi.errors %}<div class="tdk-error">{{ form.kira_baslangic_tarihi.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Kira bitiş tarihi. Sözleşme yenileme takibinde kullanılır.">
+          <label class="tdk-label" for="{{ form.kira_bitis_tarihi.id_for_label }}">{{ form.kira_bitis_tarihi.label }}</label>
+          {{ form.kira_bitis_tarihi }}
+          {% if form.kira_bitis_tarihi.errors %}<div class="tdk-error">{{ form.kira_bitis_tarihi.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Yıllık emlak vergisi tutarı.">
+          <label class="tdk-label" for="{{ form.yillik_emlak_vergisi.id_for_label }}">{{ form.yillik_emlak_vergisi.label }}</label>
+          {{ form.yillik_emlak_vergisi }}
+          {% if form.yillik_emlak_vergisi.errors %}<div class="tdk-error">{{ form.yillik_emlak_vergisi.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Emlak vergisi ödeme periyodu.">
+          <label class="tdk-label" for="{{ form.vergi_odeme_periyodu.id_for_label }}">{{ form.vergi_odeme_periyodu.label }}</label>
+          {{ form.vergi_odeme_periyodu }}
+          {% if form.vergi_odeme_periyodu.errors %}<div class="tdk-error">{{ form.vergi_odeme_periyodu.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Sigorta poliçe numarası.">
+          <label class="tdk-label" for="{{ form.sigorta_police_no.id_for_label }}">{{ form.sigorta_police_no.label }}</label>
+          {{ form.sigorta_police_no }}
+          {% if form.sigorta_police_no.errors %}<div class="tdk-error">{{ form.sigorta_police_no.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Poliçeyi düzenleyen sigorta firması.">
+          <label class="tdk-label" for="{{ form.sigorta_firmasi.id_for_label }}">{{ form.sigorta_firmasi.label }}</label>
+          {{ form.sigorta_firmasi }}
+          {% if form.sigorta_firmasi.errors %}<div class="tdk-error">{{ form.sigorta_firmasi.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Sigorta poliçesi başlangıç tarihi.">
+          <label class="tdk-label" for="{{ form.sigorta_baslangic_tarihi.id_for_label }}">{{ form.sigorta_baslangic_tarihi.label }}</label>
+          {{ form.sigorta_baslangic_tarihi }}
+          {% if form.sigorta_baslangic_tarihi.errors %}<div class="tdk-error">{{ form.sigorta_baslangic_tarihi.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Sigorta poliçesi bitiş tarihi. Yenileme takibinde kullanılır.">
+          <label class="tdk-label" for="{{ form.sigorta_bitis_tarihi.id_for_label }}">{{ form.sigorta_bitis_tarihi.label }}</label>
+          {{ form.sigorta_bitis_tarihi }}
+          {% if form.sigorta_bitis_tarihi.errors %}<div class="tdk-error">{{ form.sigorta_bitis_tarihi.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Sigorta prim veya poliçe tutarı.">
+          <label class="tdk-label" for="{{ form.sigorta_tutari.id_for_label }}">{{ form.sigorta_tutari.label }}</label>
+          {{ form.sigorta_tutari }}
+          {% if form.sigorta_tutari.errors %}<div class="tdk-error">{{ form.sigorta_tutari.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Aidat veya site gideri tutarı.">
+          <label class="tdk-label" for="{{ form.aidat_site_gideri.id_for_label }}">{{ form.aidat_site_gideri.label }}</label>
+          {{ form.aidat_site_gideri }}
+          {% if form.aidat_site_gideri.errors %}<div class="tdk-error">{{ form.aidat_site_gideri.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help full" data-help="Bakım giderleri hakkında not.">
+          <label class="tdk-label" for="{{ form.bakim_giderleri_notu.id_for_label }}">{{ form.bakim_giderleri_notu.label }}</label>
+          {{ form.bakim_giderleri_notu }}
+          {% if form.bakim_giderleri_notu.errors %}<div class="tdk-error">{{ form.bakim_giderleri_notu.errors }}</div>{% endif %}
+        </div>
+      </div>
+    </section>
+
+    <section class="tdk-section">
+      <h2 class="tdk-section-title">
+        <span class="tdk-section-icon amber">📝</span>
+        Yönetim Notları
+      </h2>
+      <div class="tdk-grid">
+        <div class="tdk-field tdk-has-help full" data-help="Gayrimenkul yönetimine ilişkin dahili notlar.">
+          <label class="tdk-label" for="{{ form.yonetim_notlari.id_for_label }}">{{ form.yonetim_notlari.label }}</label>
+          {{ form.yonetim_notlari }}
+          {% if form.yonetim_notlari.errors %}<div class="tdk-error">{{ form.yonetim_notlari.errors }}</div>{% endif %}
+        </div>
+      </div>
+    </section>
+
+    <div class="tdk-footer">
+      <a href="{% if is_edit %}{% url 'stokapp:gayrimenkul_detay' gm.pk %}{% else %}{% url 'stokapp:gayrimenkul_listesi' %}{% endif %}" class="btn btn-secondary">İptal</a>
+      <button type="submit" class="btn btn-primary">💾 Kaydet</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

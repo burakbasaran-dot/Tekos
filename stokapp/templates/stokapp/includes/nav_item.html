@@ -1,0 +1,11 @@
+{% comment %}
+Kenar çubuğu menü öğesi. Gizli öğeler admin dışına gösterilmez; admin sönük önizleme görür.
+Parametreler: nav_key, href, icon, label
+{% endcomment %}
+{% if nav_key not in nav_hidden_items or rbac_is_admin %}
+<a href="{{ href }}"{% if nav_key in nav_hidden_items and rbac_is_admin %} class="nav-link-hidden-preview" title="Gizli — yalnızca yönetici görür"{% endif %}>
+  <span class="icon">{{ icon }}</span>
+  <span class="label">{{ label }}</span>
+  {% if nav_key in nav_hidden_items and rbac_is_admin %}<span class="nav-hidden-badge">Gizli</span>{% endif %}
+</a>
+{% endif %}

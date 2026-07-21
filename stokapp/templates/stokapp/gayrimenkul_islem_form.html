@@ -1,0 +1,97 @@
+{% extends "stokapp/base.html" %}
+{% block title %}{% if is_edit %}Yükümlülük düzenle{% else %}Yükümlülük ekle{% endif %} — {{ gm.ad }}{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <a href="{% url 'stokapp:gayrimenkul_detay' gm.pk %}?tab=takip" class="btn" style="background-color: #6b7280; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px;">
+                ← Geri
+            </a>
+            <h2 style="margin: 0;">{% if is_edit %}✏️ Yükümlülük düzenle{% else %}📋 Yükümlülük ekle{% endif %} — {{ gm.ad }}</h2>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 15px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" style="max-width: 800px;">
+        {% csrf_token %}
+        {{ form.gayrimenkul }}
+
+        <div style="margin-bottom: 20px;">
+            <label for="{{ form.islem_tipi.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.islem_tipi.label }} *</label>
+            {{ form.islem_tipi }}
+            {% if form.islem_tipi.errors %}<div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.islem_tipi.errors }}</div>{% endif %}
+        </div>
+        <div style="margin-bottom: 20px;">
+            <label for="{{ form.aciklama.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.aciklama.label }}</label>
+            {{ form.aciklama }}
+            {% if form.aciklama.errors %}<div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.aciklama.errors }}</div>{% endif %}
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+            <div>
+                <label for="{{ form.tutar.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.tutar.label }}</label>
+                {{ form.tutar }}
+                {% if form.tutar.errors %}<div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.tutar.errors }}</div>{% endif %}
+            </div>
+            <div>
+                <label for="{{ form.para_birimi.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.para_birimi.label }}</label>
+                {{ form.para_birimi }}
+                {% if form.para_birimi.errors %}<div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.para_birimi.errors }}</div>{% endif %}
+            </div>
+            <div>
+                <label for="{{ form.durum.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.durum.label }} *</label>
+                {{ form.durum }}
+                {% if form.durum.errors %}<div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.durum.errors }}</div>{% endif %}
+            </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+            <div>
+                <label for="{{ form.vade_tarihi.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.vade_tarihi.label }} *</label>
+                {{ form.vade_tarihi }}
+                {% if form.vade_tarihi.errors %}<div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.vade_tarihi.errors }}</div>{% endif %}
+            </div>
+            <div>
+                <label for="{{ form.odeme_tarihi.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.odeme_tarihi.label }}</label>
+                {{ form.odeme_tarihi }}
+                {% if form.odeme_tarihi.errors %}<div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.odeme_tarihi.errors }}</div>{% endif %}
+            </div>
+            <div>
+                <label for="{{ form.hatirlatma_tarihi.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.hatirlatma_tarihi.label }}</label>
+                {{ form.hatirlatma_tarihi }}
+                {% if form.hatirlatma_tarihi.errors %}<div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.hatirlatma_tarihi.errors }}</div>{% endif %}
+            </div>
+        </div>
+        <div style="margin-bottom: 20px;">
+            <label for="{{ form.dosya.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.dosya.label }}</label>
+            {{ form.dosya }}
+            {% if is_edit and islem.dosya %}
+            <div style="margin-top: 10px;">
+                <a href="{{ islem.dosya.url }}" target="_blank" style="color: #3b82f6;">Mevcut dosyayı görüntüle</a>
+            </div>
+            {% endif %}
+            {% if form.dosya.errors %}<div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.dosya.errors }}</div>{% endif %}
+        </div>
+        <div style="margin-bottom: 20px;">
+            <label for="{{ form.not_metni.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.not_metni.label }}</label>
+            {{ form.not_metni }}
+            {% if form.not_metni.errors %}<div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.not_metni.errors }}</div>{% endif %}
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 30px;">
+            <button type="submit" style="background-color: #22c55e; color: white; padding: 12px 24px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer;">
+                💾 Kaydet
+            </button>
+            <a href="{% url 'stokapp:gayrimenkul_detay' gm.pk %}?tab=takip" style="background-color: #6b7280; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-size: 16px; font-weight: 600; display: inline-block;">
+                İptal
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

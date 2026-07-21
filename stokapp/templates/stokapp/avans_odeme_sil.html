@@ -1,0 +1,72 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Avans Ödeme Sil{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <a href="{% url 'stokapp:gunluk_calisma_listesi' %}" class="btn" style="background-color: #6b7280; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px;">
+                ← Geri
+            </a>
+            <h2 style="margin: 0;">Avans Ödeme Sil</h2>
+        </div>
+    </div>
+    
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 15px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background: #fff3cd; color: #856404; border-left: 4px solid #ffc107;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+    
+    <div style="max-width: 600px;">
+        <div style="padding: 20px; background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; margin-bottom: 20px;">
+            <p style="margin: 0; color: #991b1b; font-weight: 600;">
+                ⚠️ Bu işlem geri alınamaz!
+            </p>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+            <p style="font-size: 16px; margin-bottom: 10px;">
+                <strong>{{ avans.personel.ad }} {{ avans.personel.soyad }}</strong> için yapılan avans ödeme kaydını silmek istediğinizden emin misiniz?
+            </p>
+            
+            <div style="background-color: #f9fafb; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                <div style="margin-bottom: 10px;">
+                    <strong>Tarih:</strong> {{ avans.tarih|date:"d.m.Y" }}
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <strong>Tutar:</strong> {{ avans.tutar|floatformat:2 }} TRY
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <strong>Ödeme Şekli:</strong> {{ avans.get_odeme_sekli_display|default:"-" }}
+                </div>
+                {% if avans.aciklama %}
+                <div>
+                    <strong>Açıklama:</strong> {{ avans.aciklama }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <form method="post">
+            {% csrf_token %}
+            <div style="display: flex; gap: 10px;">
+                <button type="submit" 
+                        class="btn" 
+                        style="background-color: #ef4444; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                    🗑️ Evet, Sil
+                </button>
+                <a href="{% url 'stokapp:gunluk_calisma_listesi' %}" 
+                   class="btn" 
+                   style="background-color: #6b7280; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                    İptal
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,731 @@
+
+{% extends "stokapp/base.html" %}
+{% load static %}
+
+{% block title %}{{ baslik }}{% endblock %}
+
+{% block content %}
+<style>
+  :root {
+    --primary: #2ecc71;
+    --primary-dark: #27ae60;
+    --success: #22c55e;
+    --danger: #e74c3c;
+    --warning: #f59e0b;
+    --info: #3b82f6;
+    --ink: #111827;
+    --muted: #6b7280;
+    --border: #e5e7eb;
+    --card: #ffffff;
+    --bg: #f5f7fb;
+  }
+
+  .form-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid var(--border);
+  }
+
+  .form-header h1 {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--ink);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .form-header .icon-large {
+    font-size: 36px;
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 10px;
+  }
+
+  .form-section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    transition: box-shadow 0.3s ease;
+  }
+
+  .form-section:hover {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  }
+
+  .form-section-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 24px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+    margin-bottom: 20px;
+  }
+
+  .form-grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  @media (max-width: 768px) {
+    .form-grid, .form-grid-3 {
+      grid-template-columns: 1fr;
+    }
+    .form-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 16px;
+    }
+  }
+
+  .form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .form-field.full-width {
+    grid-column: 1 / -1;
+  }
+
+  .form-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .form-label.required::after {
+    content: " *";
+    color: var(--danger);
+    font-weight: bold;
+  }
+
+  .form-control,
+  .form-select {
+    width: 100%;
+    padding: 14px 16px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    font-size: 15px;
+    background: #fff;
+    color: var(--ink);
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+    font-family: inherit;
+  }
+
+  .form-control:focus,
+  .form-select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px rgba(46, 204, 113, 0.1);
+  }
+
+  .form-control:hover,
+  .form-select:hover {
+    border-color: #cbd5e1;
+  }
+
+  .form-help {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .form-error {
+    font-size: 12px;
+    color: var(--danger);
+    margin-top: 6px;
+    padding: 8px 12px;
+    background: #fee;
+    border-radius: 6px;
+    border-left: 3px solid var(--danger);
+  }
+
+  .stok-info-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 12px;
+    margin-top: 16px;
+    display: none;
+  }
+
+  .stok-info-card.active {
+    display: block;
+  }
+
+  .stok-info-card h3 {
+    margin: 0 0 12px 0;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .stok-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+  }
+
+  .stok-info-item {
+    background: rgba(255, 255, 255, 0.15);
+    padding: 10px;
+    border-radius: 8px;
+    backdrop-filter: blur(10px);
+  }
+
+  .stok-info-item label {
+    font-size: 11px;
+    opacity: 0.9;
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .stok-info-item .value {
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+  }
+
+  .btn-primary {
+    background: var(--primary);
+    color: white;
+    box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
+  }
+
+  .btn-primary:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(46, 204, 113, 0.4);
+  }
+
+  .btn-secondary {
+    background: #f3f4f6;
+    color: var(--ink);
+    border: 2px solid var(--border);
+  }
+
+  .btn-secondary:hover {
+    background: #e5e7eb;
+    border-color: #d1d5db;
+  }
+
+  .form-actions-bottom {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    padding-top: 20px;
+    border-top: 2px solid var(--border);
+    margin-top: 24px;
+  }
+
+  .input-icon {
+    position: relative;
+  }
+
+  .input-icon input {
+    padding-left: 40px;
+  }
+
+  .input-icon::before {
+    content: "🔍";
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 16px;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .select-with-add {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .select-with-add select {
+    flex: 1;
+  }
+
+  .add-btn-small {
+    padding: 14px 16px;
+    background: var(--info);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .add-btn-small:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+  }
+
+  .alert {
+    padding: 14px 18px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+  }
+
+  .alert-info {
+    background: #dbeafe;
+    color: #1e40af;
+    border-left: 4px solid var(--info);
+  }
+
+  .alert-success {
+    background: #d1fae5;
+    color: #065f46;
+    border-left: 4px solid var(--success);
+  }
+</style>
+
+<div class="form-header">
+  <h1>
+    <span class="icon-large">{% if baslik == 'Stok Girişi' %}📥{% else %}📤{% endif %}</span>
+    <span>{{ baslik }}</span>
+  </h1>
+  <div class="form-actions">
+    <a class="btn btn-secondary" href="{% url 'stokapp:stok_listesi' %}">
+      <span>←</span>
+      <span>Stok Listesi</span>
+    </a>
+  </div>
+</div>
+
+{% if messages %}
+  {% for message in messages %}
+    <div class="alert alert-{{ message.tags }}">
+      <span>{{ message }}</span>
+    </div>
+  {% endfor %}
+{% endif %}
+
+<div class="alert alert-info">
+  <span>ℹ️</span>
+  <span>Stok hareketi kaydedildikten sonra stok miktarı otomatik olarak güncellenecektir.</span>
+</div>
+
+<form method="post" id="hareketForm">
+  {% csrf_token %}
+
+  <div class="form-section">
+    <div class="form-section-title">
+      <span>📦</span>
+      <span>Stok Bilgileri</span>
+    </div>
+
+    <div class="form-grid">
+      <div class="form-field full-width">
+        <label class="form-label required" for="{{ form.stok_item.id_for_label }}">
+          <span>Stok Ürünü</span>
+        </label>
+        {% if hareket %}
+          {# Düzenleme modunda - readonly #}
+          <input type="text" 
+                 class="form-control"
+                 value="{{ hareket.stok_item.stok_kodu }} - {{ hareket.stok_item.ad }}"
+                 readonly
+                 style="background: #f3f4f6; cursor: not-allowed;">
+          <input type="hidden" name="{{ form.stok_item.name }}" value="{{ hareket.stok_item.pk }}">
+        {% else %}
+          {# Yeni kayıt modu #}
+          <div class="input-icon">
+            <input type="text" 
+                   id="stokSearchInput" 
+                   class="form-control"
+                   placeholder="Stok kodu veya adı ile arama yapın..."
+                   value="{% if preselected_stok %}{{ preselected_stok.stok_kodu }} - {{ preselected_stok.ad }}{% endif %}"
+                   autocomplete="off">
+          </div>
+          <select name="{{ form.stok_item.name }}" 
+                  id="{{ form.stok_item.id_for_label }}" 
+                  class="form-select"
+                  style="margin-top: 8px;"
+                  required>
+            <option value="">Stok seçiniz...</option>
+            {% for stok in form.stok_item.field.queryset %}
+              <option value="{{ stok.pk }}" 
+                      data-kod="{{ stok.stok_kodu }}"
+                      data-ad="{{ stok.ad }}"
+                      data-birim="{{ stok.birim }}"
+                      data-mevcut="{{ stok.mevcut_miktar }}"
+                      data-min="{{ stok.minimum_stok }}"
+                      data-max="{{ stok.maximum_stok }}"
+                      data-search="{{ stok.stok_kodu|lower }} {{ stok.ad|lower }}"
+                      {% if preselected_stok and preselected_stok.pk == stok.pk %}selected{% elif form.stok_item.value|stringformat:"s" == stok.pk|stringformat:"s" %}selected{% endif %}>
+                {{ stok.stok_kodu }} - {{ stok.ad }}
+              </option>
+            {% endfor %}
+          </select>
+          <div class="form-help">
+            <span>💡</span>
+            <span>Yukarıdaki arama kutusuna yazarak stok arayabilirsiniz</span>
+          </div>
+        {% endif %}
+        {% if form.stok_item.errors %}
+          <div class="form-error">{{ form.stok_item.errors }}</div>
+        {% endif %}
+      </div>
+
+      <div class="stok-info-card" id="stokInfoCard">
+        <h3>📊 Seçili Stok Bilgileri</h3>
+        <div class="stok-info-grid">
+          <div class="stok-info-item">
+            <label>Stok Kodu</label>
+            <div class="value" id="infoKod">-</div>
+          </div>
+          <div class="stok-info-item">
+            <label>Birim</label>
+            <div class="value" id="infoBirim">-</div>
+          </div>
+          <div class="stok-info-item">
+            <label>Mevcut Miktar</label>
+            <div class="value" id="infoMevcut">-</div>
+          </div>
+          <div class="stok-info-item">
+            <label>Min. Stok</label>
+            <div class="value" id="infoMin">-</div>
+          </div>
+          <div class="stok-info-item">
+            <label>Max. Stok</label>
+            <div class="value" id="infoMax">-</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-section-title">
+      <span>📋</span>
+      <span>Hareket Detayları</span>
+    </div>
+
+    <div class="form-grid">
+      {% if hareket and form.hareket_tipi %}
+      <div class="form-field">
+        <label class="form-label required" for="{{ form.hareket_tipi.id_for_label }}">
+          <span>Hareket Tipi</span>
+        </label>
+        <select name="{{ form.hareket_tipi.name }}" 
+                id="{{ form.hareket_tipi.id_for_label }}" 
+                class="form-select"
+                required>
+          {% for value, label in form.hareket_tipi.field.choices %}
+            {% if value %}
+              <option value="{{ value }}" {% if form.hareket_tipi.value == value %}selected{% endif %}>{{ label }}</option>
+            {% endif %}
+          {% endfor %}
+        </select>
+        {% if form.hareket_tipi.errors %}
+          <div class="form-error">{{ form.hareket_tipi.errors }}</div>
+        {% endif %}
+      </div>
+      {% endif %}
+      
+      <div class="form-field">
+        <label class="form-label required" for="{{ form.miktar.id_for_label }}">
+          <span>Miktar</span>
+        </label>
+        <input type="number" 
+               name="{{ form.miktar.name }}" 
+               id="{{ form.miktar.id_for_label }}" 
+               class="form-control"
+               step="0.001"
+               min="0"
+               placeholder="0.000"
+               value="{{ form.miktar.value|default:'' }}"
+               required>
+        {% if form.miktar.errors %}
+          <div class="form-error">{{ form.miktar.errors }}</div>
+        {% endif %}
+      </div>
+
+      <div class="form-field">
+        <label class="form-label" for="{{ form.birim.id_for_label }}">
+          <span>Birim</span>
+        </label>
+        <select name="{{ form.birim.name }}" 
+                id="{{ form.birim.id_for_label }}" 
+                class="form-select">
+          <option value="">Birim seçiniz...</option>
+          {% for birim in birimler %}
+            <option value="{{ birim.ad }}" {% if form.birim.value == birim.ad %}selected{% endif %}>{{ birim.ad }}</option>
+          {% endfor %}
+        </select>
+        {% if form.birim.errors %}
+          <div class="form-error">{{ form.birim.errors }}</div>
+        {% endif %}
+        <div class="form-help">
+          <span>💡</span>
+          <span>Stok seçildiğinde birim otomatik doldurulacaktır</span>
+        </div>
+      </div>
+
+      <div class="form-field full-width">
+        <label class="form-label" for="{{ form.referans_no.id_for_label }}">
+          <span>Referans No</span>
+        </label>
+        <input type="text" 
+               name="{{ form.referans_no.name }}" 
+               id="{{ form.referans_no.id_for_label }}" 
+               class="form-control"
+               placeholder="Örn: FAT-2024-001, İRS-12345"
+               value="{{ form.referans_no.value|default:'' }}">
+        {% if form.referans_no.errors %}
+          <div class="form-error">{{ form.referans_no.errors }}</div>
+        {% endif %}
+        <div class="form-help">
+          <span>💡</span>
+          <span>Fatura, irsaliye veya diğer referans numarası (opsiyonel)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-section">
+    <div class="form-actions-bottom">
+      <a class="btn btn-secondary" href="{% url 'stokapp:stok_listesi' %}">
+        <span>✕</span>
+        <span>Vazgeç</span>
+      </a>
+      <button class="btn btn-primary" type="submit">
+        <span>{% if baslik == 'Stok Girişi' %}✓{% else %}→{% endif %}</span>
+        <span>{{ buton }}</span>
+      </button>
+    </div>
+  </div>
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const stokSelect = document.getElementById('{{ form.stok_item.id_for_label }}');
+  const stokSearchInput = document.getElementById('stokSearchInput');
+  const birimSelect = document.getElementById('{{ form.birim.id_for_label }}');
+  const miktarInput = document.getElementById('{{ form.miktar.id_for_label }}');
+  const stokInfoCard = document.getElementById('stokInfoCard');
+  
+  // Stok arama özelliği (sadece yeni kayıt modunda)
+  let isUpdatingFromSelect = false; // Select'ten güncelleme yapılıyor mu kontrolü
+  const isEditMode = {% if hareket %}true{% else %}false{% endif %};
+  
+  if (stokSearchInput && stokSelect && !isEditMode) {
+    stokSearchInput.addEventListener('input', function() {
+      // Eğer select'ten güncelleme yapılıyorsa, input event'ini görmezden gel
+      if (isUpdatingFromSelect) {
+        return;
+      }
+      
+      const searchTerm = this.value.toLowerCase().trim();
+      const options = stokSelect.options;
+      
+      if (searchTerm === '') {
+        // Arama boşsa tüm seçenekleri göster ve seçimi temizle
+        for (let i = 0; i < options.length; i++) {
+          options[i].style.display = '';
+        }
+        stokSelect.selectedIndex = 0; // İlk seçeneği seç (boş seçenek)
+        stokSelect.dispatchEvent(new Event('change'));
+        return;
+      }
+      
+      // Seçenekleri filtrele - SADECE FİLTRELE, SEÇME!
+      let visibleCount = 0;
+      for (let i = 1; i < options.length; i++) {
+        const searchText = options[i].getAttribute('data-search') || '';
+        if (searchText.includes(searchTerm)) {
+          options[i].style.display = '';
+          visibleCount++;
+        } else {
+          options[i].style.display = 'none';
+        }
+      }
+      
+      // Eğer hiç eşleşme yoksa, seçimi temizle
+      if (visibleCount === 0) {
+        stokSelect.selectedIndex = 0;
+        stokSelect.dispatchEvent(new Event('change'));
+      }
+      // Eğer sadece bir eşleşme varsa, onu seç (kullanıcı deneyimi için)
+      else if (visibleCount === 1) {
+        // Tek eşleşme varsa bile otomatik seçme, kullanıcı Enter'a basana kadar bekle
+      }
+    });
+    
+    // Enter tuşuna basıldığında ilk görünür seçeneği seç
+    stokSearchInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        // Tüm seçenekleri kontrol et (display none olmayan)
+        for (let i = 1; i < stokSelect.options.length; i++) {
+          if (stokSelect.options[i].style.display !== 'none' && stokSelect.options[i].value) {
+            stokSelect.selectedIndex = i;
+            stokSelect.dispatchEvent(new Event('change'));
+            this.blur();
+            break;
+          }
+        }
+      }
+      
+      // Escape tuşu ile aramayı temizle
+      if (e.key === 'Escape') {
+        this.value = '';
+        this.dispatchEvent(new Event('input'));
+        this.blur();
+      }
+    });
+    
+    // Arama kutusuna odaklanıldığında dropdown'ı aç
+    stokSearchInput.addEventListener('focus', function() {
+      stokSelect.size = Math.min(10, stokSelect.options.length);
+      stokSelect.style.position = 'relative';
+    });
+    
+    // Arama kutusundan çıkıldığında dropdown'ı kapat
+    stokSearchInput.addEventListener('blur', function() {
+      // Biraz gecikme ile kapat (tıklama event'lerinin çalışması için)
+      setTimeout(() => {
+        stokSelect.size = 1;
+      }, 200);
+    });
+  }
+  
+  // Stok seçildiğinde bilgileri göster
+  if (stokSelect) {
+    stokSelect.addEventListener('change', function() {
+      const selectedOption = this.options[this.selectedIndex];
+      if (selectedOption && selectedOption.value) {
+        const kod = selectedOption.getAttribute('data-kod');
+        const birim = selectedOption.getAttribute('data-birim');
+        const mevcut = selectedOption.getAttribute('data-mevcut');
+        const min = selectedOption.getAttribute('data-min');
+        const max = selectedOption.getAttribute('data-max');
+        
+        document.getElementById('infoKod').textContent = kod || '-';
+        document.getElementById('infoBirim').textContent = birim || '-';
+        document.getElementById('infoMevcut').textContent = mevcut ? parseFloat(mevcut).toLocaleString('tr-TR', {minimumFractionDigits: 3, maximumFractionDigits: 3}) : '-';
+        document.getElementById('infoMin').textContent = min ? parseFloat(min).toLocaleString('tr-TR', {minimumFractionDigits: 3, maximumFractionDigits: 3}) : '-';
+        document.getElementById('infoMax').textContent = max ? parseFloat(max).toLocaleString('tr-TR', {minimumFractionDigits: 3, maximumFractionDigits: 3}) : '-';
+        
+        stokInfoCard.classList.add('active');
+        
+        // Arama kutusunu güncelle (döngüyü önlemek için flag kullan)
+        if (stokSearchInput) {
+          isUpdatingFromSelect = true;
+          stokSearchInput.value = kod || '';
+          // Tüm seçenekleri göster
+          for (let i = 0; i < stokSelect.options.length; i++) {
+            stokSelect.options[i].style.display = '';
+          }
+          setTimeout(() => {
+            isUpdatingFromSelect = false;
+          }, 100);
+        }
+        
+        // Birim alanını otomatik doldur (eğer boşsa)
+        if (birim && birimSelect) {
+          // Birim select'inde bu birimi bul ve seç
+          for (let i = 0; i < birimSelect.options.length; i++) {
+            if (birimSelect.options[i].value === birim || birimSelect.options[i].textContent.trim() === birim) {
+              birimSelect.selectedIndex = i;
+              break;
+            }
+          }
+        }
+      } else {
+        stokInfoCard.classList.remove('active');
+        if (stokSearchInput) {
+          isUpdatingFromSelect = true;
+          stokSearchInput.value = '';
+          // Tüm seçenekleri göster
+          for (let i = 0; i < stokSelect.options.length; i++) {
+            stokSelect.options[i].style.display = '';
+          }
+          setTimeout(() => {
+            isUpdatingFromSelect = false;
+          }, 100);
+        }
+      }
+    });
+    
+    // Sayfa yüklendiğinde eğer stok seçiliyse bilgileri göster
+    if (stokSelect.value) {
+      stokSelect.dispatchEvent(new Event('change'));
+    }
+  }
+  
+  // Form gönderilmeden önce validasyon
+  const form = document.getElementById('hareketForm');
+  if (form) {
+    form.addEventListener('submit', function(e) {
+      if (!stokSelect.value) {
+        e.preventDefault();
+        alert('Lütfen bir stok seçiniz!');
+        stokSelect.focus();
+        return false;
+      }
+      
+      if (!miktarInput.value || parseFloat(miktarInput.value) <= 0) {
+        e.preventDefault();
+        alert('Miktar 0\'dan büyük olmalıdır!');
+        miktarInput.focus();
+        return false;
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,275 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Belge Detay - {{ document.title }}{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div>
+            <h2 style="margin: 0 0 5px 0;">{{ document.title }}</h2>
+            {% if document.document_no %}
+            <p style="margin: 0; color: #6b7280; font-size: 14px;">Belge No: {{ document.document_no }}</p>
+            {% endif %}
+            <div style="display: flex; gap: 15px; margin-top: 15px;">
+                <a href="{% url 'stokapp:document_listesi' %}" 
+                   class="btn" 
+                   style="background-color: #6b7280; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-size: 14px;">
+                    ← Geri
+                </a>
+                <a href="{% url 'stokapp:document_duzenle' document.pk %}" 
+                   class="btn" 
+                   style="background-color: #3b82f6; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-size: 14px;">
+                    ✏️ Düzenle
+                </a>
+                <a href="{% url 'stokapp:document_dosya_yukle' document.pk %}" 
+                   class="btn" 
+                   style="background-color: #22c55e; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-size: 14px;">
+                    📎 Dosya Yükle
+                </a>
+            </div>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 15px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background: #fff3cd; color: #856404; border-left: 4px solid #ffc107;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Belge Bilgileri -->
+    <div style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; margin-bottom: 30px;">
+        <h3 style="margin: 0 0 20px 0; font-size: 20px; color: #111827; border-bottom: 2px solid #3b82f6; padding-bottom: 10px;">
+            📋 Belge Bilgileri
+        </h3>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+            <div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 600; color: #6b7280; font-size: 13px; margin-bottom: 5px;">Belge Türü</label>
+                    <div style="font-size: 16px; color: #111827; font-weight: 500;">{{ document.type.name }}</div>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 600; color: #6b7280; font-size: 13px; margin-bottom: 5px;">Veren Makam</label>
+                    <div style="font-size: 16px; color: #111827;">{{ document.issuer_authority }}</div>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 600; color: #6b7280; font-size: 13px; margin-bottom: 5px;">Evrak Tarihi</label>
+                    <div style="font-size: 16px; color: #111827;">{{ document.issue_date|date:"d.m.Y" }}</div>
+                </div>
+            </div>
+            
+            <div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 600; color: #6b7280; font-size: 13px; margin-bottom: 5px;">Geçerlilik</label>
+                    <div style="font-size: 16px; color: #111827; font-weight: 500;">
+                        {% if document.valid_until %}
+                            {% if days_remaining < 0 %}
+                                <span style="color: #dc3545; font-weight: 600;">{{ document.valid_until|date:"d.m.Y" }} ({{ days_remaining }} gün önce doldu)</span>
+                            {% elif days_remaining <= 30 %}
+                                <span style="color: #f59e0b; font-weight: 600;">{{ document.valid_until|date:"d.m.Y" }} ({{ days_remaining }} gün kaldı)</span>
+                            {% else %}
+                                {{ document.valid_until|date:"d.m.Y" }} ({{ days_remaining }} gün kaldı)
+                            {% endif %}
+                        {% else %}
+                        <span style="color: #6b7280;">Süresiz</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 600; color: #6b7280; font-size: 13px; margin-bottom: 5px;">Durum</label>
+                    <div>
+                        {% if document.status == 'ACTIVE' %}
+                        <span style="background-color: #22c55e; color: white; padding: 4px 12px; border-radius: 12px; font-size: 14px; font-weight: 500;">Aktif</span>
+                        {% elif document.status == 'EXPIRING' %}
+                        <span style="background-color: #f59e0b; color: white; padding: 4px 12px; border-radius: 12px; font-size: 14px; font-weight: 500;">Süresi Yaklaşıyor</span>
+                        {% elif document.status == 'EXPIRED' %}
+                        <span style="background-color: #dc3545; color: white; padding: 4px 12px; border-radius: 12px; font-size: 14px; font-weight: 500;">Süresi Dolmuş</span>
+                        {% else %}
+                        <span style="background-color: #6b7280; color: white; padding: 4px 12px; border-radius: 12px; font-size: 14px; font-weight: 500;">{{ document.get_status_display }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 600; color: #6b7280; font-size: 13px; margin-bottom: 5px;">Risk Seviyesi</label>
+                    <div>
+                        {% if document.risk_level == 'HIGH' %}
+                        <span style="background-color: #dc3545; color: white; padding: 4px 12px; border-radius: 12px; font-size: 14px; font-weight: 500;">Yüksek</span>
+                        {% elif document.risk_level == 'MEDIUM' %}
+                        <span style="background-color: #f59e0b; color: white; padding: 4px 12px; border-radius: 12px; font-size: 14px; font-weight: 500;">Orta</span>
+                        {% else %}
+                        <span style="background-color: #22c55e; color: white; padding: 4px 12px; border-radius: 12px; font-size: 14px; font-weight: 500;">Düşük</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        {% if document.description %}
+        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+            <label style="display: block; font-weight: 600; color: #6b7280; font-size: 13px; margin-bottom: 5px;">Açıklama</label>
+            <div style="font-size: 14px; color: #111827; line-height: 1.6; white-space: pre-wrap;">{{ document.description }}</div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Dosyalar -->
+    <div style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; margin-bottom: 30px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 2px solid #3b82f6; padding-bottom: 10px;">
+            <h3 style="margin: 0; font-size: 20px; color: #111827;">
+                📎 Dosyalar
+            </h3>
+            <a href="{% url 'stokapp:document_dosya_yukle' document.pk %}" 
+               style="padding: 10px 20px; background-color: #22c55e; color: white; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px;">
+                <span>+</span> Yeni Dosya Yükle
+            </a>
+        </div>
+        
+        {% if files %}
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background-color: #f9fafb;">
+                        <th style="padding: 10px; text-align: left; font-size: 12px; color: #6b7280; font-weight: 600;">Versiyon</th>
+                        <th style="padding: 10px; text-align: left; font-size: 12px; color: #6b7280; font-weight: 600;">Dosya Adı</th>
+                        <th style="padding: 10px; text-align: left; font-size: 12px; color: #6b7280; font-weight: 600;">Boyut</th>
+                        <th style="padding: 10px; text-align: left; font-size: 12px; color: #6b7280; font-weight: 600;">Yüklenme</th>
+                        <th style="padding: 10px; text-align: left; font-size: 12px; color: #6b7280; font-weight: 600;">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for file in files %}
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 10px;">
+                            <span style="background-color: {% if file.is_current %}#22c55e{% else %}#e5e7eb{% endif %}; color: {% if file.is_current %}white{% else %}#6b7280{% endif %}; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">
+                                v{{ file.version_no }}{% if file.is_current %} (Güncel){% endif %}
+                            </span>
+                        </td>
+                        <td style="padding: 10px; font-size: 14px;">{{ file.file_name_original }}</td>
+                        <td style="padding: 10px; font-size: 13px; color: #6b7280;">
+                            {{ file.get_file_size_display }}
+                        </td>
+                        <td style="padding: 10px; font-size: 13px; color: #6b7280;">
+                            {{ file.uploaded_at|date:"d.m.Y H:i" }}
+                            {% if file.uploaded_by %}
+                            <br><small>{{ file.uploaded_by.get_full_name|default:file.uploaded_by.username }}</small>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 10px;">
+                            <a href="{% url 'stokapp:document_dosya_indir' file.pk %}" 
+                               style="padding: 6px 12px; background-color: #3b82f6; color: white; border-radius: 4px; text-decoration: none; font-size: 12px;">
+                                ⬇️ İndir
+                            </a>
+                        </td>
+                    </tr>
+                    {% if file.change_note %}
+                    <tr>
+                        <td colspan="5" style="padding: 0 10px 10px 10px;">
+                            <div style="background-color: #f9fafb; padding: 8px; border-radius: 4px; font-size: 12px; color: #6b7280;">
+                                <strong>Not:</strong> {{ file.change_note }}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 40px; color: #6b7280;">
+            Henüz dosya yüklenmemiş. <a href="{% url 'stokapp:document_dosya_yukle' document.pk %}">İlk dosyayı yükleyin</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Yenilemeler -->
+    {% if renewals %}
+    <div style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px; margin-bottom: 30px;">
+        <h3 style="margin: 0 0 20px 0; font-size: 20px; color: #111827; border-bottom: 2px solid #3b82f6; padding-bottom: 10px;">
+            🔄 Yenilemeler
+        </h3>
+        
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background-color: #f9fafb;">
+                        <th style="padding: 10px; text-align: left; font-size: 12px; color: #6b7280; font-weight: 600;">Talep Tarihi</th>
+                        <th style="padding: 10px; text-align: left; font-size: 12px; color: #6b7280; font-weight: 600;">Hedef Tarih</th>
+                        <th style="padding: 10px; text-align: left; font-size: 12px; color: #6b7280; font-weight: 600;">Durum</th>
+                        <th style="padding: 10px; text-align: left; font-size: 12px; color: #6b7280; font-weight: 600;">Dış Referans</th>
+                        <th style="padding: 10px; text-align: left; font-size: 12px; color: #6b7280; font-weight: 600;">Talep Eden</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for renewal in renewals %}
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 10px; font-size: 13px;">{{ renewal.requested_at|date:"d.m.Y H:i" }}</td>
+                        <td style="padding: 10px; font-size: 13px;">
+                            {% if renewal.renewal_due_date %}
+                            {{ renewal.renewal_due_date|date:"d.m.Y" }}
+                            {% else %}-{% endif %}
+                        </td>
+                        <td style="padding: 10px;">
+                            <span style="background-color: #eff6ff; color: #1e40af; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500;">
+                                {{ renewal.get_status_display }}
+                            </span>
+                        </td>
+                        <td style="padding: 10px; font-size: 13px;">{{ renewal.external_reference|default:"-" }}</td>
+                        <td style="padding: 10px; font-size: 13px;">
+                            {% if renewal.requested_by %}
+                            {{ renewal.requested_by.get_full_name|default:renewal.requested_by.username }}
+                            {% else %}-{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Olaylar (Audit Log) -->
+    {% if events %}
+    <div style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px;">
+        <h3 style="margin: 0 0 20px 0; font-size: 20px; color: #111827; border-bottom: 2px solid #3b82f6; padding-bottom: 10px;">
+            📊 İşlem Geçmişi
+        </h3>
+        
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background-color: #f9fafb;">
+                        <th style="padding: 10px; text-align: left; font-size: 12px; color: #6b7280; font-weight: 600;">Tarih</th>
+                        <th style="padding: 10px; text-align: left; font-size: 12px; color: #6b7280; font-weight: 600;">Olay</th>
+                        <th style="padding: 10px; text-align: left; font-size: 12px; color: #6b7280; font-weight: 600;">Kullanıcı</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for event in events %}
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 10px; font-size: 13px; color: #111827;">{{ event.created_at|date:"d.m.Y H:i" }}</td>
+                        <td style="padding: 10px; font-size: 13px;">
+                            <span style="background-color: #eff6ff; color: #1e40af; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 500;">
+                                {{ event.get_event_type_display }}
+                            </span>
+                        </td>
+                        <td style="padding: 10px; font-size: 13px; color: #111827;">
+                            {% if event.created_by %}
+                            {{ event.created_by.get_full_name|default:event.created_by.username }}
+                            {% else %}-{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

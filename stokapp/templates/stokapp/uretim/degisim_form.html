@@ -1,0 +1,124 @@
+{% extends "stokapp/base.html" %}
+{% block title %}{% if is_edit %}Üretim Değişiklik Kaydı Düzenle{% else %}Yeni Üretim Değişiklik Kaydı{% endif %}{% endblock %}
+{% block content %}
+<style>
+  .dg-wrap{max-width:1100px;margin:0 auto}
+  .dg-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+  .dg-header h1{margin:0;font-size:28px}
+  .dg-card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:22px;box-shadow:0 2px 10px rgba(0,0,0,.04)}
+  .dg-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+  .dg-field label{display:block;font-weight:600;margin-bottom:7px;color:#374151}
+  .dg-field input,.dg-field textarea,.dg-field select{width:100%;padding:11px 12px;border:1px solid #d1d5db;border-radius:10px}
+  .dg-field input:focus,.dg-field textarea:focus,.dg-field select:focus{outline:none;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.12)}
+  .dg-checks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:12px}
+  .dg-checks label{display:flex;align-items:center;gap:8px;font-weight:600}
+  .dg-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:18px}
+  .search-input{width:100%;padding:11px 12px;border:1px solid #d1d5db;border-radius:10px;margin-bottom:8px}
+  @media (max-width: 900px){.dg-grid{grid-template-columns:1fr}.dg-checks{grid-template-columns:1fr}}
+</style>
+
+<div class="dg-wrap">
+  <div class="dg-header">
+    <h1>{% if is_edit %}✏️ Üretim Değişiklik Kaydı{% else %}🛠️ Yeni Üretim Değişiklik Kaydı{% endif %}</h1>
+    <a class="btn btn-secondary" href="{% url 'stokapp:uretim_degisim_listesi' %}">← Listeye Dön</a>
+  </div>
+
+  <form method="post" class="dg-card">
+    {% csrf_token %}
+    <div class="dg-grid">
+      <div class="dg-field">
+        <label>{{ form.urun.label }}</label>
+        <input type="text" id="urun-search" class="search-input" placeholder="Ürün kodu veya ad yazarak ara...">
+        {{ form.urun }}
+        {% if form.urun.errors %}<div style="color:#dc2626;font-size:13px;margin-top:6px;">{{ form.urun.errors }}</div>{% endif %}
+      </div>
+      <div class="dg-field">
+        <label>{{ form.degisiklik_tipi.label }}</label>
+        {{ form.degisiklik_tipi }}
+      </div>
+      <div class="dg-field" style="grid-column:1 / -1;">
+        <label>{{ form.baslik.label }}</label>
+        {{ form.baslik }}
+      </div>
+      <div class="dg-field" style="grid-column:1 / -1;">
+        <label>{{ form.aciklama.label }}</label>
+        {{ form.aciklama }}
+      </div>
+      <div class="dg-field">
+        <label>{{ form.oncelik.label }}</label>
+        {{ form.oncelik }}
+      </div>
+      <div class="dg-field">
+        <label>{{ form.termin_tarihi.label }}</label>
+        {{ form.termin_tarihi }}
+      </div>
+      <div class="dg-field">
+        <label>{{ form.durum.label }}</label>
+        {{ form.durum }}
+      </div>
+      <div class="dg-field" style="grid-column:1 / -1;">
+        <label>Güncelleme Etki Alanları</label>
+        <div class="dg-checks">
+          <label>{{ form.teknik_resim_guncellenecek }} Teknik Resim</label>
+          <label>{{ form.kati_model_guncellenecek }} Katı Model</label>
+          <label>{{ form.tekos_recete_guncellenecek }} Tekos Reçetesi</label>
+          <label>{{ form.cnc_programi_guncellenecek }} CNC Programı</label>
+        </div>
+      </div>
+      <div class="dg-field" style="grid-column:1 / -1;">
+        <label>{{ form.ek_not.label }}</label>
+        {{ form.ek_not }}
+      </div>
+      <div class="dg-field" style="grid-column:1 / -1;">
+        <label>{{ form.kapatma_notu.label }}</label>
+        {{ form.kapatma_notu }}
+      </div>
+    </div>
+    <div class="dg-footer">
+      {% if is_edit and kayit and kayit.durum != 'TAMAMLANDI' %}
+      <button type="submit" class="btn btn-secondary">Kaydet</button>
+      {% else %}
+      <button type="submit" class="btn btn-primary">Kaydet</button>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+<script>
+function normalizeSearchText(value) {
+  return (value || '').toLocaleLowerCase('tr-TR').replace(/\u0307/g, '').normalize('NFC').trim();
+}
+
+function initUrunSearch() {
+  const urunSelect = document.getElementById('id_urun');
+  const searchInput = document.getElementById('urun-search');
+  if (!urunSelect || !searchInput) return;
+
+  const allOptions = Array.from(urunSelect.options).map(o => ({ value: o.value, label: o.textContent || '' }));
+  const rebuild = (query) => {
+    const selectedValue = urunSelect.value;
+    const q = normalizeSearchText(query);
+    urunSelect.innerHTML = '';
+    allOptions.forEach(opt => {
+      if (!q || !opt.value || normalizeSearchText(opt.label).includes(q)) {
+        const node = document.createElement('option');
+        node.value = opt.value;
+        node.textContent = opt.label;
+        if (opt.value === selectedValue) node.selected = true;
+        urunSelect.appendChild(node);
+      }
+    });
+  };
+
+  searchInput.addEventListener('input', (e) => rebuild(e.target.value));
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      urunSelect.focus();
+    }
+  });
+}
+
+initUrunSearch();
+</script>
+{% endblock %}

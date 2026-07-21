@@ -1,0 +1,49 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Reçete Sil - {{ recete.urun.stok_kodu }}{% endblock %}
+{% block content %}
+<div class="card" style="max-width: 600px; margin: 0 auto;">
+    <div style="text-align: center; margin-bottom: 30px;">
+        <div style="font-size: 64px; margin-bottom: 20px;">⚠️</div>
+        <h2>Reçete Sil</h2>
+        <p style="color: #6b7280; margin-top: 10px;">
+            Bu reçeteyi silmek istediğinizden emin misiniz?
+        </p>
+    </div>
+    
+    <div style="background: #f9fafb; padding: 20px; border-radius: 12px; margin-bottom: 30px;">
+        <div style="margin-bottom: 15px;">
+            <div style="color: #6b7280; font-size: 12px; margin-bottom: 5px;">Ürün</div>
+            <div style="font-size: 16px; font-weight: 600; color: #111827;">
+                {{ recete.urun.stok_kodu }} - {{ recete.urun.ad }}
+            </div>
+        </div>
+        <div style="margin-bottom: 15px;">
+            <div style="color: #6b7280; font-size: 12px; margin-bottom: 5px;">Versiyon</div>
+            <div style="font-size: 14px; color: #111827;">v{{ recete.versiyon }}</div>
+        </div>
+        <div>
+            <div style="color: #6b7280; font-size: 12px; margin-bottom: 5px;">Durum</div>
+            <div>
+                {% if recete.aktif %}
+                <span style="padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; background: #d4edda; color: #155724;">
+                    ✅ Aktif
+                </span>
+                {% else %}
+                <span style="padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; background: #f8d7da; color: #721c24;">
+                    ❌ Pasif
+                </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <form method="post" style="display: flex; gap: 10px; justify-content: center;">
+        {% csrf_token %}
+        <a href="{% url 'stokapp:recete_detay' recete.pk %}" class="btn btn-secondary">İptal</a>
+        <button type="submit" class="btn" style="background: #dc3545; color: white;">
+            🗑️ Evet, Sil
+        </button>
+    </form>
+</div>
+{% endblock %}
+

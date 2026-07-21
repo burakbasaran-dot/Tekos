@@ -1,0 +1,225 @@
+{% extends "stokapp/base.html" %}
+{% load static %}
+{% block title %}Yeni Personel Ekle{% endblock %}
+{% block content %}
+{% include "stokapp/includes/tdk_form_styles.html" %}
+
+<style>
+  .tdk-personel-top {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 220px;
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .tdk-personel-top { grid-template-columns: 1fr; }
+  }
+  .tdk-photo-box {
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    text-align: center;
+  }
+  .tdk-photo-preview {
+    width: 100%;
+    max-width: 180px;
+    height: 220px;
+    margin: 0 auto 14px;
+    border: 2px dashed #cbd5e1;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    overflow: hidden;
+  }
+  .tdk-photo-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .tdk-photo-hint {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 8px;
+    line-height: 1.45;
+  }
+</style>
+
+<div class="tdk-page">
+  <div class="tdk-header">
+    <div>
+      <h1>👤 Yeni Personel Ekle</h1>
+      <p>Personel kaydı, iletişim ve nüfus bilgilerini tek ekrandan oluşturun.</p>
+    </div>
+    <a href="{% url 'stokapp:personel_listesi' %}" class="btn btn-secondary">← Geri</a>
+  </div>
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="tdk-alert {% if message.tags == 'error' %}tdk-alert-error{% elif message.tags == 'warning' %}tdk-alert-warning{% else %}tdk-alert-success{% endif %}">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="post" enctype="multipart/form-data" class="tdk-form-card">
+    {% csrf_token %}
+
+    <section class="tdk-section">
+      <h2 class="tdk-section-title">
+        <span class="tdk-section-icon">📋</span>
+        Temel Bilgiler
+      </h2>
+      <div class="tdk-personel-top">
+        <div class="tdk-personel-fields">
+          <div class="tdk-grid">
+            <div class="tdk-field tdk-has-help" data-help="Personel sicil numarası. PDKS ve bordro eşleştirmesinde kullanılır.">
+              <label class="tdk-label" for="{{ form.personel_no.id_for_label }}">{{ form.personel_no.label }}</label>
+              {{ form.personel_no }}
+              {% if form.personel_no.errors %}<div class="tdk-error">{{ form.personel_no.errors }}</div>{% endif %}
+            </div>
+            <div class="tdk-field tdk-has-help" data-help="Resmi sicil veya işe giriş numarası. İK kayıtlarında referanstır.">
+              <label class="tdk-label" for="{{ form.sicil_no.id_for_label }}">{{ form.sicil_no.label }}</label>
+              {{ form.sicil_no }}
+              {% if form.sicil_no.errors %}<div class="tdk-error">{{ form.sicil_no.errors }}</div>{% endif %}
+            </div>
+            <div class="tdk-field tdk-has-help" data-help="Personelin adı. Listelerde ve bordro kayıtlarında görünür.">
+              <label class="tdk-label required" for="{{ form.ad.id_for_label }}">{{ form.ad.label }}</label>
+              {{ form.ad }}
+              {% if form.ad.errors %}<div class="tdk-error">{{ form.ad.errors }}</div>{% endif %}
+            </div>
+            <div class="tdk-field tdk-has-help" data-help="Personelin soyadı. Tam ad gösteriminde kullanılır.">
+              <label class="tdk-label required" for="{{ form.soyad.id_for_label }}">{{ form.soyad.label }}</label>
+              {{ form.soyad }}
+              {% if form.soyad.errors %}<div class="tdk-error">{{ form.soyad.errors }}</div>{% endif %}
+            </div>
+            <div class="tdk-field tdk-has-help" data-help="Personelin görev unvanı. Organizasyon ve maliyet dağılımında referans olur.">
+              <label class="tdk-label" for="{{ form.gorev.id_for_label }}">{{ form.gorev.label }}</label>
+              {{ form.gorev }}
+              {% if form.gorev.errors %}<div class="tdk-error">{{ form.gorev.errors }}</div>{% endif %}
+            </div>
+            <div class="tdk-field tdk-has-help" data-help="Günlük çalışma kayıtlarında kullanılan saatlik ücret tutarı.">
+              <label class="tdk-label" for="{{ form.saatlik_ucret.id_for_label }}">{{ form.saatlik_ucret.label }}</label>
+              {{ form.saatlik_ucret }}
+              {% if form.saatlik_ucret.errors %}<div class="tdk-error">{{ form.saatlik_ucret.errors }}</div>{% endif %}
+            </div>
+            <div class="tdk-field tdk-has-help" data-help="İletişim telefonu. Acil durum ve dahili iletişimde kullanılır.">
+              <label class="tdk-label" for="{{ form.telefon.id_for_label }}">{{ form.telefon.label }}</label>
+              {{ form.telefon }}
+              {% if form.telefon.errors %}<div class="tdk-error">{{ form.telefon.errors }}</div>{% endif %}
+            </div>
+            <div class="tdk-field tdk-has-help" data-help="Personel cinsiyet bilgisi. İK raporlarında kullanılabilir.">
+              <label class="tdk-label" for="{{ form.cinsiyet.id_for_label }}">{{ form.cinsiyet.label }}</label>
+              {{ form.cinsiyet }}
+              {% if form.cinsiyet.errors %}<div class="tdk-error">{{ form.cinsiyet.errors }}</div>{% endif %}
+            </div>
+            <div class="tdk-field tdk-has-help" data-help="Personel e-posta adresi. Bildirim ve resmi yazışmalarda kullanılabilir.">
+              <label class="tdk-label" for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+              {{ form.email }}
+              {% if form.email.errors %}<div class="tdk-error">{{ form.email.errors }}</div>{% endif %}
+            </div>
+            <div class="tdk-field tdk-has-help full" data-help="Dahili sınıflandırma kodu. Rapor ve filtrelerde kullanılabilir.">
+              <label class="tdk-label" for="{{ form.ozel_kod.id_for_label }}">{{ form.ozel_kod.label }}</label>
+              {{ form.ozel_kod }}
+              {% if form.ozel_kod.errors %}<div class="tdk-error">{{ form.ozel_kod.errors }}</div>{% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="tdk-photo-box tdk-has-help" data-help="Personel vesikalık fotoğrafı. JPEG veya PNG formatında yükleyebilirsiniz.">
+          <label class="tdk-label" for="{{ form.fotograf.id_for_label }}">{{ form.fotograf.label }}</label>
+          <div id="foto-preview" class="tdk-photo-preview">
+            <span style="color: #94a3b8; font-size: 13px;">Fotoğraf yükleyin</span>
+          </div>
+          {{ form.fotograf }}
+          {% if form.fotograf.errors %}<div class="tdk-error">{{ form.fotograf.errors }}</div>{% endif %}
+          <p class="tdk-photo-hint">JPEG veya PNG. Önerilen boyut: vesikalık.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="tdk-section">
+      <h2 class="tdk-section-title">
+        <span class="tdk-section-icon green">🪪</span>
+        Nüfus Bilgileri
+      </h2>
+      <div class="tdk-grid">
+        <div class="tdk-field tdk-has-help" data-help="Personel doğum tarihi. Yaş ve izin hesaplarında referans olur.">
+          <label class="tdk-label" for="{{ form.dogum_tarihi.id_for_label }}">{{ form.dogum_tarihi.label }}</label>
+          {{ form.dogum_tarihi }}
+          {% if form.dogum_tarihi.errors %}<div class="tdk-error">{{ form.dogum_tarihi.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Medeni hal bilgisi. İK kayıtlarında tutulur.">
+          <label class="tdk-label" for="{{ form.medeni_hali.id_for_label }}">{{ form.medeni_hali.label }}</label>
+          {{ form.medeni_hali }}
+          {% if form.medeni_hali.errors %}<div class="tdk-error">{{ form.medeni_hali.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Kan grubu bilgisi. Acil sağlık durumlarında referans olur.">
+          <label class="tdk-label" for="{{ form.kan_grubu.id_for_label }}">{{ form.kan_grubu.label }}</label>
+          {{ form.kan_grubu }}
+          {% if form.kan_grubu.errors %}<div class="tdk-error">{{ form.kan_grubu.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="T.C. kimlik numarası. Resmi İK ve bordro kayıtlarında kullanılır.">
+          <label class="tdk-label" for="{{ form.tc_kimlik_no.id_for_label }}">{{ form.tc_kimlik_no.label }}</label>
+          {{ form.tc_kimlik_no }}
+          {% if form.tc_kimlik_no.errors %}<div class="tdk-error">{{ form.tc_kimlik_no.errors }}</div>{% endif %}
+        </div>
+      </div>
+    </section>
+
+    <section class="tdk-section">
+      <h2 class="tdk-section-title">
+        <span class="tdk-section-icon amber">📍</span>
+        Adres Bilgileri
+      </h2>
+      <div class="tdk-grid">
+        <div class="tdk-field tdk-has-help full" data-help="Personelin ikamet veya yazışma adresi.">
+          <label class="tdk-label" for="{{ form.adres.id_for_label }}">Adres</label>
+          {{ form.adres }}
+          {% if form.adres.errors %}<div class="tdk-error">{{ form.adres.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="İkamet veya iş yeri şehri.">
+          <label class="tdk-label" for="{{ form.sehir.id_for_label }}">{{ form.sehir.label }}</label>
+          {{ form.sehir }}
+          {% if form.sehir.errors %}<div class="tdk-error">{{ form.sehir.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Posta kodu. Resmi yazışmalarda kullanılabilir.">
+          <label class="tdk-label" for="{{ form.posta_kodu.id_for_label }}">{{ form.posta_kodu.label }}</label>
+          {{ form.posta_kodu }}
+          {% if form.posta_kodu.errors %}<div class="tdk-error">{{ form.posta_kodu.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Ülke bilgisi. Yurtdışı personel kayıtlarında kullanılır.">
+          <label class="tdk-label" for="{{ form.ulke.id_for_label }}">{{ form.ulke.label }}</label>
+          {{ form.ulke }}
+          {% if form.ulke.errors %}<div class="tdk-error">{{ form.ulke.errors }}</div>{% endif %}
+        </div>
+      </div>
+    </section>
+
+    <div class="tdk-footer">
+      <a href="{% url 'stokapp:personel_listesi' %}" class="btn btn-secondary">İptal</a>
+      <button type="submit" class="btn btn-primary">💾 Kaydet</button>
+    </div>
+  </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var fotoInput = document.querySelector('#id_fotograf');
+  var fotoPreview = document.getElementById('foto-preview');
+  if (!fotoInput || !fotoPreview) return;
+
+  fotoInput.addEventListener('change', function (e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function (ev) {
+      fotoPreview.innerHTML = '<img src="' + ev.target.result + '" alt="Önizleme">';
+    };
+    reader.readAsDataURL(file);
+  });
+});
+</script>
+{% endblock %}

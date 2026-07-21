@@ -1,0 +1,29 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Kategori Sil{% endblock %}
+{% block content %}
+<div class="card">
+    <h2>🗑️ Kategori Sil: {{ kategori.ad }}</h2>
+    
+    <div style="padding: 20px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107; margin-bottom: 20px;">
+        <strong>⚠️ Uyarı:</strong> Bu kategoriyi silmek istediğinizden emin misiniz?
+        <ul style="margin-top: 10px; margin-bottom: 0;">
+            <li>Bu kategoride <strong>{{ stok_sayisi }} ürün</strong> bulunuyor.</li>
+            {% if stok_sayisi > 0 %}
+            <li>Bu kategorideki ürünler olduğu için kategori silinemez. Önce ürünleri başka bir kategoriye taşıyın.</li>
+            {% else %}
+            <li>Kategori silindiğinde, bu kategoriye ait tüm bilgiler kalıcı olarak silinecek.</li>
+            {% endif %}
+        </ul>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+            <a href="{% url 'stokapp:kategori_duzenle' kategori.pk %}" class="btn btn-secondary">İptal</a>
+            {% if stok_sayisi == 0 %}
+            <button type="submit" class="btn btn-secondary" style="background: #dc3545; color: white;">🗑️ Evet, Sil</button>
+            {% endif %}
+        </div>
+    </form>
+</div>
+{% endblock %}

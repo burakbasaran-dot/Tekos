@@ -1,0 +1,112 @@
+{% load static %}
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Tekmar Stok{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0f172a; --panel:#0b1220; --muted:#9ca3af; --text:#e5e7eb; --brand:#22c55e; --line:#1f2937;
+      --chip:#111827; --chipb:#0b1325;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:linear-gradient(180deg,#0b1220,#0f172a 40%,#0b1220);
+         color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif}
+    a{color:inherit;text-decoration:none}
+    .layout{display:grid;grid-template-columns:260px 1fr;gap:16px;min-height:100vh}
+    .sidebar{position:sticky;top:0;height:100vh;padding:16px;background:linear-gradient(180deg,#0b1220,#101827);border-right:1px solid #1f2937}
+    .brand{font-weight:700;letter-spacing:.3px}
+    .menu{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+    .menu a{padding:10px 12px;border-radius:8px;background:linear-gradient(180deg,#0f172a,#0b1220);border:1px solid #1f2937}
+    .menu a:hover{border-color:#334155;transform:translateY(-1px);transition:.15s}
+    .menu .section{font-size:12px;color:#a1a1aa;margin:10px 4px 2px}
+    .content{padding:16px 16px 32px}
+    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+    .crumbs{font-size:12px;color:#a3a3a3}
+    .page-title{font-size:22px;font-weight:700}
+    .actions{display:flex;gap:8px}
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;background:linear-gradient(180deg,#16a34a,#22c55e);border:1px solid #14532d;color:white;font-weight:600}
+    .btn.secondary{background:linear-gradient(180deg,#0f172a,#0b1220);border:1px solid #1f2937;color:#e5e7eb}
+    .card{background:linear-gradient(180deg,#0f172a,#0b1220);border:1px solid #1f2937;border-radius:12px;padding:16px}
+    .messages{margin-bottom:12px}
+    .msg{padding:10px 12px;border-radius:10px;border:1px solid #1f2937;margin-bottom:8px}
+    .msg.success{background:#052e1b;border-color:#14532d}
+    .msg.error{background:#3b0c0c;border-color:#7f1d1d}
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+{% comment %}
+  Resolve URLs safely. Using "as var" prevents NoReverseMatch; if a name is missing, var becomes "".
+{% endcomment %}
+{% url 'ana_sayfa' as ana_sayfa_url %}
+
+{% url 'stok_listesi' as stok_listesi_url %}
+{% url 'kritik_stok_raporu' as kritik_stok_url %}
+{% url 'stok_hareket_raporu' as hareket_url %}
+
+{% url 'stok_ekle' as stok_ekle_url %}
+
+{# giriş: try common names #}
+{% url 'giris' as giris_url %}
+{% if not giris_url %}{% url 'stok_giris' as giris_url %}{% endif %}
+
+{# çıkış: try common names #}
+{% url 'cikis' as cikis_url %}
+{% if not cikis_url %}{% url 'stok_cikis' as cikis_url %}{% endif %}
+
+{# cari #}
+{% url 'cariler_liste' as cariler_url %}
+{% url 'cari_ekle' as cari_ekle_url %}
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand mb-3">Tekmar • Stok</div>
+
+    <div class="menu">
+      <div class="section">ANA</div>
+      <a href="{{ ana_sayfa_url|default:'/' }}">🏠 Ana Sayfa</a>
+      <a href="{{ stok_listesi_url|default:'#' }}">📦 Stok Listesi</a>
+      <a href="{{ kritik_stok_url|default:'#' }}">⚠️ Kritik Stok</a>
+      <a href="{{ hareket_url|default:'#' }}">🔁 Stok Hareketleri</a>
+
+      <div class="section">İŞLEMLER</div>
+      <a href="{{ stok_ekle_url|default:'#' }}">➕ Yeni Stok</a>
+      <a href="{{ giris_url|default:'#' }}">⬇️ Stok Giriş</a>
+      <a href="{{ cikis_url|default:'#' }}">⬆️ Stok Çıkış</a>
+
+      <div class="section">CARİ</div>
+      <a href="{{ cariler_url|default:'#' }}">📇 Cariler</a>
+      <a href="{{ cari_ekle_url|default:'#' }}">➕ Cari Ekle</a>
+    </div>
+  </aside>
+
+  <main class="content">
+    <div class="topbar">
+      <div>
+        <div class="crumbs">{% block breadcrumb %}{% endblock %}</div>
+        <div class="page-title">{% block page_title %}{% endblock %}</div>
+      </div>
+      <div class="actions">{% block page_actions %}{% endblock %}</div>
+    </div>
+
+    <div class="messages">
+      {% if messages %}
+        {% for m in messages %}
+          <div class="msg {% if m.tags %}{{ m.tags }}{% endif %}">{{ m }}</div>
+        {% endfor %}
+      {% endif %}
+    </div>
+
+    {% block content %}{% endblock %}
+  </main>
+</div>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>

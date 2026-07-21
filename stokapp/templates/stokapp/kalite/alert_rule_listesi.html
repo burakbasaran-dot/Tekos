@@ -1,0 +1,248 @@
+{% extends 'stokapp/base.html' %}
+{% load static %}
+
+{% block title %}Üretim Uyarı Kuralları{% endblock %}
+
+{% block content %}
+<style>
+    .kalite-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #e5e7eb;
+    }
+    .kalite-header h1 {
+        font-size: 28px;
+        font-weight: 700;
+        color: #111827;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .filtre-card {
+        background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+        padding: 24px;
+        border-radius: 12px;
+        margin-bottom: 24px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .kalite-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .kalite-table thead tr {
+        background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+    }
+    .kalite-table thead th {
+        padding: 16px;
+        text-align: left;
+        font-weight: 600;
+        color: white;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 2px solid #111827;
+    }
+    .kalite-table tbody tr {
+        border-bottom: 1px solid #f3f4f6;
+        transition: all 0.2s ease;
+    }
+    .kalite-table tbody tr:hover {
+        background: #f9fafb;
+        transform: scale(1.01);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .kalite-table tbody td {
+        padding: 14px 16px;
+        color: #374151;
+        font-size: 14px;
+    }
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    .badge-level-block {
+        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        color: #991b1b;
+    }
+    .badge-level-ack {
+        background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
+        color: #9a3412;
+    }
+    .badge-level-info {
+        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        color: #1e40af;
+    }
+    .btn-action {
+        padding: 6px 14px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 500;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        display: inline-block;
+    }
+    .btn-action:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    .btn-edit {
+        background: #f3f4f6;
+        color: #374151;
+        border: 1px solid #d1d5db;
+    }
+    .btn-delete {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+    }
+    .btn-delete:hover {
+        background: #fecaca;
+    }
+    .empty-state {
+        padding: 60px 20px;
+        text-align: center;
+        color: #9ca3af;
+    }
+    .empty-state-icon {
+        font-size: 64px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+    }
+</style>
+
+<div class="card" style="padding: 0; overflow: hidden;">
+    <div style="padding: 30px 30px 0 30px;">
+        <div class="kalite-header">
+            <h1><span style="font-size: 32px;">🔔</span> Üretim Uyarı Kuralları</h1>
+            <a href="{% url 'stokapp:alert_rule_ekle' %}" class="btn btn-primary" style="padding: 12px 24px; font-size: 14px; border-radius: 8px; box-shadow: 0 2px 8px rgba(46,204,113,0.3);">
+                <span style="font-size: 18px; margin-right: 6px;">+</span> Yeni Uyarı Kuralı
+            </a>
+        </div>
+    
+        <!-- Filtreler -->
+        <div class="filtre-card">
+            <form method="get" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+                <div>
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151; font-size: 14px;">🎯 Kapsam</label>
+                    <select name="scope" class="form-select" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #d1d5db; background: white;">
+                        <option value="">Tümü</option>
+                        {% for scope_code, scope_label in scopes %}
+                        <option value="{{ scope_code }}" {% if request.GET.scope == scope_code %}selected{% endif %}>{{ scope_label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151; font-size: 14px;">⚡ Seviye</label>
+                    <select name="level" class="form-select" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #d1d5db; background: white;">
+                        <option value="">Tümü</option>
+                        {% for level_code, level_label in levels %}
+                        <option value="{{ level_code }}" {% if request.GET.level == level_code %}selected{% endif %}>{{ level_label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151; font-size: 14px;">🔘 Aktif</label>
+                    <select name="active" class="form-select" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #d1d5db; background: white;">
+                        <option value="">Tümü</option>
+                        <option value="1" {% if request.GET.active == '1' %}selected{% endif %}>Aktif</option>
+                        <option value="0" {% if request.GET.active == '0' %}selected{% endif %}>Pasif</option>
+                    </select>
+                </div>
+                <div style="display: flex; align-items: flex-end; gap: 10px;">
+                    <button type="submit" class="btn btn-primary" style="padding: 10px 20px; border-radius: 8px; flex: 1;">🔍 Filtrele</button>
+                    <a href="{% url 'stokapp:alert_rule_listesi' %}" class="btn btn-secondary" style="padding: 10px 20px; border-radius: 8px;">🔄 Temizle</a>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Liste -->
+    <div style="padding: 0 30px 30px 30px;">
+        <table class="kalite-table">
+            <thead>
+                <tr>
+                    <th>Kapsam</th>
+                    <th>Mesaj</th>
+                    <th style="text-align: center;">Seviye</th>
+                    <th style="text-align: center;">Aktif</th>
+                    <th>Geçerlilik</th>
+                    <th style="text-align: center;">İşlemler</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rule in rules %}
+                <tr>
+                    <td><strong>{{ rule.get_scope_display }}</strong></td>
+                    <td>{{ rule.message|truncatewords:15 }}</td>
+                    <td style="text-align: center;">
+                        <span class="badge badge-level-{{ rule.level|lower }}">
+                            {{ rule.get_level_display }}
+                        </span>
+                    </td>
+                    <td style="text-align: center;">
+                        {% if rule.active %}
+                        <span style="font-size: 20px; color: #22c55e;">✅</span>
+                        {% else %}
+                        <span style="font-size: 20px; color: #9ca3af;">❌</span>
+                        {% endif %}
+                    </td>
+                    <td style="color: #6b7280; font-size: 13px;">
+                        {{ rule.valid_from|date:"d.m.Y H:i" }}
+                        {% if rule.valid_to %}
+                        <br><small>- {{ rule.valid_to|date:"d.m.Y H:i" }}</small>
+                        {% else %}
+                        <br><small style="color: #9ca3af;">(Süresiz)</small>
+                        {% endif %}
+                    </td>
+                    <td style="text-align: center;">
+                        <div style="display: flex; gap: 8px; justify-content: center;">
+                            <a href="{% url 'stokapp:alert_rule_duzenle' rule.pk %}" class="btn-action btn-edit">✏️ Düzenle</a>
+                            <a href="{% url 'stokapp:alert_rule_sil' rule.pk %}" class="btn-action btn-delete">🗑️ Sil</a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="empty-state">
+                        <div class="empty-state-icon">🔔</div>
+                        <div style="font-size: 18px; font-weight: 600; margin-bottom: 8px; color: #6b7280;">Henüz uyarı kuralı bulunmuyor</div>
+                        <div style="font-size: 14px;">Yeni bir uyarı kuralı ekleyerek başlayın.</div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Sayfalama -->
+    {% if rules.has_other_pages %}
+    <div style="padding: 24px 30px; border-top: 1px solid #e5e7eb; background: #f9fafb; display: flex; justify-content: center; align-items: center; gap: 12px;">
+        {% if rules.has_previous %}
+        <a href="?page={{ rules.previous_page_number }}" class="btn btn-secondary" style="padding: 10px 20px; border-radius: 8px;">← Önceki</a>
+        {% endif %}
+        <span style="padding: 10px 20px; background: white; border: 1px solid #d1d5db; border-radius: 8px; font-weight: 600; color: #374151;">
+            Sayfa {{ rules.number }} / {{ rules.paginator.num_pages }}
+        </span>
+        {% if rules.has_next %}
+        <a href="?page={{ rules.next_page_number }}" class="btn btn-secondary" style="padding: 10px 20px; border-radius: 8px;">Sonraki →</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

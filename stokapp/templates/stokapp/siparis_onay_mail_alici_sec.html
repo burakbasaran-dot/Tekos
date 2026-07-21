@@ -1,0 +1,66 @@
+{% extends "stokapp/base.html" %}
+{% load currency_filters %}
+{% block title %}Sipariş onay — mail alıcıları{% endblock %}
+{% block content %}
+<div class="card" style="max-width: 900px; margin: 0 auto;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
+        <h2 style="margin:0;">📧 Müşteriye teyit maili — alıcılar</h2>
+        <a href="{% url 'stokapp:siparis_listesi' %}" class="btn btn-secondary">← Siparişlere dön</a>
+    </div>
+
+    <p style="color:#374151; font-size:14px;">
+        Sipariş: <strong>{{ siparis.siparis_numarasi }}</strong>
+        {% if siparis.musteri %} — {{ siparis.musteri.ad }}{% endif %}
+    </p>
+
+    {% if no_musteri %}
+    <div style="padding:12px; background:#fef3c7; border-radius:8px; margin-bottom:16px; color:#92400e;">
+        Bu siparişte kayıtlı müşteri seçili değil; müşteri yetkilisi listesi oluşturulamaz.
+        Önce siparişe müşteri bağlayın; ardından müşteri kartına <a href="{% url 'stokapp:musteri_listesi' %}">müşteri listesinden</a> ilgili kişi e-postaları ekleyin.
+    </div>
+    {% elif not choices %}
+    <div style="padding:12px; background:#fef3c7; border-radius:8px; margin-bottom:16px; color:#92400e;">
+        Müşteri kartında firma veya ilgili kişi e-postası yok.
+        <a href="{% url 'stokapp:musteri_duzenle' siparis.musteri.pk %}">Müşteriyi düzenle</a>
+    </div>
+    {% else %}
+    <p style="font-size: 13px; color: #6b7280;">
+        Teyit mailini göndereceğiniz kişileri işaretleyin; son adımda önizleme ve gönderim onayı alınır.
+    </p>
+    {% endif %}
+
+    <div style="border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; background: #fafafa; margin-top: 16px;">
+        <div style="font-weight:600; margin-bottom:10px; font-size:14px;">Mail önizlemesi</div>
+        <div style="border: 1px solid #e5e7eb; border-radius: 10px; overflow: auto; max-height: 360px; background: #fff;">
+            {% if siparis.musteri %}
+            {% with siparis=preview_ctx.siparis kalemler=preview_ctx.kalemler ara_toplam=preview_ctx.ara_toplam vergi=preview_ctx.vergi toplam=preview_ctx.toplam tekos_logo_cid=preview_ctx.tekos_logo_cid tekos_logo_url=preview_ctx.tekos_logo_url tekmar_logo_cid=preview_ctx.tekmar_logo_cid tekmar_logo_data_uri=preview_ctx.tekmar_logo_data_uri %}
+                {% include "stokapp/emails/siparis_onay_email.html" %}
+            {% endwith %}
+            {% else %}
+            <p style="padding:16px; color:#6b7280;">Kayıtlı müşteri olmadığı için önizleme gösterilemiyor.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <form method="post" style="margin-top: 20px;">
+        {% csrf_token %}
+        {% if choices %}
+        <div style="border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; margin-bottom: 16px;">
+            {% for c in choices %}
+            <label style="display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-bottom: 1px solid #f3f4f6; cursor: pointer; margin: 0;">
+                <input type="checkbox" name="recipient_key" value="{{ c.key }}" style="margin-top: 4px;">
+                <span style="font-size: 14px; line-height: 1.45;">{{ c.label }}</span>
+            </label>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div style="display: flex; gap: 12px; justify-content: flex-end; flex-wrap: wrap;">
+            <button type="submit" name="skip_email" value="1" class="btn btn-secondary">Göndermeden onayla</button>
+            {% if choices %}
+            <button type="submit" class="btn btn-primary" style="background:#22c55e; border-color:#22c55e;">Devam — özet ve gönder</button>
+            {% endif %}
+        </div>
+    </form>
+</div>
+{% endblock %}

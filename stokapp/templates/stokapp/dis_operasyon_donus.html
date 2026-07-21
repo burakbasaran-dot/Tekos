@@ -1,0 +1,45 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Dönüş Al — {{ op.operasyon_no }}{% endblock %}
+{% block content %}
+<div class="card" style="max-width:640px;">
+  <a href="{% url 'stokapp:dis_operasyon_detay' op.pk %}" class="btn btn-secondary">← Geri</a>
+  <h2 style="margin-top:12px;">Dönüş Al: {{ op.operasyon_no }}</h2>
+  <p style="color:#6b7280;font-size:14px;">Gönderilen: {{ op.gonderilen_miktar }} {{ op.birim }} — Tedarikçide kalan: {{ op.miktar_tedarikcide_kalan }} {{ op.birim }}</p>
+  <p style="color:#6b7280;font-size:13px;">Önceki dönüşler toplamı — Dönen: {{ prev_donen }} / Fire: {{ prev_fire }} / Eksik: {{ prev_eksik }}</p>
+
+  <form method="post" style="display:grid; gap:12px; margin-top:16px;">
+    {% csrf_token %}
+    <label>Dönüş tarihi *<br>
+      <input type="date" name="donus_tarihi" required value="{% now 'Y-m-d' %}" style="padding:8px;border-radius:8px;border:1px solid #e5e7eb;">
+    </label>
+    <label>Bu dönüş — dönen miktar *<br>
+      <input type="number" step="0.001" min="0" name="donen_miktar" required style="width:100%;padding:8px;border-radius:8px;border:1px solid #e5e7eb;">
+    </label>
+    <label>Fire miktarı<br>
+      <input type="number" step="0.001" min="0" name="fire_miktari" value="0" style="width:100%;padding:8px;border-radius:8px;border:1px solid #e5e7eb;">
+    </label>
+    <label>Eksik miktar<br>
+      <input type="number" step="0.001" min="0" name="eksik_miktari" value="0" style="width:100%;padding:8px;border-radius:8px;border:1px solid #e5e7eb;">
+    </label>
+    <label>Gerçekleşen birim fiyat<br>
+      <input type="number" step="0.0001" name="gerceklesen_birim_fiyat" style="width:100%;padding:8px;border-radius:8px;border:1px solid #e5e7eb;">
+    </label>
+    <label>Nakliye maliyeti<br>
+      <input type="number" step="0.01" name="nakliye_maliyeti" value="0" style="width:100%;padding:8px;border-radius:8px;border:1px solid #e5e7eb;">
+    </label>
+    <label>Ek maliyet<br>
+      <input type="number" step="0.01" name="ek_maliyet" value="0" style="width:100%;padding:8px;border-radius:8px;border:1px solid #e5e7eb;">
+    </label>
+    <label>Toplam işlem maliyeti (bu dönüş)<br>
+      <input type="number" step="0.01" name="toplam_maliyet" value="0" style="width:100%;padding:8px;border-radius:8px;border:1px solid #e5e7eb;">
+    </label>
+    <label style="display:flex;align-items:center;gap:8px;">
+      <input type="checkbox" name="kalite_kontrol_gerekli" value="1"> Kalite kontrol gerekli (dönen miktar stoğa hemen alınmaz)
+    </label>
+    <label>Açıklama<br>
+      <textarea name="aciklama" rows="3" style="width:100%;padding:8px;border-radius:8px;border:1px solid #e5e7eb;"></textarea>
+    </label>
+    <button type="submit" class="btn btn-primary">Kaydet</button>
+  </form>
+</div>
+{% endblock %}

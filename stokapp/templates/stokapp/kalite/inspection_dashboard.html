@@ -1,0 +1,312 @@
+{% extends 'stokapp/base.html' %}
+{% load static %}
+
+{% block title %}Üretim Süreci Kontrol Dashboard{% endblock %}
+
+{% block content %}
+<style>
+    .dashboard-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        padding-bottom: 24px;
+        border-bottom: 2px solid #e5e7eb;
+    }
+    .dashboard-header h1 {
+        font-size: 28px;
+        font-weight: 700;
+        color: #111827;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    .stat-card {
+        background: linear-gradient(135deg, #ffffff 0%, #f9fafb 100%);
+        padding: 24px;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .stat-card-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: #6b7280;
+        margin-bottom: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .stat-card-value {
+        font-size: 32px;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 8px;
+    }
+    .stat-card-icon {
+        font-size: 40px;
+        margin-bottom: 12px;
+    }
+    .section-card {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .section-card h3 {
+        font-size: 20px;
+        font-weight: 600;
+        color: #111827;
+        margin: 0 0 20px 0;
+        padding-bottom: 12px;
+        border-bottom: 2px solid #e5e7eb;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .kalite-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .kalite-table thead tr {
+        background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+    }
+    .kalite-table thead th {
+        padding: 16px;
+        text-align: left;
+        font-weight: 600;
+        color: white;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 2px solid #111827;
+    }
+    .kalite-table tbody tr {
+        border-bottom: 1px solid #f3f4f6;
+        transition: all 0.2s ease;
+    }
+    .kalite-table tbody tr:hover {
+        background: #f9fafb;
+        transform: scale(1.01);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .kalite-table tbody td {
+        padding: 14px 16px;
+        color: #374151;
+        font-size: 14px;
+    }
+    .empty-state {
+        padding: 60px 20px;
+        text-align: center;
+        color: #9ca3af;
+    }
+    .empty-state-icon {
+        font-size: 64px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+    }
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    .badge-hold {
+        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+        color: #991b1b;
+    }
+    .btn-action {
+        padding: 6px 14px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 500;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        display: inline-block;
+        background: #3b82f6;
+        color: white;
+        border: none;
+    }
+    .btn-action:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        background: #2563eb;
+    }
+</style>
+
+<div class="card" style="padding: 30px;">
+    <div class="dashboard-header">
+        <h1><span style="font-size: 32px;">📊</span> Üretim Süreci Kontrol Dashboard</h1>
+        <a href="{% url 'stokapp:control_plan_listesi' %}" class="btn btn-secondary" style="padding: 10px 20px; border-radius: 8px;">Kontrol Planları</a>
+    </div>
+    
+    <!-- İstatistikler -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-card-icon">⏸️</div>
+            <div class="stat-card-title">Bekleyen İş Emirleri</div>
+            <div class="stat-card-value">{{ hold_work_orders.count }}</div>
+            <div style="font-size: 12px; color: #6b7280;">Quality gate nedeniyle HOLD durumunda</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-card-icon">✅</div>
+            <div class="stat-card-title">Aktif Kontrol Planları</div>
+            <div class="stat-card-value">{{ active_control_plans.count }}</div>
+            <div style="font-size: 12px; color: #6b7280;">Aktif durumda olan planlar</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-card-icon">📝</div>
+            <div class="stat-card-title">Bugünkü Kontroller</div>
+            <div class="stat-card-value">{{ today_inspections.count }}</div>
+            <div style="font-size: 12px; color: #6b7280;">{{ today|date:"d.m.Y" }} tarihinde yapılan</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-card-icon">⚠️</div>
+            <div class="stat-card-title">Başarısız Kontroller</div>
+            <div class="stat-card-value">{{ failed_inspections|length }}</div>
+            <div style="font-size: 12px; color: #6b7280;">Toplam başarısız kontrol sayısı</div>
+        </div>
+    </div>
+    
+    <!-- HOLD Durumundaki İş Emirleri -->
+    <div class="section-card">
+        <h3>⏸️ Bekleyen İş Emirleri (HOLD)</h3>
+        {% if hold_work_orders %}
+        <table class="kalite-table">
+            <thead>
+                <tr>
+                    <th>İş Emri No</th>
+                    <th>Ürün</th>
+                    <th>Miktar</th>
+                    <th>Durum</th>
+                    <th>İşlemler</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for wo in hold_work_orders %}
+                <tr>
+                    <td><strong>{{ wo.emir_no }}</strong></td>
+                    <td>{{ wo.recete.urun.stok_kodu }} - {{ wo.recete.urun.ad }}</td>
+                    <td>{{ wo.miktar }} {{ wo.recete.urun.birim }}</td>
+                    <td>
+                        <span class="badge badge-hold">HOLD</span>
+                    </td>
+                    <td>
+                        <a href="{% url 'stokapp:uretim_emri_detay' wo.pk %}" class="btn-action">Detay Gör</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">✅</div>
+            <p>Bekleyen iş emri bulunmuyor. Tüm üretimler normal akışında devam ediyor.</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- En Çok Başarısız Olan Kontroller -->
+    <div class="section-card">
+        <h3>⚠️ En Çok Başarısız Olan Kontroller</h3>
+        {% if failed_inspections %}
+        <table class="kalite-table">
+            <thead>
+                <tr>
+                    <th>Kontrol Maddesi</th>
+                    <th>Başarısız Sayısı</th>
+                    <th>İşlemler</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in failed_inspections %}
+                <tr>
+                    <td><strong>{{ item.control_item__name }}</strong></td>
+                    <td>
+                        <span style="color: #ef4444; font-weight: 600; font-size: 16px;">{{ item.fail_count }}</span>
+                    </td>
+                    <td>
+                        <a href="{% url 'stokapp:control_plan_listesi' %}" class="btn-action">Kontrol Planı</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">✅</div>
+            <p>Başarısız kontrol kaydı bulunmuyor.</p>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Bugünkü Kontroller -->
+    <div class="section-card">
+        <h3>📝 Bugünkü Kontroller ({{ today|date:"d.m.Y" }})</h3>
+        {% if today_inspections %}
+        <table class="kalite-table">
+            <thead>
+                <tr>
+                    <th>İş Emri</th>
+                    <th>Operasyon</th>
+                    <th>Kontrol</th>
+                    <th>Sonuç</th>
+                    <th>Ölçülen Değer</th>
+                    <th>Ölçüm Yapan</th>
+                    <th>Zaman</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inspection in today_inspections %}
+                <tr>
+                    <td><strong>{{ inspection.work_order.emir_no }}</strong></td>
+                    <td>{{ inspection.operation_step.operasyon.ad }}</td>
+                    <td>{{ inspection.control_item.name }}</td>
+                    <td>
+                        <span class="badge {% if inspection.pass_fail == 'PASS' %}badge-status-verified{% else %}badge-status-open{% endif %}">
+                            {{ inspection.get_pass_fail_display }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if inspection.measured_value %}
+                            {{ inspection.measured_value }} {{ inspection.control_item.unit|default:'' }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>{{ inspection.measured_by.get_full_name|default:inspection.measured_by.username }}</td>
+                    <td>{{ inspection.measured_at|date:"H:i" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">📋</div>
+            <p>Bugün henüz kontrol kaydı bulunmuyor.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
+

@@ -1,0 +1,109 @@
+{% load currency_filters custom_filters %}
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta charset="UTF-8">
+    <style>
+        @page { size: A4; margin: 10mm; }
+        body { font-family: Arial, "DejaVu Sans", sans-serif; font-size: 12px; color: #000; margin: 0; padding: 15px; }
+        .header-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; border-bottom: 2px solid #000; }
+        .header-table td { padding-bottom: 20px; vertical-align: top; }
+        .logo-cell { width: 250px; }
+        .right-cell { text-align: right; width: 250px; }
+        .form-title { font-size: 18px; font-weight: bold; margin: 0; }
+        .info-row { margin: 5px 0; }
+        .info-label { font-weight: bold; display: inline-block; min-width: 120px; }
+        .section-title { font-size: 16px; font-weight: bold; margin-top: 18px; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px solid #000; color: #dc3545; }
+        .products-table { width: 100%; border-collapse: collapse; margin: 14px 0; }
+        .products-table th { background: #f9fafb; color: #dc3545; padding: 10px; border: 1px solid #000; font-weight: bold; font-size: 13px; text-align: left; }
+        .products-table td { padding: 8px 10px; border: 1px solid #000; font-size: 11px; vertical-align: top; }
+        .products-table tbody tr:nth-child(even) { background: #f9fafb; }
+        .center { text-align: center; }
+        .right { text-align: right; }
+        .small { font-size: 11px; }
+        .muted { color: #6b7280; }
+        .note-box { border: 1px dashed #999; padding: 10px; margin-top: 12px; min-height: 40px; }
+        .brand-footer { margin-top: 18px; border-top: 1px solid #d1d5db; padding-top: 10px; }
+        .brand-row { width: 100%; border-collapse: collapse; }
+        .brand-row td { border: none; padding: 0; vertical-align: middle; }
+        .brand-logos { width: 140px; white-space: nowrap; }
+        .brand-logos img { height: 20px; width: auto; margin-right: 8px; }
+        .brand-text { font-size: 10px; color: #374151; line-height: 1.35; text-align: right; }
+    </style>
+</head>
+<body>
+    <table class="header-table">
+        <tr>
+            <td class="logo-cell">
+                {% if logo_path %}
+                <img src="file://{{ logo_path }}" style="max-width:240px; max-height:90px;" alt="Logo">
+                {% endif %}
+            </td>
+            <td class="center" style="vertical-align: middle;">
+                <h1 class="form-title">TEKLİF TALEP FORMU</h1>
+            </td>
+            <td class="right-cell">
+                <div class="info-row"><span class="info-label">Talep No:</span> {{ rfq.rfq_no }}</div>
+                <div class="info-row"><span class="info-label">Tarih:</span> {{ rfq.olusturma_tarihi|date:"d.m.Y" }}</div>
+                {% if rfq.son_teklif_tarihi %}
+                <div class="info-row"><span class="info-label">Son Teklif:</span> {{ rfq.son_teklif_tarihi|date:"d.m.Y" }}</div>
+                {% endif %}
+            </td>
+        </tr>
+    </table>
+
+    <div class="section-title"><strong>Talep Edilen Kalemler</strong></div>
+    <table class="products-table">
+        <thead>
+            <tr>
+                <th class="center" style="width:5%;">#</th>
+                <th style="width:15%;">Stok Kodu</th>
+                <th style="width:35%;">Ürün / Açıklama</th>
+                <th class="center" style="width:10%;">Miktar</th>
+                <th class="center" style="width:10%;">Birim</th>
+                <th class="center" style="width:25%;">Birim Fiyat / Termin</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for k in kalemler %}
+            <tr>
+                <td class="center">{{ forloop.counter }}</td>
+                <td>{% if k.stok_item %}{{ k.stok_item.stok_kodu }}{% else %}-{% endif %}</td>
+                <td>
+                    <strong>{{ k.kalem_adi }}</strong>
+                    {% if k.teknik_notlar %}<br><span class="small muted">{{ k.teknik_notlar }}</span>{% endif %}
+                </td>
+                <td class="center">{{ k.miktar|format_decimal }}</td>
+                <td class="center">{{ k.birim }}</td>
+                <td class="center muted">________ / ____ gün</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="center">Kalem yok.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="section-title"><strong>Teklif Notu</strong></div>
+    <div class="note-box">{{ rfq.notlar|default:"" }}</div>
+
+    <div class="small muted" style="margin-top:18px;">
+        Lütfen yukarıdaki kalemler için fiyat, teslim süresi ve diğer ticari koşulları içeren teklifinizi tarafımıza iletiniz.
+        <br>Bu form, sistem tarafından otomatik üretilmiştir.
+    </div>
+    <div class="brand-footer">
+        <table class="brand-row">
+            <tr>
+                <td class="brand-logos">
+                    {% if tekos_logo_path %}<img src="file://{{ tekos_logo_path }}" alt="TEKOS">{% else %}<strong style="font-size:10px;">TEKOS</strong>{% endif %}
+                    {% if tekora_logo_path %}<img src="file://{{ tekora_logo_path }}" alt="TEKORA">{% else %}<strong style="font-size:10px;">TEKORA</strong>{% endif %}
+                </td>
+                <td class="brand-text">
+                    Güvenilir üretim, sürdürülebilir tedarik ve dijital hız ile<br>
+                    TEKOS &amp; TEKORA ekosistemiyle birlikte daha güçlü.
+                </td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>

@@ -1,0 +1,76 @@
+{% extends 'stokapp/base.html' %}
+
+{% block title %}Geliştirme Talepleri{% endblock %}
+
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+  <div>
+    <h1 style="margin:0;">Geliştirme Talepleri</h1>
+    <div style="color:#6b7280; font-size:13px;">Uygulama geliştirme isteklerini takip edin.</div>
+  </div>
+  <a class="btn btn-primary" href="{% url 'stokapp:gelistirme_talep_ekle' %}">Yeni Talep</a>
+</div>
+
+<form method="get" style="margin-bottom:16px; display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
+  <label style="display:flex; flex-direction:column; gap:6px; font-size:12px; color:#6b7280;">
+    Durum
+    <select name="durum" style="padding:8px 10px; border-radius:8px; border:1px solid #e5e7eb;">
+      <option value="">Tümü</option>
+      <option value="ACIK" {% if durum_filter == "ACIK" %}selected{% endif %}>Açık</option>
+      <option value="TAMAMLANDI" {% if durum_filter == "TAMAMLANDI" %}selected{% endif %}>Tamamlandı</option>
+    </select>
+  </label>
+  <button class="btn btn-secondary" type="submit">Filtrele</button>
+</form>
+
+<div class="card" style="padding:0;">
+  <table>
+    <thead>
+      <tr>
+        <th>Başlık</th>
+        <th>Durum</th>
+        <th>Oluşturma</th>
+        <th>Tamamlanma</th>
+        <th style="width:220px;">İşlemler</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for talep in talepler %}
+      <tr>
+        <td>
+          <div style="font-weight:600;">{{ talep.baslik }}</div>
+          {% if talep.aciklama %}
+            <div style="color:#6b7280; font-size:12px; margin-top:4px;">{{ talep.aciklama|truncatechars:120 }}</div>
+          {% endif %}
+        </td>
+        <td>
+          {% if talep.durum == "TAMAMLANDI" %}
+            <span style="color:#16a34a; font-weight:600;">Tamamlandı</span>
+          {% else %}
+            <span style="color:#2563eb; font-weight:600;">Açık</span>
+          {% endif %}
+        </td>
+        <td>{{ talep.created_at|date:"d.m.Y H:i" }}</td>
+        <td>
+          {% if talep.tamamlanma_zamani %}
+            {{ talep.tamamlanma_zamani|date:"d.m.Y H:i" }}
+          {% else %}
+            -
+          {% endif %}
+        </td>
+        <td>
+          <a class="btn btn-secondary" href="{% url 'stokapp:gelistirme_talep_duzenle' talep.id %}">Düzenle</a>
+          {% if talep.durum != "TAMAMLANDI" %}
+            <a class="btn btn-primary" href="{% url 'stokapp:gelistirme_talep_kapat' talep.id %}">Kapat</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="5" style="text-align:center; padding:20px; color:#6b7280;">Henüz talep yok.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

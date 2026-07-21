@@ -1,0 +1,315 @@
+{% extends 'stokapp/base.html' %}
+{% load static %}
+
+{% block title %}Kontrol Kaydı Ekle{% endblock %}
+
+{% block content %}
+<style>
+    .form-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        padding-bottom: 24px;
+        border-bottom: 2px solid #e5e7eb;
+    }
+    .form-header h1 {
+        font-size: 28px;
+        font-weight: 700;
+        color: #111827;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .form-section {
+        background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+        padding: 24px;
+        border-radius: 12px;
+        margin-bottom: 24px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .form-section h3 {
+        font-size: 18px;
+        font-weight: 600;
+        color: #111827;
+        margin: 0 0 20px 0;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .form-group {
+        margin-bottom: 20px;
+    }
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #374151;
+        font-size: 14px;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 14px;
+        transition: all 0.2s ease;
+        background: white;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    .required-items-list {
+        margin-top: 20px;
+    }
+    .required-item {
+        padding: 12px;
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        margin-bottom: 12px;
+    }
+    .required-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+    .required-item-name {
+        font-weight: 600;
+        color: #111827;
+    }
+    .badge-critical {
+        background: #fee2e2;
+        color: #991b1b;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    .badge-major {
+        background: #fed7aa;
+        color: #9a3412;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    .badge-minor {
+        background: #fef3c7;
+        color: #78350f;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+</style>
+
+<div class="card" style="padding: 30px;">
+    <div class="form-header">
+        <h1><span style="font-size: 32px;">📊</span> Kontrol Kaydı Ekle</h1>
+        <a href="{% url 'stokapp:uretim_emri_detay' work_order.pk %}" class="btn btn-secondary" style="padding: 10px 20px; border-radius: 8px;">← Geri</a>
+    </div>
+    
+    <div class="form-section">
+        <h3>📋 İş Emri Bilgileri</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div>
+                <strong>İş Emri:</strong> {{ work_order.emir_no }}
+            </div>
+            <div>
+                <strong>Operasyon:</strong> {{ operation_step.operasyon.ad }} (Sıra: {{ operation_step.sira }})
+            </div>
+        </div>
+    </div>
+    
+    <form id="inspectionForm" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <div class="form-section">
+            <h3>📝 Kontrol Bilgileri</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div class="form-group">
+                    <label class="required-field">{{ form.control_item.label }}</label>
+                    {{ form.control_item }}
+                    {% if form.control_item.errors %}
+                        <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.control_item.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label>{{ form.sample_no.label }}</label>
+                    {{ form.sample_no }}
+                    {% if form.sample_no.errors %}
+                        <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.sample_no.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group" id="measured-value-group">
+                    <label>{{ form.measured_value.label }}</label>
+                    {{ form.measured_value }}
+                    <small style="color: #6b7280; display: block; margin-top: 4px;" id="value-range-hint"></small>
+                    {% if form.measured_value.errors %}
+                        <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.measured_value.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group" id="instrument-group" style="display: none;">
+                    <label>{{ form.instrument.label }}</label>
+                    {{ form.instrument }}
+                    {% if form.instrument.errors %}
+                        <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.instrument.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label class="required-field">{{ form.pass_fail.label }}</label>
+                    {{ form.pass_fail }}
+                    {% if form.pass_fail.errors %}
+                        <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.pass_fail.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group" id="attachment-group">
+                    <label>{{ form.attachment.label }}</label>
+                    {{ form.attachment }}
+                    {% if form.attachment.errors %}
+                        <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.attachment.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>{{ form.notes.label }}</label>
+                {{ form.notes }}
+                {% if form.notes.errors %}
+                    <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.notes.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="form-section" id="disposition-section" style="display: none;">
+            <h3>⚠️ Disposition (Başarısız Kontrol İçin)</h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div class="form-group">
+                    <label>{{ form.disposition.label }}</label>
+                    {{ form.disposition }}
+                    {% if form.disposition.errors %}
+                        <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.disposition.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label>{{ form.disposition_reason.label }}</label>
+                    {{ form.disposition_reason }}
+                    {% if form.disposition_reason.errors %}
+                        <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.disposition_reason.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div style="margin-top: 30px; display: flex; gap: 12px; padding-top: 24px; border-top: 2px solid #e5e7eb;">
+            <button type="submit" class="btn btn-primary" style="padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600;">💾 Kaydet</button>
+            <a href="{% url 'stokapp:uretim_emri_detay' work_order.pk %}" class="btn btn-secondary" style="padding: 12px 24px; border-radius: 8px; font-size: 14px;">❌ İptal</a>
+        </div>
+    </form>
+</div>
+
+<script>
+// Control item seçildiğinde dinamik alan güncellemesi
+document.getElementById('id_control_item').addEventListener('change', function() {
+    const controlItemId = this.value;
+    if (!controlItemId) return;
+    
+    // API'den kontrol maddesi bilgilerini al
+    fetch(`/stok/api/kalite/inspection/item/${controlItemId}/`)
+        .then(response => response.json())
+        .then(data => {
+            const item = data.item;
+            
+            // Ölçü aleti gereksinimini kontrol et
+            const instrumentGroup = document.getElementById('instrument-group');
+            if (item.requires_instrument) {
+                instrumentGroup.style.display = 'block';
+                instrumentGroup.querySelector('select').required = true;
+            } else {
+                instrumentGroup.style.display = 'none';
+                instrumentGroup.querySelector('select').required = false;
+            }
+            
+            // Ek dosya gereksinimini kontrol et
+            const attachmentGroup = document.getElementById('attachment-group');
+            if (item.requires_attachment) {
+                attachmentGroup.querySelector('input').required = true;
+            } else {
+                attachmentGroup.querySelector('input').required = false;
+            }
+            
+            // Sayısal değer için min/max göster
+            const measuredValueGroup = document.getElementById('measured-value-group');
+            const hintElement = document.getElementById('value-range-hint');
+            if (item.inspection_type === 'NUMERIC' && item.min_value !== null && item.max_value !== null) {
+                measuredValueGroup.style.display = 'block';
+                hintElement.textContent = `Kabul aralığı: ${item.min_value} - ${item.max_value} ${item.unit || ''}`;
+            } else if (item.inspection_type === 'NUMERIC') {
+                measuredValueGroup.style.display = 'block';
+                hintElement.textContent = '';
+            } else {
+                measuredValueGroup.style.display = 'none';
+            }
+        })
+        .catch(error => console.error('Error:', error));
+});
+
+// Pass/Fail değiştiğinde disposition bölümünü göster/gizle
+document.getElementById('id_pass_fail').addEventListener('change', function() {
+    const dispositionSection = document.getElementById('disposition-section');
+    if (this.value === 'FAIL') {
+        dispositionSection.style.display = 'block';
+        dispositionSection.querySelectorAll('input, select, textarea').forEach(el => {
+            el.required = true;
+        });
+    } else {
+        dispositionSection.style.display = 'none';
+        dispositionSection.querySelectorAll('input, select, textarea').forEach(el => {
+            el.required = false;
+        });
+    }
+});
+
+// Ölçülen değer girildiğinde otomatik pass/fail hesaplama
+document.getElementById('id_measured_value').addEventListener('blur', function() {
+    const controlItemId = document.getElementById('id_control_item').value;
+    const measuredValue = parseFloat(this.value);
+    
+    if (!controlItemId || isNaN(measuredValue)) return;
+    
+    fetch(`/stok/api/kalite/inspection/item/${controlItemId}/`)
+        .then(response => response.json())
+        .then(data => {
+            const item = data.item;
+            if (item.inspection_type === 'NUMERIC' && item.min_value !== null && item.max_value !== null) {
+                if (measuredValue >= item.min_value && measuredValue <= item.max_value) {
+                    document.getElementById('id_pass_fail').value = 'PASS';
+                } else {
+                    document.getElementById('id_pass_fail').value = 'FAIL';
+                    // Disposition bölümünü göster
+                    document.getElementById('disposition-section').style.display = 'block';
+                }
+            }
+        });
+});
+</script>
+{% endblock %}
+

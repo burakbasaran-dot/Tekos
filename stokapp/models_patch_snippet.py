@@ -1,0 +1,1 @@
+Kategori, Tedarikci, Birim, Depo, Raf, EkDosya modelleri ve StokItem alan ekleri

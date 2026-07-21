@@ -1,0 +1,89 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Kurulum Dosyası Arşiv - {{ dosya.urun.stok_kodu }}{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div>
+            <h2 style="margin: 0 0 5px 0;">📦 Arşivlenmiş Versiyonlar</h2>
+            <div style="color: #6b7280; font-size: 14px;">
+                {{ dosya.urun.stok_kodu }} - {{ dosya.urun_parcasi }}
+            </div>
+            <div style="display: flex; gap: 15px; margin-top: 15px;">
+                <a href="{% url 'stokapp:kurulum_dosyasi_detay' dosya.pk %}" 
+                   class="btn" 
+                   style="background-color: #6b7280; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-size: 14px;">
+                    ← Geri
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Aktif Versiyon Bilgisi -->
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 12px; padding: 20px; margin-bottom: 30px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <div style="font-size: 14px; opacity: 0.9; margin-bottom: 5px;">Aktif Versiyon</div>
+                <div style="font-size: 24px; font-weight: 700;">v{{ dosya.versiyon }}</div>
+            </div>
+            {% if dosya.pdf_dosya %}
+            <a href="{% url 'stokapp:kurulum_dosyasi_pdf_indir' dosya.pk %}" 
+               style="background: white; color: #667eea; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">
+                📥 Aktif PDF İndir
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if arsivlenmis_versiyonlar %}
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 12px; overflow: hidden;">
+            <thead>
+                <tr style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); color: white;">
+                    <th style="padding: 14px; text-align: left; font-weight: 600; font-size: 14px;">Versiyon</th>
+                    <th style="padding: 14px; text-align: left; font-weight: 600; font-size: 14px;">Açıklama</th>
+                    <th style="padding: 14px; text-align: left; font-weight: 600; font-size: 14px;">Arşivlenme Tarihi</th>
+                    <th style="padding: 14px; text-align: center; font-weight: 600; font-size: 14px;">İşlemler</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for arsiv in arsivlenmis_versiyonlar %}
+                <tr style="border-bottom: 1px solid #e5e7eb; transition: background-color 0.2s;"
+                    onmouseover="this.style.backgroundColor='#f9fafb'"
+                    onmouseout="this.style.backgroundColor='white'">
+                    <td style="padding: 14px;">
+                        <span style="display: inline-block; padding: 6px 14px; background: #fef3c7; color: #92400e; border-radius: 16px; font-weight: 600; font-size: 13px;">
+                            v{{ arsiv.versiyon }}
+                        </span>
+                    </td>
+                    <td style="padding: 14px; font-size: 14px; color: #111827;">
+                        {{ arsiv.aciklama|default:"-"|linebreaks|truncatewords:20 }}
+                    </td>
+                    <td style="padding: 14px; font-size: 14px; color: #6b7280;">
+                        {{ arsiv.arsiv_tarihi|date:"d.m.Y H:i" }}
+                    </td>
+                    <td style="padding: 14px; text-align: center;">
+                        <a href="{% url 'stokapp:kurulum_dosyasi_arsiv_pdf_indir' arsiv.pk %}" 
+                           class="btn" 
+                           style="background-color: #3b82f6; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-size: 13px; font-weight: 500; transition: background-color 0.2s;"
+                           onmouseover="this.style.backgroundColor='#2563eb'"
+                           onmouseout="this.style.backgroundColor='#3b82f6'">
+                            📥 PDF İndir
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="background: white; border: 1px solid #e5e7eb; border-radius: 12px; padding: 60px; text-align: center;">
+        <div style="font-size: 64px; margin-bottom: 20px;">📦</div>
+        <div style="font-size: 18px; color: #111827; font-weight: 600; margin-bottom: 10px;">Henüz arşivlenmiş versiyon yok</div>
+        <div style="font-size: 14px; color: #6b7280;">
+            Versiyon değiştirildiğinde eski dosyalar burada görünecektir.
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

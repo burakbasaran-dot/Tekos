@@ -1,0 +1,289 @@
+{% extends 'stokapp/base.html' %}
+{% load static %}
+
+{% block title %}Yeni Uyarı Kuralı{% endblock %}
+
+{% block content %}
+<style>
+    .form-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        padding-bottom: 24px;
+        border-bottom: 2px solid #e5e7eb;
+    }
+    .form-header h1 {
+        font-size: 28px;
+        font-weight: 700;
+        color: #111827;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .form-section {
+        background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+        padding: 24px;
+        border-radius: 12px;
+        margin-bottom: 24px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .form-section h3 {
+        font-size: 18px;
+        font-weight: 600;
+        color: #111827;
+        margin: 0 0 20px 0;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+    }
+    .form-group {
+        margin-bottom: 20px;
+    }
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #374151;
+        font-size: 14px;
+    }
+    .form-group input[type="text"],
+    .form-group input[type="number"],
+    .form-group input[type="date"],
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 14px;
+        transition: all 0.2s ease;
+        background: white;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    .form-group input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+        margin-top: 8px;
+    }
+    .search-input {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 14px;
+        margin-bottom: 10px;
+        background: #fff;
+    }
+    .search-input:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    .required-field::after {
+        content: " *";
+        color: #ef4444;
+    }
+</style>
+
+<div class="card" style="padding: 30px;">
+    <div class="form-header">
+        <h1><span style="font-size: 32px;">🔔</span> Yeni Uyarı Kuralı</h1>
+        <a href="{% url 'stokapp:alert_rule_listesi' %}" class="btn btn-secondary" style="padding: 10px 20px; border-radius: 8px;">← Geri</a>
+    </div>
+    
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="form-section">
+            <h3>⚙️ Kural Ayarları</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="required-field">{{ form.scope.label }}</label>
+                    {{ form.scope }}
+                    {% if form.scope.errors %}
+                        <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.scope.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div id="product-field" class="form-group" style="display: none;">
+                    <label>{{ form.product.label }}</label>
+                    <input
+                        type="text"
+                        id="product-search"
+                        class="search-input"
+                        placeholder="Ürün kodu veya adı ile ara..."
+                        autocomplete="off"
+                    >
+                    {{ form.product }}
+                    {% if form.product.errors %}
+                        <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.product.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div id="product-revision-field" class="form-group" style="display: none;">
+                    <label>{{ form.product_revision.label }}</label>
+                    {{ form.product_revision }}
+                    {% if form.product_revision.errors %}
+                        <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.product_revision.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div id="customer-field" class="form-group" style="display: none;">
+                    <label>{{ form.customer.label }}</label>
+                    {{ form.customer }}
+                    {% if form.customer.errors %}
+                        <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.customer.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div id="category-field" class="form-group" style="display: none;">
+                    <label>{{ form.category.label }}</label>
+                    {{ form.category }}
+                    {% if form.category.errors %}
+                        <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.category.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label>{{ form.severity_threshold.label }}</label>
+                    {{ form.severity_threshold }}
+                    {% if form.severity_threshold.errors %}
+                        <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.severity_threshold.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label class="required-field">{{ form.level.label }}</label>
+                    {{ form.level }}
+                    {% if form.level.errors %}
+                        <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.level.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label style="display: flex; align-items: center; gap: 8px;">
+                        {{ form.active }}
+                        <span>{{ form.active.label }}</span>
+                    </label>
+                    {% if form.active.errors %}
+                        <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.active.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label class="required-field">{{ form.valid_from.label }}</label>
+                    {{ form.valid_from }}
+                    {% if form.valid_from.errors %}
+                        <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.valid_from.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label>{{ form.valid_to.label }}</label>
+                    {{ form.valid_to }}
+                    {% if form.valid_to.errors %}
+                        <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.valid_to.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="form-section">
+            <h3>💬 Uyarı Mesajı</h3>
+            <div class="form-group">
+                <label class="required-field">{{ form.message.label }}</label>
+                <textarea name="{{ form.message.name }}" id="{{ form.message.id_for_label }}" class="form-control" rows="5" required style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; font-family: inherit;">{{ form.message.value|default:'' }}</textarea>
+                {% if form.message.errors %}
+                    <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.message.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div style="margin-top: 30px; display: flex; gap: 12px; padding-top: 24px; border-top: 2px solid #e5e7eb;">
+            <button type="submit" class="btn btn-primary" style="padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; box-shadow: 0 2px 8px rgba(46,204,113,0.3);">💾 Kaydet</button>
+            <a href="{% url 'stokapp:alert_rule_listesi' %}" class="btn btn-secondary" style="padding: 12px 24px; border-radius: 8px; font-size: 14px;">❌ İptal</a>
+        </div>
+    </form>
+</div>
+
+<script>
+function updateScopeFields() {
+    const scope = document.getElementById('id_scope').value;
+    document.getElementById('product-field').style.display = (scope === 'PRODUCT' || scope === 'PRODUCT_REVISION') ? 'block' : 'none';
+    document.getElementById('product-revision-field').style.display = (scope === 'PRODUCT_REVISION') ? 'block' : 'none';
+    document.getElementById('customer-field').style.display = (scope === 'CUSTOMER') ? 'block' : 'none';
+    document.getElementById('category-field').style.display = (scope === 'CATEGORY') ? 'block' : 'none';
+}
+
+document.getElementById('id_scope').addEventListener('change', updateScopeFields);
+updateScopeFields(); // İlk yüklemede çağır
+
+function normalizeSearchText(value) {
+    return (value || '')
+        .toLocaleLowerCase('tr-TR')
+        .replace(/\u0307/g, '')
+        .normalize('NFC')
+        .trim();
+}
+
+function initProductSearch() {
+    const productSelect = document.getElementById('id_product');
+    const productSearch = document.getElementById('product-search');
+    if (!productSelect || !productSearch) return;
+
+    const allOptions = Array.from(productSelect.options).map(opt => ({
+        value: opt.value,
+        label: opt.textContent || '',
+    }));
+
+    const renderOptions = (queryText) => {
+        const selectedValue = productSelect.value;
+        const query = normalizeSearchText(queryText);
+        productSelect.innerHTML = '';
+
+        allOptions.forEach((opt) => {
+            if (!query || !opt.value || normalizeSearchText(opt.label).includes(query)) {
+                const optionNode = document.createElement('option');
+                optionNode.value = opt.value;
+                optionNode.textContent = opt.label;
+                if (opt.value === selectedValue) {
+                    optionNode.selected = true;
+                }
+                productSelect.appendChild(optionNode);
+            }
+        });
+    };
+
+    productSearch.addEventListener('input', (event) => {
+        renderOptions(event.target.value);
+    });
+
+    productSearch.addEventListener('keydown', (event) => {
+        if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            productSelect.focus();
+        }
+    });
+}
+
+initProductSearch();
+</script>
+{% endblock %}
+

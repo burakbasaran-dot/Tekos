@@ -1,0 +1,80 @@
+{# Ortak Üretim Kontrol form stilleri — adim_form ve baslat sayfalarında include edilir #}
+<style>
+.uk-page { max-width: 920px; margin: 0 auto; }
+.uk-page .uk-breadcrumb { font-size: 13px; margin-bottom: 16px; }
+.uk-page .uk-breadcrumb a { color: #3b82f6; text-decoration: none; }
+.uk-page .uk-breadcrumb a:hover { text-decoration: underline; }
+.uk-page-header { margin-bottom: 24px; }
+.uk-page-header h2 { margin: 0 0 8px; font-size: 24px; color: #0f172a; }
+.uk-page-header .uk-subtitle { margin: 0; font-size: 14px; color: #64748b; line-height: 1.5; }
+.uk-plan-summary {
+  background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%);
+  border: 1px solid #bfdbfe; border-radius: 12px; padding: 16px 20px; margin-bottom: 24px;
+}
+.uk-plan-summary dl { margin: 0; display: grid; gap: 8px; }
+.uk-plan-summary dt { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #64748b; font-weight: 600; }
+.uk-plan-summary dd { margin: 0; font-size: 14px; color: #0f172a; }
+.uk-section {
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
+  margin-bottom: 20px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,.04);
+}
+.uk-section-head {
+  padding: 12px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0;
+  font-size: 13px; font-weight: 700; color: #334155; letter-spacing: .02em;
+}
+.uk-section-body { padding: 20px; }
+.uk-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px 20px; }
+.uk-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px 20px; }
+@media (max-width: 768px) {
+  .uk-grid-2, .uk-grid-3 { grid-template-columns: 1fr; }
+}
+.uk-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.uk-field-full { grid-column: 1 / -1; }
+.uk-field label,
+.uk-field > label { font-size: 13px; font-weight: 600; color: #475569; }
+.uk-field .helptext { font-size: 12px; color: #94a3b8; margin: 0; }
+.uk-field input[type="text"],
+.uk-field input[type="number"],
+.uk-field input[type="date"],
+.uk-field input[type="file"],
+.uk-field select,
+.uk-field textarea,
+.uk-page .form-control {
+  width: 100%; box-sizing: border-box; padding: 10px 12px;
+  border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px;
+  background: #fff; transition: border-color .15s, box-shadow .15s;
+}
+.uk-field input:focus,
+.uk-field select:focus,
+.uk-field textarea:focus,
+.uk-page .form-control:focus {
+  outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.12);
+}
+.uk-field.uk-field-disabled input,
+.uk-field.uk-field-disabled select { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; }
+.uk-order-row {
+  display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: end;
+}
+@media (max-width: 640px) { .uk-order-row { grid-template-columns: 1fr; } }
+.uk-check-row {
+  display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px;
+  background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px;
+  cursor: pointer; user-select: none;
+}
+.uk-check-row input { margin-top: 3px; width: 18px; height: 18px; accent-color: #3b82f6; flex-shrink: 0; }
+.uk-check-row .uk-check-label { font-size: 14px; font-weight: 600; color: #334155; }
+.uk-check-row .uk-check-hint { font-size: 12px; color: #64748b; margin-top: 2px; font-weight: 400; }
+.uk-rev-banner {
+  background: #fff7ed; border: 1px solid #fdba74; border-radius: 10px;
+  padding: 16px 20px; margin-bottom: 20px;
+}
+.uk-rev-banner strong { display: block; margin-bottom: 10px; color: #9a3412; }
+.uk-photo-preview { margin-top: 10px; }
+.uk-photo-preview img { max-height: 140px; border-radius: 10px; border: 1px solid #e2e8f0; }
+.uk-form-actions {
+  display: flex; flex-wrap: wrap; gap: 12px; align-items: center;
+  padding-top: 8px; margin-top: 8px;
+}
+.uk-form-actions .btn-primary { padding: 12px 28px; font-size: 15px; }
+.uk-errors { color: #dc2626; font-size: 12px; margin-top: 4px; list-style: none; padding: 0; }
+</style>

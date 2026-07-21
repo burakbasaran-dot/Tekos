@@ -1,0 +1,151 @@
+{% extends "stokapp/base.html" %}
+{% block title %}{% if mode == 'ekle' %}Yeni Dış Operasyon{% else %}Dış Operasyon Düzenle{% endif %}{% endblock %}
+{% block content %}
+<div class="card" style="max-width:920px;">
+  <h2 style="margin-top:0;">{% if mode == 'ekle' %}Yeni Dış Operasyon{% else %}Dış Operasyon Düzenle — {{ op.operasyon_no }}{% endif %}</h2>
+  <form method="post" style="display:grid; gap:14px;">
+    {% csrf_token %}
+    {% if mode == 'ekle' %}
+    <label>Stok ürünü *<br>
+      <select name="stok_item" required style="width:100%;padding:8px;border-radius:8px;border:1px solid #e5e7eb;">
+        {% for s in stoklar %}
+        <option value="{{ s.pk }}">{{ s.stok_kodu }} — {{ s.ad }} ({{ s.mevcut_miktar }} {{ s.birim }})</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Operasyon tipi *<br>
+      <select name="operasyon_tipi" required style="width:100%;padding:8px;border-radius:8px;border:1px solid #e5e7eb;">
+        {% for t in tipler %}
+        <option value="{{ t.pk }}">{{ t.ad }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Tedarikçi *<br>
+      <select name="tedarikci" required style="width:100%;padding:8px;border-radius:8px;border:1px solid #e5e7eb;">
+        {% for ted in tedarikciler %}
+        <option value="{{ ted.pk }}">{{ ted.ad }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Üretim emri (opsiyonel)<br>
+      <select name="uretim_emri" style="width:100%;padding:8px;border-radius:8px;border:1px solid #e5e7eb;">
+        <option value="">—</option>
+        {% for e in uretimler %}
+        <option value="{{ e.pk }}">{{ e.emir_no }} — {{ e.recete.urun.stok_kodu }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Gönderilen miktar *<br>
+      <input name="gonderilen_miktar" type="number" step="0.001" min="0.001" required style="width:100%;padding:8px;border-radius:8px;border:1px solid #e5e7eb;">
+    </label>
+    <label>Birim<br>
+      <input name="birim" type="text" value="Adet" style="width:100%;padding:8px;border-radius:8px;border:1px solid #e5e7eb;">
+    </label>
+    <label>Gönderim tarihi *<br>
+      <input name="gonderim_tarihi" type="date" required value="{{ bugun|date:'Y-m-d' }}" style="padding:8px;border-radius:8px;border:1px solid #e5e7eb;">
+    </label>
+    <label>Beklenen dönüş tarihi<br>
+      <input name="beklenen_donus_tarihi" type="date" style="padding:8px;border-radius:8px;border:1px solid #e5e7eb;">
+    </label>
+    <label>Birim işlem fiyatı<br>
+      <input name="birim_fiyat" type="number" step="0.0001" value="0" style="width:100%;padding:8px;border-radius:8px;border:1px solid #e5e7eb;">
+    </label>
+    <label>Para birimi<br>
+      <select name="para_birimi" style="padding:8px;border-radius:8px;border:1px solid #e5e7eb;">
+        <option value="TL">TL</option>
+        <option value="USD">USD</option>
+        <option value="EUR">EUR</option>
+        <option value="GBP">GBP</option>
+      </select>
+    </label>
+    <label>Tahmini toplam maliyet<br>
+      <input name="tahmini_toplam_maliyet" type="number" step="0.01" value="0" style="width:100%;padding:8px;border-radius:8px;border:1px solid #e5e7eb;">
+    </label>
+    {% else %}
+    <p style="color:#6b7280;font-size:14px;">No: <strong>{{ op.operasyon_no }}</strong> — {{ op.stok_item.stok_kodu }} ({{ op.gonderilen_miktar }} {{ op.birim }})</p>
+    {% if op.durum == 'TASLAK' %}
+    <label>Operasyon tipi<br>
+      <select name="operasyon_tipi" style="width:100%;padding:8px;border-radius:8px;border:1px solid #e5e7eb;">
+        {% for t in tipler %}
+        <option value="{{ t.pk }}" {% if op.operasyon_tipi_id == t.pk %}selected{% endif %}>{{ t.ad }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Tedarikçi<br>
+      <select name="tedarikci" style="width:100%;padding:8px;border-radius:8px;border:1px solid #e5e7eb;">
+        {% for ted in tedarikciler %}
+        <option value="{{ ted.pk }}" {% if op.tedarikci_id == ted.pk %}selected{% endif %}>{{ ted.ad }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Gönderim tarihi<br>
+      <input name="gonderim_tarihi" type="date" value="{{ op.gonderim_tarihi|date:'Y-m-d' }}" style="padding:8px;border-radius:8px;border:1px solid #e5e7eb;">
+    </label>
+    <label>Birim fiyat<br>
+      <input name="birim_fiyat" type="number" step="0.0001" value="{{ op.birim_fiyat }}" style="width:100%;padding:8px;border-radius:8px;border:1px solid #e5e7eb;">
+    </label>
+    <label>Para birimi<br>
+      <select name="para_birimi" style="padding:8px;border-radius:8px;border:1px solid #e5e7eb;">
+        <option value="TL" {% if op.para_birimi == 'TL' %}selected{% endif %}>TL</option>
+        <option value="USD" {% if op.para_birimi == 'USD' %}selected{% endif %}>USD</option>
+        <option value="EUR" {% if op.para_birimi == 'EUR' %}selected{% endif %}>EUR</option>
+        <option value="GBP" {% if op.para_birimi == 'GBP' %}selected{% endif %}>GBP</option>
+      </select>
+    </label>
+    <label>Tahmini toplam maliyet<br>
+      <input name="tahmini_toplam_maliyet" type="number" step="0.01" value="{{ op.tahmini_toplam_maliyet }}" style="width:100%;padding:8px;border-radius:8px;border:1px solid #e5e7eb;">
+    </label>
+    {% endif %}
+    {% endif %}
+
+    <label>Parti / Lot No<br>
+      <input name="parti_no" value="{% if op %}{{ op.parti_no }}{% endif %}" style="width:100%;padding:8px;border-radius:8px;border:1px solid #e5e7eb;">
+    </label>
+    <label>Gönderim deposu<br>
+      <select name="gonderim_deposu" style="width:100%;padding:8px;border-radius:8px;border:1px solid #e5e7eb;">
+        <option value="">—</option>
+        {% for d in depolar %}
+        <option value="{{ d.pk }}" {% if op and op.gonderim_deposu_id == d.pk %}selected{% endif %}>{{ d.ad }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>Dış operasyon lokasyonu / tedarikçi deposu<br>
+      <input name="dis_operasyon_lokasyonu" value="{% if op %}{{ op.dis_operasyon_lokasyonu }}{% endif %}" style="width:100%;padding:8px;border-radius:8px;border:1px solid #e5e7eb;">
+    </label>
+    <label>Sevk evrak / irsaliye no<br>
+      <input name="sevk_evrak_no" value="{% if op %}{{ op.sevk_evrak_no }}{% endif %}" style="width:100%;padding:8px;border-radius:8px;border:1px solid #e5e7eb;">
+    </label>
+    <label>Beklenen dönüş tarihi<br>
+      <input name="beklenen_donus_tarihi" type="date" value="{% if op and op.beklenen_donus_tarihi %}{{ op.beklenen_donus_tarihi|date:'Y-m-d' }}{% endif %}" style="padding:8px;border-radius:8px;border:1px solid #e5e7eb;">
+    </label>
+    {% if mode == 'duzenle' %}
+    <label>Üretim emri<br>
+      <select name="uretim_emri" style="width:100%;padding:8px;border-radius:8px;border:1px solid #e5e7eb;">
+        <option value="">—</option>
+        {% for e in uretimler %}
+        <option value="{{ e.pk }}" {% if op.uretim_emri_id == e.pk %}selected{% endif %}>{{ e.emir_no }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    {% endif %}
+    <label>Açıklama<br>
+      <textarea name="aciklama" rows="3" style="width:100%;padding:8px;border-radius:8px;border:1px solid #e5e7eb;">{% if op %}{{ op.aciklama }}{% endif %}</textarea>
+    </label>
+
+    {% if mode == 'ekle' %}
+    <label style="display:flex;align-items:center;gap:8px;">
+      <input type="checkbox" name="taslak" value="1"> Taslak olarak kaydet (stok düşmez; Detay’dan “Gönder” ile sevk)
+    </label>
+    <div style="display:flex;gap:10px;">
+      <button type="submit" class="btn btn-primary">Kaydet</button>
+      <a href="{% url 'stokapp:dis_operasyon_listesi' %}" class="btn btn-secondary">İptal</a>
+    </div>
+    {% else %}
+    <div style="display:flex;gap:10px;">
+      <button type="submit" class="btn btn-primary">Güncelle</button>
+      <a href="{% url 'stokapp:dis_operasyon_detay' op.pk %}" class="btn btn-secondary">İptal</a>
+    </div>
+    {% endif %}
+  </form>
+</div>
+{% endblock %}

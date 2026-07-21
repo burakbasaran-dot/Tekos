@@ -1,0 +1,93 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Avans Ödeme Ekle{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <a href="{% url 'stokapp:gunluk_calisma_listesi' %}" class="btn" style="background-color: #6b7280; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px;">
+                ← Geri
+            </a>
+            <h2 style="margin: 0;">Avans Ödeme Ekle</h2>
+        </div>
+    </div>
+    
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 15px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background: #fff3cd; color: #856404; border-left: 4px solid #ffc107;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+    
+    <form method="post" style="max-width: 800px;">
+        {% csrf_token %}
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.personel.label }}</label>
+                {{ form.personel }}
+                {% if form.personel.errors %}
+                    <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.personel.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.tarih.label }}</label>
+                {{ form.tarih }}
+                {% if form.tarih.errors %}
+                    <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.tarih.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.tutar.label }}</label>
+                {{ form.tutar }}
+                {% if form.tutar.errors %}
+                    <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.tutar.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.odeme_sekli.label }}</label>
+                {{ form.odeme_sekli }}
+                {% if form.odeme_sekli.errors %}
+                    <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.odeme_sekli.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.aciklama.label }}</label>
+            {{ form.aciklama }}
+            {% if form.aciklama.errors %}
+                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.aciklama.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div style="margin-top: 30px;">
+            <button type="submit" class="btn btn-primary" style="background-color: #f59e0b; border-color: #f59e0b; padding: 10px 20px;">Kaydet</button>
+            <a href="{% url 'stokapp:gunluk_calisma_listesi' %}" class="btn" style="background-color: #6b7280; color: white; padding: 10px 20px; text-decoration: none; margin-left: 10px;">İptal</a>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Tutar alanını 2 ondalık basamakla formatla
+    const tutarInput = document.querySelector('#id_tutar');
+    if (tutarInput) {
+        tutarInput.addEventListener('blur', function() {
+            const value = parseFloat(this.value);
+            if (!isNaN(value)) {
+                this.value = value.toFixed(2);
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

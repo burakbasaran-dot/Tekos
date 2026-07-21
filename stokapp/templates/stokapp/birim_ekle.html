@@ -1,0 +1,30 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Yeni Birim Ekle{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>➕ Yeni Birim Ekle</h2>
+        <a href="{% url 'stokapp:birim_listesi' %}" class="btn btn-secondary">← Geri</a>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        
+        <div style="max-width: 500px;">
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Birim Adı:</label>
+                {{ form.ad }}
+                {% if form.ad.errors %}
+                    <div style="color: #dc3545; font-size: 12px; margin-top: 5px;">{{ form.ad.errors }}</div>
+                {% endif %}
+                <small style="color: #6b7280; font-size: 12px; margin-top: 5px; display: block;">Örn: Adet, Kg, Litre, Metre</small>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <a href="{% url 'stokapp:birim_listesi' %}" class="btn btn-secondary">İptal</a>
+                <button type="submit" class="btn btn-primary">💾 Kaydet</button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

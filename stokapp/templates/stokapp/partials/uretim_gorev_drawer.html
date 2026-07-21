@@ -1,0 +1,106 @@
+<div id="task-drawer-backdrop" class="task-drawer-backdrop"></div>
+<aside id="task-drawer" class="task-drawer" aria-hidden="true">
+  <div class="task-drawer-header">
+    <h3 id="drawer-title">Görev Detayı</h3>
+    <button type="button" id="drawer-close-btn" class="btn btn-secondary btn-sm">Kapat</button>
+  </div>
+
+  <div id="drawer-loading" class="drawer-loading">Yükleniyor...</div>
+
+  <div id="drawer-content" class="drawer-content hidden">
+    <section class="drawer-section">
+      <h4>Üst Bilgi</h4>
+      <div class="drawer-grid">
+        <div><span class="k">İş Emri No</span><span id="drawer-emir-no" class="v">-</span></div>
+        <div><span class="k">Ürün Kodu</span><span id="drawer-urun-kodu" class="v">-</span></div>
+        <div><span class="k">Ürün Adı</span><span id="drawer-urun-adi" class="v">-</span></div>
+        <div><span class="k">Operasyon</span><span id="drawer-operasyon" class="v">-</span></div>
+        <div><span class="k">Atanan Personel</span><span id="drawer-personel" class="v">-</span></div>
+        <div><span class="k">Durum</span><span id="drawer-durum" class="v">-</span></div>
+        <div><span class="k">Planlanan Süre</span><span id="drawer-planlanan-sure" class="v">-</span></div>
+        <div><span class="k">Planlanan Başlangıç</span><span id="drawer-planlanan-baslangic" class="v">-</span></div>
+        <div><span class="k">Planlanan Bitiş</span><span id="drawer-planlanan-bitis" class="v">-</span></div>
+        <div><span class="k">Gerçek Süre</span><span id="drawer-gerceklesen-sure" class="v">-</span></div>
+        <div><span class="k">Süre Farkı</span><span id="drawer-gecikme" class="v">-</span></div>
+      </div>
+    </section>
+
+    <section class="drawer-section">
+      <h4>Aksiyonlar</h4>
+      <div class="drawer-actions">
+        <button id="btn-baslat" type="button" class="btn btn-primary btn-sm" data-action="BASLAT">İşi Başlat</button>
+        <button id="btn-duraklat" type="button" class="btn btn-warning btn-sm" data-action="DURAKLAT">Duraklat</button>
+        <button id="btn-devam" type="button" class="btn btn-info btn-sm" data-action="DEVAM">Devam Et</button>
+        <button id="btn-tamamla" type="button" class="btn btn-success btn-sm" data-action="TAMAMLA">Tamamla</button>
+        <button id="btn-talimat-toggle" type="button" class="btn btn-secondary btn-sm">Talimatı Gör</button>
+      </div>
+    </section>
+
+    <section class="drawer-section">
+      <h4>Planlama Düzenle (15 dk snap)</h4>
+      <div class="drawer-inline-form">
+        <label>Atanan Personel
+          <select id="plan-personel-id">
+            <option value="">Personel seçin</option>
+            {% for personel in personeller %}
+              <option value="{{ personel.id }}">{{ personel.ad }} {{ personel.soyad }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>Planlanan Başlangıç Tarihi
+          <input id="plan-start-date" type="date">
+        </label>
+        <label>Planlanan Başlangıç (HH:mm)
+          <input id="plan-start-time" type="time" step="900">
+        </label>
+        <label>Planlanan Süre (dk)
+          <input id="plan-duration-minutes" type="number" min="15" step="15">
+        </label>
+        <label>Planlanan Bitiş (HH:mm)
+          <input id="plan-end-time" type="time" readonly>
+        </label>
+        <button id="btn-plan-save" type="button" class="btn btn-secondary btn-sm">Planı Güncelle</button>
+      </div>
+    </section>
+
+    <section class="drawer-section">
+      <div class="drawer-collapsible-header">
+        <h4 style="margin:0;">Talimatlar</h4>
+        <span id="instruction-state-text">Kapalı</span>
+      </div>
+      <div id="instruction-panel" class="instruction-panel hidden">
+        <div id="instruction-loading" class="drawer-loading hidden">Talimatlar yükleniyor...</div>
+        <div id="instruction-empty" class="empty-hint hidden">Talimat bulunamadı.</div>
+        <div id="instruction-list"></div>
+      </div>
+    </section>
+
+    <section class="drawer-section">
+      <h4>Not Ekle</h4>
+      <div class="drawer-inline-form">
+        <textarea id="note-input" rows="3" placeholder="Operasyon notunuzu yazın..."></textarea>
+        <button id="btn-note-save" type="button" class="btn btn-secondary btn-sm">Not Ekle</button>
+      </div>
+      <div id="note-list" class="drawer-list"></div>
+    </section>
+
+    <section class="drawer-section">
+      <h4>Sorun Bildir</h4>
+      <div class="drawer-inline-form">
+        <select id="issue-type">
+          <option value="MALZEME_EKSIK">Malzeme eksik</option>
+          <option value="TAKIM_PROBLEMI">Takım problemi</option>
+          <option value="OLCU_PROBLEMI">Ölçü problemi</option>
+          <option value="TEKNIK_RESIM_UYUMSUZ">Teknik resim uyumsuzluğu</option>
+          <option value="MAKINE_ARIZASI">Makine arızası</option>
+          <option value="DIGER">Diğer</option>
+        </select>
+        <textarea id="issue-description" rows="3" placeholder="Sorun açıklaması"></textarea>
+        <label class="issue-file-row">Görsel (opsiyonel) <input id="issue-image" type="file" accept="image/*"></label>
+        <label class="issue-checkbox-row"><input id="issue-mark-problem" type="checkbox" checked> Görevi Sorunlu / Durduruldu yap</label>
+        <button id="btn-issue-save" type="button" class="btn btn-danger btn-sm">Sorun Bildir</button>
+      </div>
+      <div id="issue-list" class="drawer-list"></div>
+    </section>
+  </div>
+</aside>

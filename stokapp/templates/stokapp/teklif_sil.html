@@ -1,0 +1,21 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Teklif Sil{% endblock %}
+{% block content %}
+<div class="card" style="max-width: 520px;">
+    <h2>Teklif silinsin mi?</h2>
+    <p style="color:#374151;">{{ teklif.teklif_no }} — {{ teklif.ad }}</p>
+    {% if siparise_bagli %}
+    <p style="background:#fef3c7;border:1px solid #fcd34d;color:#92400e;padding:12px;border-radius:8px;font-size:14px;">
+        Bu tekliften oluşturulmuş bir sipariş kaydı var; güvenlik nedeniyle silme yapılamaz. Önce ilgili siparişi kaldırın veya arşivleyin.
+    </p>
+    <a href="{% url 'stokapp:teklif_detay' teklif.pk %}" class="btn btn-secondary" style="padding:10px 18px;">Teklife dön</a>
+    <a href="{% url 'stokapp:teklif_listesi' %}" class="btn btn-secondary" style="margin-left:8px;padding:10px 18px;">Listeye dön</a>
+    {% else %}
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn" style="background:#ef4444;color:#fff;padding:10px 18px;border:none;border-radius:6px;cursor:pointer;">Evet, sil</button>
+        <a href="{% url 'stokapp:teklif_listesi' %}" class="btn btn-secondary" style="margin-left:8px;padding:10px 18px;">Vazgeç</a>
+    </form>
+    {% endif %}
+</div>
+{% endblock %}

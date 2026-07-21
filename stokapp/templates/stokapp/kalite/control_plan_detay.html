@@ -1,0 +1,65 @@
+{% extends 'stokapp/base.html' %}
+{% load static %}
+
+{% block title %}Kontrol Planı Detay{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h1 style="margin: 0;">✅ Kontrol Planı Detay</h1>
+        <div style="display: flex; gap: 10px;">
+            <a href="{% url 'stokapp:control_item_ekle' plan.pk %}" class="btn btn-primary">+ Kontrol Maddesi Ekle</a>
+            <a href="{% url 'stokapp:control_plan_listesi' %}" class="btn btn-secondary">← Geri</a>
+        </div>
+    </div>
+    
+    <!-- Plan Bilgileri -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-bottom: 30px;">
+        <div>
+            <strong>Ürün:</strong> {{ plan.product.ad }}
+        </div>
+        <div>
+            <strong>Revizyon:</strong> {{ plan.revision }}
+        </div>
+        <div>
+            <strong>Geçerlilik Tarihi:</strong> {{ plan.effective_from|date:"d.m.Y" }}
+        </div>
+    </div>
+    
+    <!-- Kontrol Maddeleri -->
+    <div>
+        <h2 style="margin-bottom: 15px;">Kontrol Maddeleri</h2>
+        {% if items %}
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #34495e; color: white;">
+                    <th style="padding: 12px;">Adım</th>
+                    <th style="padding: 12px;">Ölçüm Adı</th>
+                    <th style="padding: 12px;">Spec Min</th>
+                    <th style="padding: 12px;">Spec Max</th>
+                    <th style="padding: 12px;">Metod</th>
+                    <th style="padding: 12px;">Frekans</th>
+                    <th style="padding: 12px;">Zorunlu</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td style="padding: 12px;">{{ item.step|default:"-" }}</td>
+                    <td style="padding: 12px;">{{ item.measurement_name }}</td>
+                    <td style="padding: 12px;">{{ item.spec_min|default:"-" }}</td>
+                    <td style="padding: 12px;">{{ item.spec_max|default:"-" }}</td>
+                    <td style="padding: 12px;">{{ item.method|default:"-" }}</td>
+                    <td style="padding: 12px;">{{ item.frequency|default:"-" }}</td>
+                    <td style="padding: 12px;">{% if item.required %}✅{% else %}❌{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="color: #6b7280; padding: 20px;">Henüz kontrol maddesi eklenmemiş.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

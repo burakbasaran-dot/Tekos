@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <title>Sipariş Maliyetleri</title>
+</head>
+<body>
+  <h1>Sipariş Maliyetleri</h1>
+  <div class="meta">
+    Sipariş: {{ siparis.siparis_numarasi }} |
+    Müşteri: {{ siparis.musteri_adi|default:siparis.musteri.ad }} |
+    Oluşturma: {{ olusturma_tarihi|date:"d.m.Y H:i" }}
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Tip</th>
+        <th>Açıklama</th>
+        <th class="num">Miktar</th>
+        <th class="num">Birim Fiyat</th>
+        <th class="num">Toplam</th>
+        <th>Para Birimi</th>
+        <th>Kayıt Tarihi</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for maliyet in maliyetler %}
+      <tr>
+        <td>{{ maliyet.get_maliyet_tipi_display }}</td>
+        <td>{{ maliyet.aciklama }}</td>
+        <td class="num">{{ maliyet.miktar }} {{ maliyet.birim }}</td>
+        <td class="num">{{ maliyet.birim_fiyat }}</td>
+        <td class="num">{{ maliyet.toplam }}</td>
+        <td>{{ maliyet.para_birimi }}</td>
+        <td>{{ maliyet.kayit_tarihi|date:"d.m.Y" }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" class="empty">Kayıt bulunamadı.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="totals">
+    <strong>Malzeme Toplam:</strong> {{ malzeme_toplam }} TRY |
+    <strong>Operasyon Toplam:</strong> {{ operasyon_toplam }} TRY |
+    <strong>Genel Toplam:</strong> {{ genel_toplam }} TRY
+  </div>
+</body>
+</html>

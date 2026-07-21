@@ -1,0 +1,46 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Yeni Raf Ekle{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>➕ Yeni Raf Ekle</h2>
+        <a href="{% url 'stokapp:raf_listesi' %}" class="btn btn-secondary">← Geri</a>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        
+        <div style="max-width: 500px;">
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Depo:</label>
+                {{ form.depo }}
+                {% if form.depo.errors %}
+                    <div style="color: #dc3545; font-size: 12px; margin-top: 5px;">{{ form.depo.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Raf Adı:</label>
+                {{ form.ad }}
+                {% if form.ad.errors %}
+                    <div style="color: #dc3545; font-size: 12px; margin-top: 5px;">{{ form.ad.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <a href="{% url 'stokapp:raf_listesi' %}" class="btn btn-secondary">İptal</a>
+                <button type="submit" class="btn btn-primary">💾 Kaydet</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+// URL'den depo_id parametresi varsa otomatik seç
+const urlParams = new URLSearchParams(window.location.search);
+const depoId = urlParams.get('depo_id');
+if (depoId) {
+    document.getElementById('id_depo').value = depoId;
+}
+</script>
+{% endblock %}

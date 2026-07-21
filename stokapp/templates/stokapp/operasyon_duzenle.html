@@ -1,0 +1,60 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Operasyon Düzenle - {{ operasyon.ad }}{% endblock %}
+{% block content %}
+<div class="card">
+    <h2>Operasyon Düzenle: {{ operasyon.ad }}</h2>
+    
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 15px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background: #fff3cd; color: #856404; border-left: 4px solid #ffc107;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+    
+    <form method="post" style="max-width: 600px;">
+        {% csrf_token %}
+        
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.ad.label }}</label>
+            {{ form.ad }}
+            {% if form.ad.errors %}
+                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.ad.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.aciklama.label }}</label>
+            {{ form.aciklama }}
+            {% if form.aciklama.errors %}
+                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.aciklama.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.sira.label }}</label>
+            {{ form.sira }}
+            {% if form.sira.errors %}
+                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.sira.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label style="display: flex; align-items: center; gap: 8px;">
+                {{ form.aktif }}
+                <span>{{ form.aktif.label }}</span>
+            </label>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <button type="submit" class="btn btn-primary" style="background-color: #3b82f6; border-color: #3b82f6; padding: 10px 20px;">Güncelle</button>
+            <a href="{% url 'stokapp:operasyon_listesi' %}" class="btn" style="background-color: #6b7280; color: white; padding: 10px 20px; text-decoration: none; margin-left: 10px;">İptal</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+

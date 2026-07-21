@@ -1,0 +1,120 @@
+{% extends "stokapp/base.html" %}
+{% load custom_filters %}
+{% load currency_filters %}
+{% block title %}Kritik Stok Raporu{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="margin: 0;">⚠️ Kritik Stok Raporu</h2>
+        <div style="display:flex; gap:8px; align-items:center;">
+            <a href="{% url 'stokapp:kritik_stok_raporu_excel' %}" class="btn btn-secondary">📊 Excel</a>
+            <a href="{% url 'stokapp:kritik_stok_raporu_pdf' %}" class="btn btn-secondary">📄 PDF</a>
+            <button id="satinalmaOlusturBtn" class="btn btn-primary" style="padding: 8px 16px; display: none;" onclick="satinalmaOlustur()">
+                ➕ Satınalma Siparişi Oluştur
+            </button>
+        </div>
+    </div>
+    
+    <p style="color: #6b7280; margin-bottom: 20px;">
+        Kritik stok seviyesinde veya stoksuz ürünler listelenmektedir. İhtiyacınız olan ürünleri seçip satınalma siparişi oluşturabilirsiniz.
+    </p>
+    
+    {% if kritik_stoklar %}
+    <table style="width: 100%; border-collapse: collapse; background: white;">
+        <thead>
+            <tr style="background-color: #f9fafb; border-bottom: 2px solid #e5e7eb;">
+                <th style="padding: 12px; text-align: left; font-weight: 600; width: 50px;">
+                    <input type="checkbox" id="selectAllStok" onchange="toggleAllStoklar(this.checked)">
+                </th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Stok Kodu</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Ürün Adı</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Kategori</th>
+                <th style="padding: 12px; text-align: right; font-weight: 600;">Mevcut Stok</th>
+                <th style="padding: 12px; text-align: right; font-weight: 600;">Minimum Stok</th>
+                <th style="padding: 12px; text-align: right; font-weight: 600;">Eksik Miktar</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Birim</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Durum</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in kritik_stoklar %}
+            <tr style="border-bottom: 1px solid #e5e7eb; {% if item.mevcut_miktar == 0 %}background-color: #fee2e2;{% else %}background-color: #fef3c7;{% endif %}">
+                <td style="padding: 12px;">
+                    <input type="checkbox" class="stok-checkbox" 
+                           value="{{ item.id }}" 
+                           data-stok-kodu="{{ item.stok_kodu }}"
+                           data-stok-adi="{{ item.ad }}"
+                           data-eksik-miktar="{{ item.eksik_miktar }}"
+                           data-birim="{{ item.birim }}"
+                           data-alis-fiyati="{{ item.alis_fiyati|default:0 }}"
+                           data-para-birimi="{{ item.alis_para_birimi|default:'TRY' }}"
+                           onchange="updateSatinalmaButton()">
+                </td>
+                <td style="padding: 12px;">{{ item.stok_kodu }}</td>
+                <td style="padding: 12px;">{{ item.ad }}</td>
+                <td style="padding: 12px;">{{ item.kategori.ad|default:"-" }}</td>
+                <td style="padding: 12px; text-align: right;">{{ item.mevcut_miktar|format_miktar }} {{ item.birim }}</td>
+                <td style="padding: 12px; text-align: right;">{{ item.minimum_stok|format_miktar }} {{ item.birim }}</td>
+                <td style="padding: 12px; text-align: right; color: #dc2626; font-weight: 600;">
+                    {{ item.eksik_miktar|format_miktar }} {{ item.birim }}
+                </td>
+                <td style="padding: 12px;">{{ item.birim }}</td>
+                <td style="padding: 12px;">
+                    {% if item.mevcut_miktar == 0 %}
+                        <span style="padding: 4px 8px; border-radius: 4px; background-color: #dc2626; color: white; font-size: 12px; font-weight: 600;">❌ STOK YOK</span>
+                    {% else %}
+                        <span style="padding: 4px 8px; border-radius: 4px; background-color: #f59e0b; color: white; font-size: 12px; font-weight: 600;">⚠️ KRİTİK STOK</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="padding: 40px; text-align: center; color: #6b7280;">
+        <p>🎉 Hiç kritik stok bulunmuyor!</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function toggleAllStoklar(checked) {
+    const checkboxes = document.querySelectorAll('.stok-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = checked;
+    });
+    updateSatinalmaButton();
+}
+
+function updateSatinalmaButton() {
+    const checkedBoxes = document.querySelectorAll('.stok-checkbox:checked');
+    const btn = document.getElementById('satinalmaOlusturBtn');
+    
+    if (checkedBoxes.length > 0) {
+        btn.style.display = 'inline-block';
+    } else {
+        btn.style.display = 'none';
+    }
+}
+
+function satinalmaOlustur() {
+    const checkedBoxes = document.querySelectorAll('.stok-checkbox:checked');
+    
+    if (checkedBoxes.length === 0) {
+        alert('Lütfen en az bir ürün seçin.');
+        return;
+    }
+    
+    // Seçili ürünleri URL parametreleri olarak hazırla
+    const params = new URLSearchParams();
+    checkedBoxes.forEach((checkbox, index) => {
+        params.append(`malzeme_${index}`, checkbox.value);
+        params.append(`miktar_${index}`, checkbox.getAttribute('data-eksik-miktar'));
+    });
+    
+    // Satınalma ekle sayfasına yönlendir
+    window.location.href = `{% url 'stokapp:satinalma_ekle' %}?${params.toString()}&planlama=1`;
+}
+</script>
+
+{% endblock %}

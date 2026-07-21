@@ -1,0 +1,107 @@
+{% extends "stokapp/base.html" %}
+{% load static %}
+{% block title %}Sigorta Poliçesi Sil - {{ sigorta.varlik_adi }}{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <a href="{% url 'stokapp:sigorta_listesi' %}{% if arsivli %}?arsivli=true{% endif %}" class="btn" style="background-color: #6b7280; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px;">
+                ← Geri
+            </a>
+            <h2 style="margin: 0;">Sigorta Poliçesi Sil</h2>
+        </div>
+    </div>
+    
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 15px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background: #fff3cd; color: #856404; border-left: 4px solid #ffc107;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+    
+    <div style="max-width: 600px;">
+        <div style="padding: 20px; background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; margin-bottom: 20px;">
+            <p style="margin: 0; color: #991b1b; font-weight: 600;">
+                ⚠️ Bu işlem geri alınamaz!
+            </p>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+            <p style="font-size: 16px; margin-bottom: 10px;">
+                <strong>{{ sigorta.varlik_adi }}</strong> adlı sigorta poliçesini silmek istediğinizden emin misiniz?
+            </p>
+            
+            <div style="background-color: #f9fafb; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                <div style="margin-bottom: 10px;">
+                    <strong>Poliçe No:</strong> {{ sigorta.police_no }}
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <strong>Varlık Kimlik No:</strong> {{ sigorta.varlik_kimlik_no|default:"-" }}
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <strong>Varlık Türü:</strong> {{ sigorta.get_varlik_turu_display }}
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <strong>Poliçe Başlangıç:</strong> {{ sigorta.police_baslangic_tarihi|date:"d.m.Y" }}
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <strong>Poliçe Bitiş:</strong> {{ sigorta.police_bitis_tarihi|date:"d.m.Y" }}
+                    {% if sigorta.suresi_doldu %}
+                    <span style="color: #ef4444; margin-left: 8px;">⚠️ Süresi Doldu</span>
+                    {% endif %}
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <strong>Düzenleyen Firma:</strong> {{ sigorta.police_duzenleyen_firma }}
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <strong>Prim Bedeli:</strong> {{ sigorta.police_prim_bedeli|floatformat:2 }} TRY
+                </div>
+                <div>
+                    <strong>Durum:</strong> 
+                    <span style="color: {% if sigorta.arsivlendi %}#6b7280{% else %}#22c55e{% endif %};">
+                        {% if sigorta.arsivlendi %}Arşivlenmiş{% else %}Aktif{% endif %}
+                    </span>
+                </div>
+            </div>
+            
+            {% if sigorta.police_dosyasi %}
+            <div style="margin-top: 15px; padding: 12px; background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;">
+                <div style="margin-bottom: 8px;">
+                    <strong>Poliçe Dosyası:</strong>
+                </div>
+                <a href="{{ sigorta.police_dosyasi.url }}" target="_blank" 
+                   style="color: #3b82f6; text-decoration: none; font-weight: 500;">
+                    📄 {{ sigorta.police_dosyasi.name|slice:"20:" }}
+                </a>
+                <p style="margin: 8px 0 0 0; font-size: 12px; color: #6b7280;">
+                    Bu dosya da silinecektir.
+                </p>
+            </div>
+            {% endif %}
+        </div>
+        
+        <form method="post">
+            {% csrf_token %}
+            {% if arsivli %}
+            <input type="hidden" name="arsivli" value="true">
+            {% endif %}
+            <div style="display: flex; gap: 10px;">
+                <button type="submit" 
+                        class="btn" 
+                        style="background-color: #ef4444; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                    🗑️ Evet, Sil
+                </button>
+                <a href="{% url 'stokapp:sigorta_listesi' %}{% if arsivli %}?arsivli=true{% endif %}" 
+                   class="btn" 
+                   style="background-color: #6b7280; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px; display: inline-block;">
+                    İptal
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

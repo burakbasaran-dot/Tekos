@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <title>Üretim Planlama</title>
+</head>
+<body>
+  <h1>Üretim Planlama</h1>
+  <div class="meta">
+    Ölçek: {{ scale }} |
+    Başlangıç: {{ start_date|date:"d.m.Y" }} |
+    Aralık: {{ count }} |
+    Oluşturma: {{ olusturma_tarihi|date:"d.m.Y H:i" }}
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>İş Emri</th>
+        <th>Ürün</th>
+        <th>Operasyon</th>
+        <th>Personel</th>
+        <th>Başlangıç</th>
+        <th>Bitiş</th>
+        <th class="num">Süre (dk)</th>
+        <th>Durum</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for asama in asamalar %}
+      <tr>
+        <td>{{ asama.uretim_emri.emir_no }}</td>
+        <td>{{ asama.uretim_emri.recete.urun.stok_kodu }} - {{ asama.uretim_emri.recete.urun.ad }}</td>
+        <td>{{ asama.ad }}</td>
+        <td>{% if asama.atanan_personel %}{{ asama.atanan_personel.ad }} {{ asama.atanan_personel.soyad }}{% else %}-{% endif %}</td>
+        <td>{{ asama.planlanan_baslama|date:"d.m.Y H:i" }}</td>
+        <td>{{ asama.planlanan_bitis|date:"d.m.Y H:i" }}</td>
+        <td class="num">{{ asama.planlanan_sure }}</td>
+        <td>{{ asama.get_durum_display }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="8" class="empty">Planlı görev bulunamadı.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>

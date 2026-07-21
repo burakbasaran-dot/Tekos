@@ -1,0 +1,141 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Tedarikçi Performansı{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <h2 style="margin:0;">📈 Tedarikçi Performans Raporu</h2>
+        <a href="{% url 'stokapp:tedarikci_listesi' %}" class="btn btn-secondary" style="padding:8px 14px;">← Tedarikçilere Dön</a>
+    </div>
+
+    <!-- Filtreler -->
+    <form method="get" style="background:#f9fafb; padding:16px; border-radius:8px; margin-bottom:20px;">
+        <div style="display:grid; grid-template-columns: 1.5fr 1fr 1fr 1fr auto; gap:12px; align-items:flex-end;">
+            <div>
+                <label style="display:block; margin-bottom:5px; font-weight:600; font-size:13px;">Kategori (Etiket)</label>
+                <select name="kategori" style="width:100%; padding:8px; border:1px solid #d1d5db; border-radius:6px;">
+                    <option value="">Tüm kategoriler</option>
+                    {% for k in kategoriler %}
+                    <option value="{{ k.pk }}" {% if filtre_kategori == k.pk|stringformat:"s" %}selected{% endif %}>{{ k.ad }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label style="display:block; margin-bottom:5px; font-weight:600; font-size:13px;">Tarih (Baş.)</label>
+                <input type="date" name="tarih_basla" value="{{ filtre_tarih_basla }}" style="width:100%; padding:8px; border:1px solid #d1d5db; border-radius:6px;">
+            </div>
+            <div>
+                <label style="display:block; margin-bottom:5px; font-weight:600; font-size:13px;">Tarih (Bit.)</label>
+                <input type="date" name="tarih_bitis" value="{{ filtre_tarih_bitis }}" style="width:100%; padding:8px; border:1px solid #d1d5db; border-radius:6px;">
+            </div>
+            <div>
+                <label style="display:block; margin-bottom:5px; font-weight:600; font-size:13px;">Durum</label>
+                <select name="durum" style="width:100%; padding:8px; border:1px solid #d1d5db; border-radius:6px;">
+                    <option value="aktif" {% if filtre_durum == 'aktif' %}selected{% endif %}>Aktif</option>
+                    <option value="pasif" {% if filtre_durum == 'pasif' %}selected{% endif %}>Pasif</option>
+                    <option value="hepsi" {% if filtre_durum == 'hepsi' %}selected{% endif %}>Hepsi</option>
+                </select>
+            </div>
+            <div>
+                <button type="submit" class="btn btn-primary" style="padding:9px 18px;">Filtrele</button>
+            </div>
+        </div>
+    </form>
+
+    <!-- Özet kartları -->
+    <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:12px; margin-bottom:20px;">
+        <div style="background:#eef2ff; padding:14px; border-radius:8px;">
+            <div style="font-size:12px; color:#3730a3; font-weight:600;">Tedarikçi Sayısı</div>
+            <div style="font-size:20px; font-weight:700; margin-top:4px;">{{ ozet.tedarikci_sayisi }}</div>
+        </div>
+        <div style="background:#dcfce7; padding:14px; border-radius:8px;">
+            <div style="font-size:12px; color:#166534; font-weight:600;">Toplam Teklif</div>
+            <div style="font-size:20px; font-weight:700; margin-top:4px;">{{ ozet.toplam_teklif }}</div>
+        </div>
+        <div style="background:#fef3c7; padding:14px; border-radius:8px;">
+            <div style="font-size:12px; color:#92400e; font-weight:600;">Kazanan Kalem</div>
+            <div style="font-size:20px; font-weight:700; margin-top:4px;">{{ ozet.toplam_kazanan }}</div>
+        </div>
+        <div style="background:#fce7f3; padding:14px; border-radius:8px;">
+            <div style="font-size:12px; color:#9d174d; font-weight:600;">Toplam Ciro (TRY)</div>
+            <div style="font-size:20px; font-weight:700; margin-top:4px;">₺{{ ozet.toplam_ciro|floatformat:2 }}</div>
+        </div>
+    </div>
+
+    <!-- Tablo -->
+    <table style="width:100%; border-collapse:collapse; background:white;">
+        <thead>
+            <tr style="background:#f3f4f6; border-bottom:2px solid #e5e7eb;">
+                <th style="padding:10px; text-align:left;">Tedarikçi</th>
+                <th style="padding:10px; text-align:left;">Etiketler</th>
+                <th style="padding:10px; text-align:right;">Toplam Teklif</th>
+                <th style="padding:10px; text-align:right;">Kazanan</th>
+                <th style="padding:10px; text-align:right;">
+                    <a href="?sort=kazanma_orani&dir={% if sort == 'kazanma_orani' and sort_dir == 'desc' %}asc{% else %}desc{% endif %}{% if filtre_kategori %}&kategori={{ filtre_kategori }}{% endif %}{% if filtre_tarih_basla %}&tarih_basla={{ filtre_tarih_basla }}{% endif %}{% if filtre_tarih_bitis %}&tarih_bitis={{ filtre_tarih_bitis }}{% endif %}&durum={{ filtre_durum }}" style="color:inherit; text-decoration:none;">
+                        Kazanma % {% if sort == 'kazanma_orani' %}{% if sort_dir == 'desc' %}↓{% else %}↑{% endif %}{% endif %}
+                    </a>
+                </th>
+                <th style="padding:10px; text-align:right;">
+                    <a href="?sort=ort_teslim_suresi&dir={% if sort == 'ort_teslim_suresi' and sort_dir == 'asc' %}desc{% else %}asc{% endif %}{% if filtre_kategori %}&kategori={{ filtre_kategori }}{% endif %}{% if filtre_tarih_basla %}&tarih_basla={{ filtre_tarih_basla }}{% endif %}{% if filtre_tarih_bitis %}&tarih_bitis={{ filtre_tarih_bitis }}{% endif %}&durum={{ filtre_durum }}" style="color:inherit; text-decoration:none;">
+                        Ort. Teslim (gün) {% if sort == 'ort_teslim_suresi' %}{% if sort_dir == 'desc' %}↓{% else %}↑{% endif %}{% endif %}
+                    </a>
+                </th>
+                <th style="padding:10px; text-align:right;">
+                    <a href="?sort=ort_fiyat_sapma&dir={% if sort == 'ort_fiyat_sapma' and sort_dir == 'asc' %}desc{% else %}asc{% endif %}{% if filtre_kategori %}&kategori={{ filtre_kategori }}{% endif %}{% if filtre_tarih_basla %}&tarih_basla={{ filtre_tarih_basla }}{% endif %}{% if filtre_tarih_bitis %}&tarih_bitis={{ filtre_tarih_bitis }}{% endif %}&durum={{ filtre_durum }}" style="color:inherit; text-decoration:none;">
+                        Fiyat Sapması % {% if sort == 'ort_fiyat_sapma' %}{% if sort_dir == 'desc' %}↓{% else %}↑{% endif %}{% endif %}
+                    </a>
+                </th>
+                <th style="padding:10px; text-align:right;">
+                    <a href="?sort=ciro&dir={% if sort == 'ciro' and sort_dir == 'desc' %}asc{% else %}desc{% endif %}{% if filtre_kategori %}&kategori={{ filtre_kategori }}{% endif %}{% if filtre_tarih_basla %}&tarih_basla={{ filtre_tarih_basla }}{% endif %}{% if filtre_tarih_bitis %}&tarih_bitis={{ filtre_tarih_bitis }}{% endif %}&durum={{ filtre_durum }}" style="color:inherit; text-decoration:none;">
+                        Ciro (TRY) {% if sort == 'ciro' %}{% if sort_dir == 'desc' %}↓{% else %}↑{% endif %}{% endif %}
+                    </a>
+                </th>
+                <th style="padding:10px; text-align:left;">Aksiyon</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in sonuc %}
+            <tr style="border-bottom:1px solid #e5e7eb;">
+                <td style="padding:10px;"><strong>{{ r.tedarikci.ad }}</strong></td>
+                <td style="padding:10px;">
+                    {% for k in r.kategoriler %}
+                        <span style="padding:1px 8px; background:#eef2ff; color:#3730a3; border-radius:10px; font-size:11px; margin-right:2px;">{{ k.ad }}</span>
+                    {% empty %}
+                        <span style="color:#9ca3af; font-size:12px;">-</span>
+                    {% endfor %}
+                </td>
+                <td style="padding:10px; text-align:right;">{{ r.toplam_teklif }}</td>
+                <td style="padding:10px; text-align:right;">{{ r.kazanilan }}</td>
+                <td style="padding:10px; text-align:right;">
+                    {% if r.toplam_teklif > 0 %}
+                        <span style="padding:2px 8px; background:{% if r.kazanma_orani >= 50 %}#dcfce7; color:#166534{% elif r.kazanma_orani >= 25 %}#fef3c7; color:#92400e{% else %}#fee2e2; color:#991b1b{% endif %}; border-radius:10px; font-weight:600;">
+                            {{ r.kazanma_orani|floatformat:1 }}%
+                        </span>
+                    {% else %}
+                        <span style="color:#9ca3af;">-</span>
+                    {% endif %}
+                </td>
+                <td style="padding:10px; text-align:right;">
+                    {% if r.ort_teslim_suresi is not None %}{{ r.ort_teslim_suresi|floatformat:1 }}{% else %}-{% endif %}
+                </td>
+                <td style="padding:10px; text-align:right;">
+                    {% if r.ort_fiyat_sapma is not None %}
+                        <span style="color:{% if r.ort_fiyat_sapma > 5 %}#991b1b{% elif r.ort_fiyat_sapma < -5 %}#166534{% else %}#374151{% endif %};">
+                            {{ r.ort_fiyat_sapma|floatformat:1 }}%
+                        </span>
+                    {% else %}-{% endif %}
+                </td>
+                <td style="padding:10px; text-align:right;">₺{{ r.ciro|floatformat:2 }}</td>
+                <td style="padding:10px;">
+                    <a href="{% url 'stokapp:tedarikci_duzenle' r.tedarikci.pk %}" style="font-size:12px; color:#3b82f6;">Kart</a>
+                    {% if r.tedarikci.pk %}
+                        | <a href="{% url 'stokapp:tedarikci_stoklari' r.tedarikci.pk %}" style="font-size:12px; color:#3b82f6;">Stoklar</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="9" style="padding:40px; text-align:center; color:#6b7280;">Filtreye uygun tedarikçi bulunamadı.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

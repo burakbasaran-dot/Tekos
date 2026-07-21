@@ -1,0 +1,95 @@
+{% extends 'stokapp/base.html' %}
+{% load static %}
+
+{% block title %}CAPA Aksiyonu Düzenle{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h1 style="margin: 0;">🔧 CAPA Aksiyonu Düzenle</h1>
+        <a href="{% url 'stokapp:complaint_detay' capa.complaint.pk %}" class="btn btn-secondary">← Geri</a>
+    </div>
+    
+    <form method="post">
+        {% csrf_token %}
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.action_type.label }} <span style="color: red;">*</span></label>
+                {{ form.action_type }}
+                {% if form.action_type.errors %}
+                    <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.action_type.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.root_cause_method.label }}</label>
+                {{ form.root_cause_method }}
+                {% if form.root_cause_method.errors %}
+                    <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.root_cause_method.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.owner.label }} <span style="color: red;">*</span></label>
+                {{ form.owner }}
+                {% if form.owner.errors %}
+                    <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.owner.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.due_date.label }} <span style="color: red;">*</span></label>
+                {{ form.due_date }}
+                {% if form.due_date.errors %}
+                    <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.due_date.errors }}</div>
+                {% endif %}
+            </div>
+            
+            {% if capa.done_date %}
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600;">Tamamlanma Tarihi:</label>
+                <input type="date" value="{{ capa.done_date|date:'Y-m-d' }}" class="form-control" readonly>
+            </div>
+            {% endif %}
+            
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.status.label }} <span style="color: red;">*</span></label>
+                {{ form.status }}
+                {% if form.status.errors %}
+                    <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.status.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.root_cause_text.label }} <span style="color: red;">*</span></label>
+            {{ form.root_cause_text }}
+            {% if form.root_cause_text.errors %}
+                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.root_cause_text.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.action_text.label }} <span style="color: red;">*</span></label>
+            {{ form.action_text }}
+            {% if form.action_text.errors %}
+                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.action_text.errors }}</div>
+            {% endif %}
+        </div>
+        
+        {% if capa.verification_text %}
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: 600;">Doğrulama:</label>
+            <textarea class="form-control" rows="4" readonly>{{ capa.verification_text }}</textarea>
+        </div>
+        {% endif %}
+        
+        <div style="display: flex; gap: 10px;">
+            <button type="submit" class="btn btn-primary">Kaydet</button>
+            <a href="{% url 'stokapp:complaint_detay' capa.complaint.pk %}" class="btn btn-secondary">İptal</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

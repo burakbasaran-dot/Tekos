@@ -1,0 +1,256 @@
+{% extends "stokapp/base.html" %}
+{% load static %}
+{% load currency_filters %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <a href="{% url 'stokapp:dashboard' %}" class="btn" style="background-color: #6b7280; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px;">
+                ← Geri
+            </a>
+            <h2 style="margin: 0;">💰 Aylık Ödemeler Takibi</h2>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <a href="{% url 'stokapp:banka_hesaplari_listesi' %}" class="btn" style="background-color: #3b82f6; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px;">
+                🏦 Banka Hesapları
+            </a>
+            <a href="{% url 'stokapp:kredi_kartlari_listesi' %}" class="btn" style="background-color: #8b5cf6; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px;">
+                💳 Kredi Kartları
+            </a>
+            <a href="{% url 'stokapp:aylik_odeme_ekle' %}" class="btn btn-primary" style="background-color: #22c55e; border-color: #22c55e; padding: 8px 16px;">
+                + Yeni Ödeme Ekle
+            </a>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 15px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background: #fff3cd; color: #856404; border-left: 4px solid #ffc107;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Yaklaşan ve Gecikmiş Ödemeler Uyarıları (yalnız Ödenecekler sekmesinde) -->
+    {% if sekme == 'odenecek' %}
+    {% if yaklasan_odemeler %}
+    <div style="padding: 16px; margin-bottom: 20px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 8px;">
+        <div style="font-weight: 600; color: #856404; margin-bottom: 8px;">⚠️ Yaklaşan ödemeler</div>
+        <div style="color: #856404; font-size: 14px;">
+            {{ yaklasan_odemeler|length }} ödeme yaklaşıyor (her kaydın seçtiğiniz gün öncesi). Lütfen kontrol edin.
+        </div>
+    </div>
+    {% endif %}
+
+    {% if gecikmis_odemeler %}
+    <div style="padding: 16px; margin-bottom: 20px; background: #f8d7da; border-left: 4px solid #dc3545; border-radius: 8px;">
+        <div style="font-weight: 600; color: #721c24; margin-bottom: 8px;">🚨 Gecikmiş Ödemeler</div>
+        <div style="color: #721c24; font-size: 14px;">
+            {{ gecikmis_odemeler|length }} ödeme gecikmiş durumda. Acilen ödenmelidir!
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    <!-- Filtreleme -->
+    <div style="display: flex; gap: 10px; margin-bottom: 20px; align-items: center; flex-wrap: wrap;">
+        <form method="get" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <input type="hidden" name="sekme" value="{{ sekme }}">
+            {% if sirala %}<input type="hidden" name="sirala" value="{{ sirala }}">{% endif %}
+            {% if yon %}<input type="hidden" name="yon" value="{{ yon }}">{% endif %}
+            <input type="text" name="arama" value="{{ arama }}" placeholder="Açıklama ara..." 
+                   style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; width: 250px;">
+            <select name="durum" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px;">
+                <option value="">Tüm Durumlar</option>
+                <option value="BEKLEMEDE" {% if durum_filtresi == 'BEKLEMEDE' %}selected{% endif %}>Beklemede</option>
+                <option value="ODENDI" {% if durum_filtresi == 'ODENDI' %}selected{% endif %}>Ödendi</option>
+                <option value="GECIKMIS" {% if durum_filtresi == 'GECIKMIS' %}selected{% endif %}>Gecikmiş</option>
+            </select>
+            <button type="submit" style="background-color: #3b82f6; color: white; padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer;">
+                🔍 Ara
+            </button>
+            {% if arama or durum_filtresi %}
+            <a href="{% url 'stokapp:aylik_odemeler_listesi' %}" style="background-color: #6b7280; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px;">
+                Temizle
+            </a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Ödenecekler / Ödenenler sekmeleri -->
+    <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 10px; gap: 8px; flex-wrap: wrap;">
+        <a href="{% url 'stokapp:aylik_odemeler_listesi' %}{{ sekme_odenecek_url }}"
+           style="padding: 10px 18px; border-radius: 8px 8px 0 0; text-decoration: none; font-size: 14px; font-weight: 600;
+           {% if sekme == 'odenecek' %}background: #374151; color: white; border: 1px solid #374151; border-bottom: none;
+           {% else %}background: #e5e7eb; color: #374151; border: 1px solid #d1d5db;{% endif %}">
+            📋 Ödenecekler{% if odenecek_sayisi %} <span style="opacity:0.9;">({{ odenecek_sayisi }})</span>{% endif %}
+        </a>
+        <a href="{% url 'stokapp:aylik_odemeler_listesi' %}{{ sekme_odenen_url }}"
+           style="padding: 10px 18px; border-radius: 8px 8px 0 0; text-decoration: none; font-size: 14px; font-weight: 600;
+           {% if sekme == 'odenen' %}background: #065f46; color: white; border: 1px solid #065f46; border-bottom: none;
+           {% else %}background: #e5e7eb; color: #374151; border: 1px solid #d1d5db;{% endif %}">
+            ✅ Ödenenler{% if odenen_sayisi %} <span style="opacity:0.9;">({{ odenen_sayisi }})</span>{% endif %}
+        </a>
+    </div>
+
+    {% if odemeler %}
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: #374151; border-bottom: 2px solid #e5e7eb;">
+                    <th style="padding: 12px; text-align: left; font-weight: 600; color: white;">
+                        <a href="{{ sirala_urls.aciklama }}" style="color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;" title="Sırala">Açıklama{% if sirala == 'aciklama' %}<span aria-hidden="true">{% if yon == 'asc' %}▲{% else %}▼{% endif %}</span>{% endif %}</a>
+                    </th>
+                    <th style="padding: 12px; text-align: left; font-weight: 600; color: white;">
+                        <a href="{{ sirala_urls.odeme_sekli }}" style="color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;" title="Sırala">Ödeme Şekli{% if sirala == 'odeme_sekli' %}<span aria-hidden="true">{% if yon == 'asc' %}▲{% else %}▼{% endif %}</span>{% endif %}</a>
+                    </th>
+                    <th style="padding: 12px; text-align: left; font-weight: 600; color: white;">
+                        <a href="{{ sirala_urls.kayit_tarihi }}" style="color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;" title="Sırala">Kayıt Tarihi{% if sirala == 'kayit_tarihi' %}<span aria-hidden="true">{% if yon == 'asc' %}▲{% else %}▼{% endif %}</span>{% endif %}</a>
+                    </th>
+                    <th style="padding: 12px; text-align: left; font-weight: 600; color: white;">
+                        <a href="{{ sirala_urls.odeme_tarihi }}" style="color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;" title="Sırala">Ödeme Tarihi{% if sirala == 'odeme_tarihi' %}<span aria-hidden="true">{% if yon == 'asc' %}▲{% else %}▼{% endif %}</span>{% endif %}</a>
+                    </th>
+                    <th style="padding: 12px; text-align: right; font-weight: 600; color: white;">
+                        <a href="{{ sirala_urls.tutar }}" style="color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; justify-content: flex-end; width: 100%;" title="Sırala">Tutar{% if sirala == 'tutar' %}<span aria-hidden="true">{% if yon == 'asc' %}▲{% else %}▼{% endif %}</span>{% endif %}</a>
+                    </th>
+                    <th style="padding: 12px; text-align: center; font-weight: 600; color: white;">
+                        <a href="{{ sirala_urls.durum }}" style="color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; justify-content: center; width: 100%;" title="Sırala">Durum{% if sirala == 'durum' %}<span aria-hidden="true">{% if yon == 'asc' %}▲{% else %}▼{% endif %}</span>{% endif %}</a>
+                    </th>
+                    <th style="padding: 12px; text-align: center; font-weight: 600; color: white;">İşlemler</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for odeme in odemeler %}
+                <tr style="border-bottom: 1px solid #e5e7eb; {% if odeme.odeme_durumu == 'GECIKMIS' or odeme.gecikmis_mi %}background: #fef2f2;{% elif odeme.odeme_durumu == 'ODENDI' %}background: #f0fdf4;{% elif odeme.hatirlatma_gecerli_mi %}background: #fffbeb;{% endif %}">
+                    <td style="padding: 12px;">
+                        <div style="font-weight: 600; color: #111827;">{{ odeme.odeme_aciklamasi }}</div>
+                        {% if odeme.pk in son_taksit_pks %}
+                        <div style="margin-top: 8px; font-size: 13px; font-weight: 700; color: #0f766e; display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #ccfbf1 0%, #a7f3d0 100%); padding: 5px 12px; border-radius: 8px; border: 1px solid #2dd4bf; box-shadow: 0 1px 2px rgba(15, 118, 110, 0.15);">
+                            <span aria-hidden="true" style="font-size: 1.15em; line-height: 1;">😊</span>
+                            <span>Son Taksit</span>
+                        </div>
+                        {% endif %}
+                        {% if odeme.tekrar_eden %}
+                        <span style="font-size: 12px; color: #6b7280; background: #f3f4f6; padding: 2px 6px; border-radius: 4px;">🔄 Tekrar Eden</span>
+                        {% endif %}
+                        {% if odeme.aciklama %}
+                        <div style="font-size: 12px; color: #6b7280; margin-top: 4px;">{{ odeme.aciklama|truncatewords:10 }}</div>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 12px;">
+                        <div style="font-size: 14px; color: #374151;">{{ odeme.get_odeme_sekli_display }}</div>
+                        {% if odeme.banka_hesabi %}
+                        <div style="font-size: 12px; color: #6b7280;">{{ odeme.banka_hesabi.hesap_adi }}</div>
+                        {% elif odeme.kredi_karti %}
+                        <div style="font-size: 12px; color: #6b7280;">{{ odeme.kredi_karti.kart_adi }}</div>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 12px; font-size: 14px; color: #6b7280;">{{ odeme.kayit_tarihi|date:"d.m.Y" }}</td>
+                    <td style="padding: 12px;">
+                        <div style="font-size: 14px; font-weight: 600; color: #111827;">{{ odeme.odeme_tarihi|date:"d.m.Y" }}</div>
+                        {% if odeme.odeme_yapildi_tarih %}
+                        <div style="font-size: 12px; color: #059669;">Ödendi: {{ odeme.odeme_yapildi_tarih|date:"d.m.Y" }}</div>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 12px; text-align: right; font-weight: 600; color: #111827;">
+                        {{ odeme.tutar|currency }} ₺
+                    </td>
+                    <td style="padding: 12px; text-align: center;">
+                        {% if odeme.odeme_durumu == 'ODENDI' %}
+                        <span style="background: #d1fae5; color: #065f46; padding: 4px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;">
+                            ✅ Ödendi
+                        </span>
+                        {% elif odeme.gecikmis_mi %}
+                        <span style="background: #fee2e2; color: #991b1b; padding: 4px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;">
+                            🚨 Gecikmiş
+                        </span>
+                        {% elif odeme.hatirlatma_gecerli_mi %}
+                        <span style="background: #fef3c7; color: #92400e; padding: 4px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;">
+                            ⚠️ Yaklaşıyor
+                        </span>
+                        {% else %}
+                        <span style="background: #e5e7eb; color: #374151; padding: 4px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;">
+                            ⏳ Beklemede
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 12px; text-align: center;">
+                        <div style="display: flex; gap: 6px; justify-content: center;">
+                            {% if odeme.odeme_durumu != 'ODENDI' %}
+                            <button onclick="odemeYapildi({{ odeme.pk }})" 
+                                    style="background: #22c55e; color: white; padding: 6px 12px; border: none; border-radius: 6px; cursor: pointer; font-size: 12px;">
+                                ✅ Ödendi
+                            </button>
+                            {% endif %}
+                            <a href="{% url 'stokapp:aylik_odeme_duzenle' odeme.pk %}" 
+                               style="background: #3b82f6; color: white; padding: 6px 12px; text-decoration: none; border-radius: 6px; font-size: 12px;">
+                                ✏️
+                            </a>
+                            <a href="{% url 'stokapp:aylik_odeme_sil' odeme.pk %}" 
+                               style="background: #ef4444; color: white; padding: 6px 12px; text-decoration: none; border-radius: 6px; font-size: 12px;"
+                               onclick="return confirm('Bu ödemeyi silmek istediğinize emin misiniz?');">
+                                🗑️
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="text-align: center; padding: 40px; color: #6b7280; border: 1px solid #e5e7eb; border-radius: 8px; background: #fafafa;">
+        <div style="font-size: 48px; margin-bottom: 16px;">{% if sekme == 'odenen' %}✅{% else %}💰{% endif %}</div>
+        {% if sekme == 'odenen' %}
+        <div style="font-size: 18px; margin-bottom: 8px;">Henüz ödenen kayıt yok</div>
+        <div style="font-size: 14px;">Ödeme yaptığınızda kayıtlar burada görünür.</div>
+        <a href="{% url 'stokapp:aylik_odemeler_listesi' %}{{ sekme_odenecek_url }}" style="display: inline-block; margin-top: 16px; color: #3b82f6; font-weight: 600;">← Ödenecekler listesine dön</a>
+        {% else %}
+        <div style="font-size: 18px; margin-bottom: 8px;">Ödenecek kayıt yok</div>
+        <div style="font-size: 14px; margin-bottom: 8px;">Tüm ödemeler tamamlanmış olabilir veya filtre dar olabilir.</div>
+        <a href="{% url 'stokapp:aylik_odeme_ekle' %}" class="btn btn-primary" style="background-color: #22c55e; border-color: #22c55e; padding: 8px 16px; margin-top: 8px; display: inline-block;">
+            + Yeni ödeme ekle
+        </a>
+        {% if odenen_sayisi %}
+        <div style="margin-top: 20px;">
+            <a href="{% url 'stokapp:aylik_odemeler_listesi' %}{{ sekme_odenen_url }}" style="color: #065f46; font-weight: 600;">Ödenenler ({{ odenen_sayisi }}) →</a>
+        </div>
+        {% endif %}
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<script>
+function odemeYapildi(odemeId) {
+    if (confirm('Bu ödemeyi yapıldı olarak işaretlemek istediğinize emin misiniz?')) {
+        fetch(`/stok/finansal/aylik-odeme/${odemeId}/odendi/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const u = new URL(window.location.href);
+                u.searchParams.set('sekme', 'odenen');
+                window.location.href = u.toString();
+            } else {
+                alert('Hata: ' + (data.error || 'Bir hata oluştu'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Bir hata oluştu');
+        });
+    }
+}
+</script>
+{% endblock %}
+

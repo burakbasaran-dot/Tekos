@@ -1,0 +1,102 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Fiyat Geçmişi{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>💰 Fiyat Geçmişi: {{ stok_item.stok_kodu }}</h2>
+        <div>
+            <a href="{% url 'stokapp:stok_detay' stok_item.pk %}" class="btn btn-secondary">← Stok Detayı</a>
+            <a href="{% url 'stokapp:fiyat_gecmisi_listesi' %}" class="btn btn-secondary">📋 Tüm Geçmiş</a>
+        </div>
+    </div>
+
+    <div style="padding: 15px; background: #f8f9fa; border-radius: 8px; margin-bottom: 20px;">
+        <strong>Ürün:</strong> {{ stok_item.ad }}<br>
+        <strong>Mevcut Alış Fiyatı:</strong> {{ stok_item.alis_fiyati }} {{ stok_item.alis_para_birimi }}<br>
+        <strong>Mevcut Satış Fiyatı:</strong> {{ stok_item.satis_fiyati }} {{ stok_item.alis_para_birimi }}<br>
+        <strong>Mevcut Satın Alma Fiyatı:</strong> {{ stok_item.satin_alma_fiyati }} {{ stok_item.alis_para_birimi }}
+    </div>
+
+    {% if gecmisler %}
+    <table>
+        <thead>
+            <tr>
+                <th>Tarih</th>
+                <th>Değişen Alan</th>
+                <th>Eski Fiyat</th>
+                <th>Yeni Fiyat</th>
+                <th>Fark</th>
+                <th>Değişim %</th>
+                <th>Kullanıcı</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for gecmis in gecmisler %}
+            <tr>
+                <td>{{ gecmis.tarih|date:"d.m.Y H:i" }}</td>
+                <td>
+                    <span style="padding: 4px 8px; background: #d1ecf1; color: #0c5460; border-radius: 6px; font-size: 12px;">
+                        {% if gecmis.degisen_alan == 'alis_fiyati' %}Alış Fiyatı
+                        {% elif gecmis.degisen_alan == 'satis_fiyati' %}Satış Fiyatı
+                        {% elif gecmis.degisen_alan == 'satin_alma_fiyati' %}Satın Alma Fiyatı
+                        {% else %}{{ gecmis.degisen_alan }}{% endif %}
+                    </span>
+                </td>
+                <td>
+                    {% if gecmis.eski_alis_fiyati %}{{ gecmis.eski_alis_fiyati }}
+                    {% elif gecmis.eski_satis_fiyati %}{{ gecmis.eski_satis_fiyati }}
+                    {% elif gecmis.eski_satin_alma_fiyati %}{{ gecmis.eski_satin_alma_fiyati }}
+                    {% else %}-{% endif %} {{ gecmis.para_birimi }}
+                </td>
+                <td>
+                    {% if gecmis.yeni_alis_fiyati %}{{ gecmis.yeni_alis_fiyati }}
+                    {% elif gecmis.yeni_satis_fiyati %}{{ gecmis.yeni_satis_fiyati }}
+                    {% elif gecmis.yeni_satin_alma_fiyati %}{{ gecmis.yeni_satin_alma_fiyati }}
+                    {% else %}-{% endif %} {{ gecmis.para_birimi }}
+                </td>
+                <td>
+                    {% if gecmis.eski_alis_fiyati and gecmis.yeni_alis_fiyati %}
+                        {% widthratio gecmis.yeni_alis_fiyati 1 gecmis.eski_alis_fiyati as diff %}
+                        {% if diff > 0 %}
+                            <span style="color: #28a745;">+{{ diff|floatformat:2 }}</span>
+                        {% else %}
+                            <span style="color: #dc3545;">{{ diff|floatformat:2 }}</span>
+                        {% endif %}
+                    {% elif gecmis.eski_satis_fiyati and gecmis.yeni_satis_fiyati %}
+                        {% widthratio gecmis.yeni_satis_fiyati 1 gecmis.eski_satis_fiyati as diff %}
+                        {% if diff > 0 %}
+                            <span style="color: #28a745;">+{{ diff|floatformat:2 }}</span>
+                        {% else %}
+                            <span style="color: #dc3545;">{{ diff|floatformat:2 }}</span>
+                        {% endif %}
+                    {% elif gecmis.eski_satin_alma_fiyati and gecmis.yeni_satin_alma_fiyati %}
+                        {% widthratio gecmis.yeni_satin_alma_fiyati 1 gecmis.eski_satin_alma_fiyati as diff %}
+                        {% if diff > 0 %}
+                            <span style="color: #28a745;">+{{ diff|floatformat:2 }}</span>
+                        {% else %}
+                            <span style="color: #dc3545;">{{ diff|floatformat:2 }}</span>
+                        {% endif %}
+                    {% else %}-{% endif %}
+                </td>
+                <td>
+                    {% if gecmis.eski_alis_fiyati and gecmis.yeni_alis_fiyati and gecmis.eski_alis_fiyati > 0 %}
+                        {% widthratio gecmis.yeni_alis_fiyati|sub:gecmis.eski_alis_fiyati 1 gecmis.eski_alis_fiyati as change_pct %}
+                        {% if change_pct > 0 %}
+                            <span style="color: #28a745;">+{{ change_pct|floatformat:1 }}%</span>
+                        {% else %}
+                            <span style="color: #dc3545;">{{ change_pct|floatformat:1 }}%</span>
+                        {% endif %}
+                    {% else %}-{% endif %}
+                </td>
+                <td>{{ gecmis.user }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="text-align: center; padding: 40px; color: #6b7280;">
+        Bu ürün için henüz fiyat değişikliği kaydı bulunmuyor.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

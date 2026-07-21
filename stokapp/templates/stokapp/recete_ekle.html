@@ -1,0 +1,216 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Yeni Reçete Oluştur{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <h2>➕ Yeni Reçete Oluştur</h2>
+        <a href="{% url 'stokapp:recete_listesi' %}" class="btn btn-secondary">← Geri</a>
+    </div>
+    
+    <form method="post" style="max-width: 800px;">
+        {% csrf_token %}
+        
+        <!-- Ürün/Yarı Mamül/Ham Madde Seçimi -->
+        <div style="margin-bottom: 25px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 10px; color: #111827;">
+                Ürün, Yarı Mamül veya Ham Madde Seçin <span style="color: #dc3545;">*</span>
+            </label>
+            
+            <!-- Arama Kutusu -->
+            <div style="margin-bottom: 15px;">
+                <input type="text" 
+                       id="stokSearch" 
+                       placeholder="Stok kodu veya adı ile arama yapın..."
+                       style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #e5e7eb; font-size: 14px;"
+                       onkeyup="filterStokItems(this.value)">
+            </div>
+            
+            <!-- Seçilebilir Liste -->
+            <div id="stokListContainer" 
+                 style="max-height: 400px; overflow-y: auto; border: 2px solid #e5e7eb; border-radius: 8px; background: white;">
+                {% for item in stok_items %}
+                <div class="stok-item-option" 
+                     data-stok-kodu="{{ item.stok_kodu }}" 
+                     data-stok-ad="{{ item.ad }}"
+                     data-stok-id="{{ item.pk }}"
+                     data-urun-rolu="{{ item.urun_rolu|default:'AL_SAT' }}"
+                     onclick="selectStokItem(this)"
+                     style="padding: 12px 15px; border-bottom: 1px solid #f3f4f6; cursor: pointer; transition: background 0.2s;"
+                     onmouseover="this.style.background='#f9fafb'"
+                     onmouseout="this.style.background='white'">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong style="color: #111827;">{{ item.stok_kodu }}</strong>
+                            <span style="color: #6b7280; margin-left: 10px;">{{ item.ad }}</span>
+                        </div>
+                        {% with stok_tipi=item.stok_tipi|default:item.kategori.stok_tipi %}
+                        <span style="background: {% if stok_tipi == 'URUN' %}#dbeafe{% elif stok_tipi == 'YARI_MAMUL' %}#fef3c7{% else %}#dcfce7{% endif %}; 
+                              color: {% if stok_tipi == 'URUN' %}#1e40af{% elif stok_tipi == 'YARI_MAMUL' %}#92400e{% else %}#166534{% endif %}; 
+                              padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;">
+                            {% if stok_tipi == 'URUN' %}Ürün{% elif stok_tipi == 'YARI_MAMUL' %}Yarı Mamül{% else %}Ham Madde{% endif %}
+                        </span>
+                        {% endwith %}
+                    </div>
+                </div>
+                {% empty %}
+                <div style="padding: 40px; text-align: center; color: #6b7280;">
+                    Stok bulunamadı.
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Seçilen Ürün -->
+            <input type="hidden" id="selectedUrun" name="urun" required>
+            <div id="selectedUrunDisplay" style="margin-top: 15px; padding: 15px; background: #f0f9ff; border-radius: 8px; border: 2px solid #3b82f6; display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <strong style="color: #1e40af;">Seçilen:</strong>
+                        <span id="selectedUrunText" style="margin-left: 10px; color: #111827;"></span>
+                    </div>
+                    <button type="button" onclick="clearSelection()" style="background: #dc3545; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer;">
+                        ✕ Temizle
+                    </button>
+                </div>
+            </div>
+            <div id="rolYonlendirmeKutusu" style="margin-top: 12px; padding: 12px 14px; border-radius: 8px; border: 1px solid #bfdbfe; background: #eff6ff; color: #1e3a8a; font-size: 13px; display: none;"></div>
+        </div>
+        
+        <!-- Versiyon -->
+        <div style="margin-bottom: 25px;">
+            <label for="versiyon" style="display: block; font-weight: 600; margin-bottom: 10px; color: #111827;">
+                Versiyon
+            </label>
+            <input type="text" 
+                   id="versiyon" 
+                   name="versiyon" 
+                   value="1.0"
+                   placeholder="Örn: 1.0, 1.1, 2.0"
+                   style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #e5e7eb; font-size: 14px;">
+            <small style="color: #6b7280; margin-top: 5px; display: block;">
+                Aynı ürün için farklı versiyonlar oluşturabilirsiniz.
+            </small>
+        </div>
+        
+        <!-- Açıklama -->
+        <div style="margin-bottom: 25px;">
+            <label for="aciklama" style="display: block; font-weight: 600; margin-bottom: 10px; color: #111827;">
+                Açıklama
+            </label>
+            <textarea id="aciklama" 
+                      name="aciklama" 
+                      rows="4"
+                      placeholder="Reçete hakkında notlar..."
+                      style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #e5e7eb; font-size: 14px; resize: vertical;"></textarea>
+        </div>
+        
+        <!-- Butonlar -->
+        <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 30px; padding-top: 20px; border-top: 2px solid #e5e7eb;">
+            <a href="{% url 'stokapp:recete_listesi' %}" class="btn btn-secondary">İptal</a>
+            <button type="submit" class="btn btn-primary" id="submitBtn" disabled>
+                💾 Reçete Oluştur
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+let allStokItems = [];
+
+// Sayfa yüklendiğinde tüm stok öğelerini sakla
+document.addEventListener('DOMContentLoaded', function() {
+    const items = document.querySelectorAll('.stok-item-option');
+    items.forEach(item => {
+        allStokItems.push({
+            element: item,
+            kod: item.dataset.stokKodu.toLowerCase(),
+            ad: item.dataset.stokAd.toLowerCase(),
+            id: item.dataset.stokId
+        });
+    });
+});
+
+// Stok öğelerini filtrele
+function filterStokItems(searchTerm) {
+    const term = searchTerm.toLowerCase();
+    const container = document.getElementById('stokListContainer');
+    const items = container.querySelectorAll('.stok-item-option');
+    
+    items.forEach(item => {
+        const kod = item.dataset.stokKodu.toLowerCase();
+        const ad = item.dataset.stokAd.toLowerCase();
+        
+        if (kod.includes(term) || ad.includes(term)) {
+            item.style.display = 'block';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+}
+
+// Stok öğesi seç
+function selectStokItem(element) {
+    const stokId = element.dataset.stokId;
+    const stokKodu = element.dataset.stokKodu;
+    const stokAd = element.dataset.stokAd;
+    
+    // Hidden input'a değer ata
+    document.getElementById('selectedUrun').value = stokId;
+    
+    // Seçilen ürünü göster
+    document.getElementById('selectedUrunText').textContent = `${stokKodu} - ${stokAd}`;
+    document.getElementById('selectedUrunDisplay').style.display = 'block';
+    updateRolYonlendirme(element.dataset.urunRolu || 'AL_SAT');
+    
+    // Submit butonunu aktif et
+    document.getElementById('submitBtn').disabled = false;
+    
+    // Seçilen öğeyi vurgula
+    document.querySelectorAll('.stok-item-option').forEach(item => {
+        item.style.background = 'white';
+        item.style.borderLeft = 'none';
+    });
+    element.style.background = '#dbeafe';
+    element.style.borderLeft = '4px solid #3b82f6';
+}
+
+// Seçimi temizle
+function clearSelection() {
+    document.getElementById('selectedUrun').value = '';
+    document.getElementById('selectedUrunDisplay').style.display = 'none';
+    const rolKutusu = document.getElementById('rolYonlendirmeKutusu');
+    if (rolKutusu) {
+        rolKutusu.style.display = 'none';
+        rolKutusu.textContent = '';
+    }
+    document.getElementById('submitBtn').disabled = true;
+    
+    // Vurgulamayı kaldır
+    document.querySelectorAll('.stok-item-option').forEach(item => {
+        item.style.background = 'white';
+        item.style.borderLeft = 'none';
+    });
+}
+
+function updateRolYonlendirme(urunRolu) {
+    const rolKutusu = document.getElementById('rolYonlendirmeKutusu');
+    if (!rolKutusu) return;
+    const rol = (urunRolu || 'AL_SAT').toUpperCase();
+
+    if (rol === 'BILESEN') {
+        rolKutusu.textContent = 'Bu ürün bir üretim bileşeni. Reçete bileşeni eklemek opsiyoneldir; yalnızca operasyon, talimat ve dokümantasyon için reçete açabilirsiniz.';
+    } else if (rol === 'NIHAI_URUN') {
+        rolKutusu.textContent = 'Bu ürün nihai üründür. Maliyet takibi için reçete bileşeni ve operasyon tanımlamanız önerilir.';
+    } else {
+        rolKutusu.textContent = 'Bu ürün al-sat rolündedir. Reçete bileşeni eklemek zorunlu değildir; gerekiyorsa kontrol/operasyon adımları için reçete kullanabilirsiniz.';
+    }
+    rolKutusu.style.display = 'block';
+}
+</script>
+
+<style>
+.stok-item-option:hover {
+    background: #f9fafb !important;
+}
+</style>
+{% endblock %}
+

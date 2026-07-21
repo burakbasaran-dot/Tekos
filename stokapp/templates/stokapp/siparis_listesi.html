@@ -1,0 +1,1459 @@
+{% extends "stokapp/base.html" %}
+{% load currency_filters %}
+{% block title %}Siparişler{% endblock %}
+{% block content %}
+<style>
+    .order-status-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 500;
+        line-height: 1.35;
+        white-space: nowrap;
+    }
+    .siparis-page-layout {
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 44px);
+        overflow: hidden;
+        gap: 0;
+    }
+    .content:has(.siparis-page-layout) {
+        overflow: hidden;
+    }
+    .siparis-ozet-panel {
+        flex-shrink: 0;
+        padding-bottom: 14px;
+        margin-bottom: 14px;
+        border-bottom: 1px solid #e5e7eb;
+        background: var(--bg, #f5f7fb);
+        z-index: 5;
+    }
+    .siparis-liste-panel {
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        padding-right: 4px;
+    }
+    .siparis-liste-panel .card {
+        margin-bottom: 0;
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    .siparis-toolbar {
+        flex-shrink: 0;
+    }
+    .siparis-tablo-scroll {
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+        border-top: 1px solid #e5e7eb;
+    }
+    .siparis-tablo-scroll table {
+        margin-bottom: 0;
+    }
+    .siparis-tablo-scroll thead th {
+        position: sticky;
+        top: 0;
+        z-index: 3;
+        background: #f9fafb;
+        box-shadow: 0 1px 0 #e5e7eb;
+        color: #111827;
+    }
+    .siparis-tablo-scroll thead th select {
+        color: #111827;
+    }
+    .siparis-pagination {
+        flex-shrink: 0;
+        padding-top: 12px;
+        margin-top: 0;
+        border-top: 1px solid #e5e7eb;
+        background: #fff;
+    }
+    .siparis-ozet-sutunlar {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+        align-items: stretch;
+    }
+    @media (max-width: 1100px) {
+        .siparis-ozet-sutunlar { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 640px) {
+        .siparis-ozet-sutunlar { grid-template-columns: 1fr; }
+    }
+    .dashboard-ozet-kutu {
+        border-radius: 16px;
+        padding: 0;
+        font-size: 12px;
+        line-height: 1.45;
+        border: 1px solid rgba(0, 0, 0, 0.06);
+        box-shadow:
+            0 1px 2px rgba(0, 0, 0, 0.04),
+            0 8px 24px -6px rgba(15, 23, 42, 0.1);
+        position: relative;
+        min-height: 0;
+        overflow: hidden;
+        transition: transform 0.22s ease, box-shadow 0.22s ease;
+        background: linear-gradient(155deg, rgba(255, 255, 255, 0.97) 0%, rgba(248, 250, 252, 0.92) 100%);
+    }
+    .dashboard-ozet-kutu:hover {
+        transform: translateY(-2px);
+        box-shadow:
+            0 2px 4px rgba(0, 0, 0, 0.05),
+            0 16px 40px -12px rgba(15, 23, 42, 0.14);
+    }
+    .dashboard-ozet-kutu::before {
+        content: "";
+        display: block;
+        height: 3px;
+        width: 100%;
+        background: linear-gradient(90deg, #94a3b8, #cbd5e1);
+        opacity: 0.85;
+    }
+    .dashboard-ozet-kutu.ok-tint {
+        background: linear-gradient(160deg, #f0fdf4 0%, #dcfce7 55%, #bbf7d0 100%);
+        border-color: rgba(34, 197, 94, 0.2);
+    }
+    .dashboard-ozet-kutu.ok-tint::before {
+        background: linear-gradient(90deg, #22c55e, #4ade80);
+    }
+    .dashboard-ozet-kutu.warn-tint {
+        background: linear-gradient(160deg, #fffbeb 0%, #fef3c7 55%, #fde68a 100%);
+        border-color: rgba(245, 158, 11, 0.28);
+    }
+    .dashboard-ozet-kutu.warn-tint::before {
+        background: linear-gradient(90deg, #f59e0b, #fbbf24);
+    }
+    .dashboard-ozet-kutu.talep-tint {
+        background: linear-gradient(160deg, #eff6ff 0%, #dbeafe 55%, #bfdbfe 100%);
+        border-color: rgba(59, 130, 246, 0.22);
+    }
+    .dashboard-ozet-kutu.talep-tint::before {
+        background: linear-gradient(90deg, #3b82f6, #60a5fa);
+    }
+    .dashboard-ozet-kutu.total-tint {
+        background: linear-gradient(160deg, #faf5ff 0%, #f3e8ff 55%, #e9d5ff 100%);
+        border-color: rgba(168, 85, 247, 0.22);
+    }
+    .dashboard-ozet-kutu.total-tint::before {
+        background: linear-gradient(90deg, #a855f7, #c084fc);
+    }
+    .dashboard-ozet-inner {
+        padding: 12px 14px 14px;
+        position: relative;
+    }
+    .dashboard-ozet-top {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    .dashboard-ozet-icon {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        flex-shrink: 0;
+        background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), #e2e8f0);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    }
+    .dashboard-ozet-kutu.ok-tint .dashboard-ozet-icon {
+        background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), #bbf7d0);
+    }
+    .dashboard-ozet-kutu.warn-tint .dashboard-ozet-icon {
+        background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), #fde68a);
+    }
+    .dashboard-ozet-kutu.talep-tint .dashboard-ozet-icon {
+        background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), #bfdbfe);
+    }
+    .dashboard-ozet-kutu.total-tint .dashboard-ozet-icon {
+        background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), #e9d5ff);
+    }
+    .dashboard-ozet-headtext {
+        flex: 1;
+        min-width: 0;
+    }
+    .dashboard-ozet-kutu h4 {
+        margin: 0 0 2px 0;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #475569;
+    }
+    .dashboard-ozet-kutu.ok-tint h4 { color: #166534; }
+    .dashboard-ozet-kutu.warn-tint h4 { color: #92400e; }
+    .dashboard-ozet-kutu.talep-tint h4 { color: #1e40af; }
+    .dashboard-ozet-kutu.total-tint h4 { color: #6b21a8; }
+    .dashboard-ozet-kutu .ozet-sayi {
+        font-size: 1.45rem;
+        font-weight: 800;
+        line-height: 1.1;
+        letter-spacing: -0.03em;
+        font-variant-numeric: tabular-nums;
+        color: #0f172a;
+    }
+    .dashboard-ozet-kutu.ok-tint .ozet-sayi { color: #15803d; }
+    .dashboard-ozet-kutu.warn-tint .ozet-sayi { color: #c2410c; }
+    .dashboard-ozet-kutu.talep-tint .ozet-sayi { color: #1d4ed8; }
+    .dashboard-ozet-kutu.total-tint .ozet-sayi { color: #7e22ce; }
+    .dashboard-ozet-kutu .ozet-alt {
+        margin-top: 8px;
+        color: #64748b;
+        font-size: 11px;
+    }
+    .dashboard-ozet-kutu .ozet-muted-hint {
+        color: #94a3b8;
+        font-weight: 500;
+        font-size: 10px;
+        margin: 6px 0 0 0;
+    }
+    .ozet-tutar-satirlar {
+        margin-top: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+    .ozet-tutar-satir {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 10px;
+        font-size: 11px;
+        color: #64748b;
+    }
+    .ozet-tutar-satir span {
+        font-weight: 600;
+    }
+    .ozet-tutar-satir strong {
+        font-variant-numeric: tabular-nums;
+        font-weight: 800;
+        color: #0f172a;
+        white-space: nowrap;
+    }
+    .ozet-tutar-satir.ozet-tutar-toplam {
+        margin-top: 4px;
+        padding-top: 7px;
+        border-top: 1px solid rgba(15, 23, 42, 0.08);
+        font-size: 12px;
+        color: #334155;
+    }
+    .ozet-tutar-satir.ozet-tutar-toplam strong {
+        font-size: 1.2rem;
+        letter-spacing: -0.02em;
+    }
+    .dashboard-ozet-kutu.ok-tint .ozet-tutar-toplam strong { color: #15803d; }
+    .dashboard-ozet-kutu.talep-tint .ozet-tutar-toplam strong { color: #1d4ed8; }
+    .dashboard-ozet-kutu.warn-tint .ozet-tutar-toplam strong { color: #c2410c; }
+    .dashboard-ozet-kutu.total-tint .ozet-tutar-toplam strong { color: #7e22ce; }
+</style>
+<div class="siparis-page-layout">
+    {% if tab != 'acik_siparis_kalemleri' and tab != 'teslimat_bekleyen_kalemleri' %}
+    <section class="siparis-ozet-panel" aria-label="Sipariş tutar özeti">
+        <div class="siparis-ozet-sutunlar">
+            <div class="dashboard-ozet-kutu ok-tint">
+                <div class="dashboard-ozet-inner">
+                    <div class="dashboard-ozet-top">
+                        <span class="dashboard-ozet-icon" aria-hidden="true">₺</span>
+                        <div class="dashboard-ozet-headtext">
+                            <h4>TL Siparişleri</h4>
+                        </div>
+                    </div>
+                    <div class="ozet-tutar-satirlar">
+                        <div class="ozet-tutar-satir">
+                            <span>Tutar</span>
+                            <strong>{{ siparis_tl_tutar|currency }} ₺</strong>
+                        </div>
+                        <div class="ozet-tutar-satir">
+                            <span>KDV (%20)</span>
+                            <strong>{{ siparis_tl_kdv|currency }} ₺</strong>
+                        </div>
+                        <div class="ozet-tutar-satir ozet-tutar-toplam">
+                            <span>Toplam</span>
+                            <strong>{{ siparis_tl_toplam|currency }} ₺</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="dashboard-ozet-kutu talep-tint">
+                <div class="dashboard-ozet-inner">
+                    <div class="dashboard-ozet-top">
+                        <span class="dashboard-ozet-icon" aria-hidden="true">€</span>
+                        <div class="dashboard-ozet-headtext">
+                            <h4>Euro Siparişleri</h4>
+                        </div>
+                    </div>
+                    <div class="ozet-tutar-satirlar">
+                        <div class="ozet-tutar-satir">
+                            <span>Tutar</span>
+                            <strong>{{ siparis_eur_tutar|currency }} €</strong>
+                        </div>
+                        <div class="ozet-tutar-satir">
+                            <span>KDV (%20)</span>
+                            <strong>{{ siparis_eur_kdv|currency }} €</strong>
+                        </div>
+                        <div class="ozet-tutar-satir ozet-tutar-toplam">
+                            <span>Toplam</span>
+                            <strong>{{ siparis_eur_toplam|currency }} €</strong>
+                        </div>
+                    </div>
+                    {% if eur_kur %}
+                    <p class="ozet-muted-hint">Günlük kur: 1 € = {{ eur_kur|tr_decimal:"4" }} ₺</p>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="dashboard-ozet-kutu warn-tint">
+                <div class="dashboard-ozet-inner">
+                    <div class="dashboard-ozet-top">
+                        <span class="dashboard-ozet-icon" aria-hidden="true">$</span>
+                        <div class="dashboard-ozet-headtext">
+                            <h4>Dolar Siparişleri</h4>
+                        </div>
+                    </div>
+                    <div class="ozet-tutar-satirlar">
+                        <div class="ozet-tutar-satir">
+                            <span>Tutar</span>
+                            <strong>{{ siparis_usd_tutar|currency }} $</strong>
+                        </div>
+                        <div class="ozet-tutar-satir">
+                            <span>KDV (%20)</span>
+                            <strong>{{ siparis_usd_kdv|currency }} $</strong>
+                        </div>
+                        <div class="ozet-tutar-satir ozet-tutar-toplam">
+                            <span>Toplam</span>
+                            <strong>{{ siparis_usd_toplam|currency }} $</strong>
+                        </div>
+                    </div>
+                    {% if usd_kur %}
+                    <p class="ozet-muted-hint">Günlük kur: 1 $ = {{ usd_kur|tr_decimal:"4" }} ₺</p>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="dashboard-ozet-kutu total-tint">
+                <div class="dashboard-ozet-inner">
+                    <div class="dashboard-ozet-top">
+                        <span class="dashboard-ozet-icon" aria-hidden="true">Σ</span>
+                        <div class="dashboard-ozet-headtext">
+                            <h4>Genel Toplam (TL)</h4>
+                        </div>
+                    </div>
+                    <div class="ozet-tutar-satirlar">
+                        <div class="ozet-tutar-satir">
+                            <span>Tutar</span>
+                            <strong>{{ siparis_genel_tl_tutar|currency }} ₺</strong>
+                        </div>
+                        <div class="ozet-tutar-satir">
+                            <span>KDV (%20)</span>
+                            <strong>{{ siparis_genel_tl_kdv|currency }} ₺</strong>
+                        </div>
+                        <div class="ozet-tutar-satir ozet-tutar-toplam">
+                            <span>Toplam</span>
+                            <strong>{{ siparis_genel_tl_toplam|currency }} ₺</strong>
+                        </div>
+                    </div>
+                    <p class="ozet-alt">Tüm para birimleri günlük kurla TL'ye çevrilmiştir</p>
+                    {% if not eur_kur or not usd_kur %}
+                    <p class="ozet-muted-hint">{% if not eur_kur and not usd_kur %}Döviz kuru alınamadı; yalnızca TL tutarları hesaplandı.{% elif not eur_kur %}Euro kuru alınamadı.{% else %}Dolar kuru alınamadı.{% endif %}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    <section class="siparis-liste-panel" aria-label="Sipariş listesi">
+<div class="card">
+    <div class="siparis-toolbar">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="margin: 0;">Siparişler</h2>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn btn-secondary" style="padding: 8px 16px;">Sütunları Sıfırla</button>
+            {% if tab == 'teslimat_bekleyen_kalemleri' %}
+            <a href="{% url 'stokapp:teslimat_bekleyen_kalemleri_export_pdf' %}" class="btn btn-secondary" style="padding: 8px 16px; text-decoration: none;">📥 PDF Export</a>
+            {% else %}
+            <button type="button" class="btn btn-secondary" style="padding: 8px 16px;" disabled title="Bu sekme için PDF dışa aktarma henüz yok">📥 Export</button>
+            {% endif %}
+            <a href="{% url 'stokapp:siparis_ekle' %}" class="btn btn-primary" style="padding: 8px 16px;">+ Yeni</a>
+        </div>
+    </div>
+    
+    <!-- Sekmeler -->
+    <div class="tekos-tab-buttons">
+        <a href="?tab=onay_bekliyor" class="siparis-tab-btn tab-pending{% if tab == 'onay_bekliyor' %} is-active{% endif %}">
+            <span class="tab-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            </span>
+            <span>Onay Bekliyor</span>
+            <span class="tab-count">{{ counts.onay_bekliyor }}</span>
+        </a>
+        <a href="?tab=onaylandi" class="siparis-tab-btn tab-approved{% if tab == 'onaylandi' %} is-active{% endif %}">
+            <span class="tab-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            </span>
+            <span>Onaylandı</span>
+            <span class="tab-count">{{ counts.onaylandi }}</span>
+        </a>
+        <a href="?tab=teslimat_bekleyen" class="siparis-tab-btn tab-delivery{% if tab == 'teslimat_bekleyen' %} is-active{% endif %}">
+            <span class="tab-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h11v10H3z"/><path d="M14 10h4l3 3v4h-7"/><circle cx="7.5" cy="17.5" r="1.5"/><circle cx="17.5" cy="17.5" r="1.5"/></svg>
+            </span>
+            <span>Teslimat Bekleyen</span>
+            <span class="tab-count">{{ counts.teslimat_bekleyen }}</span>
+        </a>
+        <a href="?tab=teslimat_bekleyen_kalemleri" class="siparis-tab-btn tab-delivery-items{% if tab == 'teslimat_bekleyen_kalemleri' %} is-active{% endif %}">
+            <span class="tab-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.3 7L12 12l8.7-5"/><path d="M12 22V12"/></svg>
+            </span>
+            <span>Teslimat Bekleyen Ürünler</span>
+            <span class="tab-count">{{ counts.teslimat_bekleyen_kalemleri }}</span>
+        </a>
+        <a href="?tab=acik_siparis_kalemleri" class="siparis-tab-btn tab-open-items{% if tab == 'acik_siparis_kalemleri' %} is-active{% endif %}">
+            <span class="tab-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M3 6h.01"/><path d="M3 12h.01"/><path d="M3 18h.01"/></svg>
+            </span>
+            <span>Açık sipariş kalemleri</span>
+            <span class="tab-count">{{ counts.acik_siparis_kalemleri }}</span>
+        </a>
+        <a href="?tab=teslim_edildi" class="siparis-tab-btn tab-delivered{% if tab == 'teslim_edildi' %} is-active{% endif %}">
+            <span class="tab-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14.01l-3-3"/></svg>
+            </span>
+            <span>Teslim Edildi</span>
+            <span class="tab-count">{{ counts.teslim_edildi }}</span>
+        </a>
+        <a href="?tab=red" class="siparis-tab-btn tab-rejected{% if tab == 'red' %} is-active{% endif %}">
+            <span class="tab-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6"/><path d="M9 9l6 6"/></svg>
+            </span>
+            <span>RED Sipariş</span>
+            <span class="tab-count">{{ counts.red }}</span>
+        </a>
+        <a href="?tab=detayli_liste" class="siparis-tab-btn tab-detail{% if tab == 'detayli_liste' %} is-active{% endif %}">
+            <span class="tab-icon" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18"/><path d="M9 4v16"/></svg>
+            </span>
+            <span>Detaylı Liste</span>
+            <span class="tab-count">{{ counts.detayli_liste }}</span>
+        </a>
+    </div>
+    </div>
+
+    <div class="siparis-tablo-scroll">
+    {% if tab == 'acik_siparis_kalemleri' %}
+    <table style="width: 100%; border-collapse: collapse; background: white; font-size: 11px;">
+        <thead>
+            <tr style="background-color: #f9fafb; border-bottom: 2px solid #e5e7eb;">
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Sipariş Numarası</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Müşteri</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Ürün / Stok</th>
+                <th style="padding: 12px; text-align: right; font-weight: 600;">Talep edilen</th>
+                <th style="padding: 12px; text-align: right; font-weight: 600;">Karşılanan</th>
+                <th style="padding: 12px; text-align: right; font-weight: 600;">Açık miktar</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in acik_siparis_kalemleri %}
+            <tr style="border-bottom: 1px solid #e5e7eb; cursor: pointer;" onclick="window.location.href='{% url 'stokapp:siparis_detay' row.siparis.pk %}'">
+                <td style="padding: 12px;">
+                    <a href="{% url 'stokapp:siparis_detay' row.siparis.pk %}"
+                       class="order-hover-trigger"
+                       data-order-id="{{ row.siparis.pk }}"
+                       data-items-url="{% url 'stokapp:siparis_items_api' row.siparis.pk %}"
+                       onclick="event.stopPropagation();"
+                       style="color: #3b82f6; text-decoration: none; font-weight: 600;">
+                        {{ row.siparis.siparis_numarasi }}
+                    </a>
+                </td>
+                <td style="padding: 12px;">
+                    {% if row.siparis.musteri %}
+                        {{ row.siparis.musteri.ad }}
+                    {% else %}
+                        {{ row.siparis.musteri_adi|default:"-" }}
+                    {% endif %}
+                </td>
+                <td style="padding: 12px;">
+                    {% if row.kalem.stok_item %}
+                        <a href="{% url 'stokapp:stok_ekle' row.kalem.stok_item.pk %}"
+                           onclick="event.stopPropagation();"
+                           style="color:#2563eb; text-decoration:none; font-weight:700;">
+                            {{ row.kalem.stok_item.stok_kodu }}
+                        </a>
+                        — {{ row.kalem.stok_item.ad }}
+                    {% else %}
+                        {{ row.kalem.aciklama|default:"Serbest kalem"|truncatechars:60 }}
+                    {% endif %}
+                </td>
+                <td style="padding: 12px; text-align: right;">{{ row.talep|floatformat:3 }} {{ row.birim }}</td>
+                <td style="padding: 12px; text-align: right;">{{ row.karsilanan|floatformat:3 }} {{ row.birim }}</td>
+                <td style="padding: 12px; text-align: right; color: #ef4444; font-weight: 600;">{{ row.bekleyen|floatformat:3 }} {{ row.birim }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 40px; color: #6b7280;">
+                    Açık sipariş kalemi bulunmuyor.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% elif tab == 'teslimat_bekleyen_kalemleri' %}
+    <table style="width: 100%; border-collapse: collapse; background: white; font-size: 11px;">
+        <thead>
+            <tr style="background-color: #f9fafb; border-bottom: 2px solid #e5e7eb;">
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Sipariş Numarası</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Müşteri</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Ürün / Stok</th>
+                <th style="padding: 12px; text-align: right; font-weight: 600;">Sipariş miktarı</th>
+                <th style="padding: 12px; text-align: right; font-weight: 600;">Stoktan ayrılan</th>
+                <th style="padding: 12px; text-align: right; font-weight: 600;">Teslimde düşülecek</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Üretim</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">İşlem</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in teslimat_bekleyen_kalemleri %}
+            <tr style="border-bottom: 1px solid #e5e7eb;">
+                <td style="padding: 12px;">
+                    <a href="{% url 'stokapp:siparis_detay' row.siparis.pk %}"
+                       class="order-hover-trigger"
+                       data-order-id="{{ row.siparis.pk }}"
+                       data-items-url="{% url 'stokapp:siparis_items_api' row.siparis.pk %}"
+                       style="color: #0ea5e9; text-decoration: none; font-weight: 600;">
+                        {{ row.siparis.siparis_numarasi }}
+                    </a>
+                </td>
+                <td style="padding: 12px;">
+                    {% if row.siparis.musteri %}
+                        {{ row.siparis.musteri.ad }}
+                    {% else %}
+                        {{ row.siparis.musteri_adi|default:"-" }}
+                    {% endif %}
+                </td>
+                <td style="padding: 12px;">
+                    {% if row.kalem.stok_item %}
+                        <a href="{% url 'stokapp:stok_ekle' row.kalem.stok_item.pk %}"
+                           style="color:#2563eb; text-decoration:none; font-weight:700;">
+                            {{ row.kalem.stok_item.stok_kodu }}
+                        </a>
+                        — {{ row.kalem.stok_item.ad }}
+                    {% else %}
+                        {{ row.kalem.aciklama|default:"Serbest kalem"|truncatechars:60 }}
+                    {% endif %}
+                </td>
+                <td style="padding: 12px; text-align: right; font-weight: 600;">{{ row.talep|floatformat:3 }} {{ row.birim }}</td>
+                <td style="padding: 12px; text-align: right;">{{ row.stoktan_dusulen|floatformat:3 }} {{ row.birim }}</td>
+                <td style="padding: 12px; text-align: right; color: #0ea5e9; font-weight: 600;">{{ row.bekleyen|floatformat:3 }} {{ row.birim }}</td>
+                <td style="padding: 12px;">
+                    {% if row.siparis.uretim_durumu == 'STOKTAN_SEVK' %}
+                        <span style="color:#059669; font-weight:600;">Stoktan sevk</span>
+                    {% else %}
+                        <span style="color:#2563eb; font-weight:600;">Tamamlandı</span>
+                    {% endif %}
+                </td>
+                <td style="padding: 12px;">
+                    <form method="post" action="{% url 'stokapp:siparis_teslim_et' row.siparis.pk %}" style="display:inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="return_tab" value="teslimat_bekleyen_kalemleri">
+                        <button type="submit"
+                            class="btn"
+                            style="background-color: #0ea5e9; color: white; padding: 6px 12px; border-radius: 4px; border: none; font-size: 13px; cursor: pointer;">
+                            🚚 Teslim Edildi
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="8" style="text-align: center; padding: 40px; color: #6b7280;">
+                    Teslimat bekleyen ürün kalemi bulunmuyor.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <!-- Tablo -->
+    <table style="width: 100%; border-collapse: collapse; background: white; font-size: 11px;">
+        <thead>
+            <tr style="background-color: #f9fafb; border-bottom: 2px solid #e5e7eb;">
+                <th style="padding: 12px; text-align: left; font-weight: 600;">
+                    <input type="checkbox" style="cursor: pointer;">
+                </th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">
+                    Sipariş Numarası ℹ️
+                </th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">
+                    Müşteri ℹ️
+                </th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Etiketler</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">
+                    Toplam ℹ️
+                </th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Oluşturulma Tarihi</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Tamamlanması Bekl.</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">
+                    Stok Durumu ℹ️
+                    <select onchange="window.location.href=this.value" style="margin-left: 5px; padding: 2px 5px; font-size: 12px;">
+                        <option value="?tab={{ tab }}">Hepsi</option>
+                        <option value="?tab={{ tab }}&stok_durumu=STOKTA_VAR" {% if stok_durumu == 'STOKTA_VAR' %}selected{% endif %}>Stokta Var</option>
+                        <option value="?tab={{ tab }}&stok_durumu=STOKTA_YOK" {% if stok_durumu == 'STOKTA_YOK' %}selected{% endif %}>Stokta Yok</option>
+                    </select>
+                </th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">
+                    Hammadde Durumu ℹ️
+                    <select onchange="window.location.href=this.value" style="margin-left: 5px; padding: 2px 5px; font-size: 12px;">
+                        <option value="?tab={{ tab }}">Hepsi</option>
+                        <option value="?tab={{ tab }}&hammadde_durumu=STOKTA_VAR" {% if hammadde_durumu == 'STOKTA_VAR' %}selected{% endif %}>Stokta Var</option>
+                        <option value="?tab={{ tab }}&hammadde_durumu=STOKTA_YOK" {% if hammadde_durumu == 'STOKTA_YOK' %}selected{% endif %}>Stokta Yok</option>
+                    </select>
+                </th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">
+                    Üretim Durumu ℹ️
+                    <select onchange="window.location.href=this.value" style="margin-left: 5px; padding: 2px 5px; font-size: 12px;">
+                        <option value="?tab={{ tab }}">Hepsi</option>
+                        <option value="?tab={{ tab }}&uretim_durumu=TAMAMLANDI" {% if uretim_durumu == 'TAMAMLANDI' %}selected{% endif %}>Tamamlandı</option>
+                        <option value="?tab={{ tab }}&uretim_durumu=DEVAM_EDIYOR" {% if uretim_durumu == 'DEVAM_EDIYOR' %}selected{% endif %}>Üretim Başladı</option>
+                    </select>
+                </th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">
+                    Teslimat Durumu ℹ️
+                    <select onchange="window.location.href=this.value" style="margin-left: 5px; padding: 2px 5px; font-size: 12px;">
+                        <option value="?tab={{ tab }}">Hepsi</option>
+                        <option value="?tab={{ tab }}&teslimat_durumu=TESLIM_EDILDI" {% if teslimat_durumu == 'TESLIM_EDILDI' %}selected{% endif %}>Teslim Edildi</option>
+                        <option value="?tab={{ tab }}&teslimat_durumu=HAZIRLANIYOR" {% if teslimat_durumu == 'HAZIRLANIYOR' %}selected{% endif %}>Hazırlanıyor</option>
+                    </select>
+                </th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">
+                    Fatura Durumu ℹ️
+                </th>
+                <th style="padding: 12px; text-align: center; font-weight: 600;">Ek</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">İşlemler</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for siparis in siparisler %}
+            <tr style="border-bottom: 1px solid #e5e7eb;">
+                <td style="padding: 12px;">
+                    <input type="checkbox" style="cursor: pointer;">
+                </td>
+                <td style="padding: 12px;">
+                    <a
+                        href="{% url 'stokapp:siparis_detay' siparis.pk %}"
+                        class="order-hover-trigger"
+                        data-order-id="{{ siparis.pk }}"
+                        data-items-url="{% url 'stokapp:siparis_items_api' siparis.pk %}"
+                        style="color: #3b82f6; text-decoration: none; font-weight: 600;"
+                    >
+                        {{ siparis.siparis_numarasi }}
+                    </a>
+                </td>
+                <td style="padding: 12px;">
+                    {% if siparis.musteri %}
+                        {{ siparis.musteri.ad }}
+                    {% else %}
+                        {{ siparis.musteri_adi|default:"-" }}
+                    {% endif %}
+                </td>
+                <td style="padding: 12px;">
+                    {% if siparis.etiketler and 'TEKORA' in siparis.etiketler|upper %}
+                    <span style="display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;vertical-align:middle;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" stroke-linecap="round" aria-hidden="true" title="TEKORA">
+                            <path d="M12 3v2M12 19v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M3 12h2M19 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                        <span style="padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:0.04em;background:#dbeafe;color:#1e40af;">TEKORA</span>
+                        {% if siparis.etiketler|upper != 'TEKORA' %}
+                        <span style="color:#64748b;font-size:11px;">{{ siparis.etiketler }}</span>
+                        {% endif %}
+                    </span>
+                    {% else %}
+                    {{ siparis.etiketler|default:"-" }}
+                    {% endif %}
+                </td>
+                <td style="padding: 12px;">{{ siparis.toplam|currency }} {{ siparis.para_birimi }}</td>
+                <td style="padding: 12px;">{{ siparis.olusturulma_tarihi|date:"d.m.Y" }}</td>
+                <td style="padding: 12px; {% if siparis.tamamlanma_tarihi %}color: #ef4444;{% endif %}">
+                    {{ siparis.tamamlanma_tarihi|date:"d.m.Y"|default:"-" }}
+                </td>
+                <td style="padding: 12px; white-space: nowrap;">
+                    <span class="order-status-badge" style="{% if siparis.stok_durumu == 'STOKTA_YOK' %}background-color: #fee2e2; color: #991b1b;{% else %}background-color: #d1fae5; color: #065f46;{% endif %}">
+                        {{ siparis.get_stok_durumu_display }}
+                    </span>
+                </td>
+                <td style="padding: 12px; white-space: nowrap;">
+                    <span class="order-status-badge" style="{% if siparis.hammadde_durumu == 'STOKTA_YOK' %}background-color: #fee2e2; color: #991b1b;{% elif siparis.hammadde_durumu == 'KISMI_STOK' %}background-color: #fef3c7; color: #92400e;{% else %}background-color: #d1fae5; color: #065f46;{% endif %}"{% if siparis.hammadde_durumu == 'KISMI_STOK' %} title="Satınalma bekleniyor"{% endif %}>
+                        {% if siparis.hammadde_durumu == 'KISMI_STOK' %}
+                            Tedarik Bekliyor
+                        {% else %}
+                            {{ siparis.get_hammadde_durumu_display }}
+                        {% endif %}
+                    </span>
+                </td>
+                <td style="padding: 12px;">
+                    <span style="padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; background-color: #d1fae5; color: #065f46;">
+                        {% if siparis.uretim_durumu == 'DEVAM_EDIYOR' %}
+                            Üretim Başladı
+                        {% elif siparis.uretim_durumu == 'TAMAMLANDI' %}
+                            Üretim Tamamlandı
+                        {% elif siparis.uretim_durumu == 'STOKTAN_SEVK' %}
+                            Stoktan Sevk
+                        {% elif siparis.uretim_durumu == 'BEKLEMEDE' %}
+                            Beklemede
+                        {% else %}
+                            {{ siparis.get_uretim_durumu_display }}
+                        {% endif %}
+                    </span>
+                </td>
+                <td style="padding: 12px;">
+                    <span style="padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; background-color: #d1fae5; color: #065f46;">
+                        {{ siparis.get_teslimat_durumu_display }}
+                    </span>
+                </td>
+                <td style="padding: 12px;">
+                    
+                </td>
+                <td style="padding: 12px; text-align: center;">
+                    {% if siparis.ek_dosya_url %}
+                    <a href="{{ siparis.ek_dosya_url }}"
+                       target="_blank"
+                       rel="noopener"
+                       title="Sipariş mektubunu görüntüle"
+                       style="display:inline-flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:8px; background:#eff6ff; color:#2563eb; text-decoration:none; border:1px solid #bfdbfe;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M21.44 11.05l-8.49 8.49a5 5 0 0 1-7.07-7.07l8.49-8.49a3.5 3.5 0 0 1 4.95 4.95l-8.49 8.49a2 2 0 1 1-2.83-2.83l7.78-7.78"/>
+                        </svg>
+                    </a>
+                    {% else %}
+                    <span style="color:#d1d5db;">—</span>
+                    {% endif %}
+                </td>
+                <td style="padding: 12px;">
+                    <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                        {% if siparis.linked_satinalma_id or siparis.linked_rfq_id %}
+                            {% if siparis.linked_satinalma_id %}
+                            <a href="{% url 'stokapp:satinalma_detay' siparis.linked_satinalma_id %}"
+                               class="btn"
+                               style="background-color: #0ea5e9; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px;"
+                               title="Bu siparişe bağlı satınalma siparişi">
+                                🛒 {{ siparis.linked_satinalma_no|default:"Satınalma Siparişi" }}
+                            </a>
+                            {% endif %}
+                            {% if siparis.linked_rfq_id %}
+                            <a href="{% url 'stokapp:rfq_detay' siparis.linked_rfq_id %}"
+                               class="btn"
+                               style="background-color: #8b5cf6; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px;"
+                               title="Bu siparişe bağlı satınalma teklifi">
+                                🧾 {{ siparis.linked_rfq_no|default:"Satınalma Teklifi" }}
+                            </a>
+                            {% endif %}
+                        {% elif siparis.show_decision_button %}
+                        <button
+                            type="button"
+                            class="btn js-order-decision-btn"
+                            data-order-id="{{ siparis.pk }}"
+                            data-has-production="{% if siparis.has_uretim_items %}1{% else %}0{% endif %}"
+                            data-has-al-sat="{% if siparis.has_al_sat_items %}1{% else %}0{% endif %}"
+                            data-check-url="{% url 'stokapp:start_production_from_order' siparis.pk %}"
+                            data-fulfill-url="{% url 'stokapp:fulfill_from_stock' siparis.pk %}"
+                            data-fulfill-inproduction-url="{% url 'stokapp:fulfill_from_inproduction' siparis.pk %}"
+                            data-produce-remaining-url="{% url 'stokapp:produce_remaining' siparis.pk %}"
+                            data-produce-full-url="{% url 'stokapp:produce_full' siparis.pk %}"
+                            data-satinalma-url="{% url 'stokapp:satinalma_ekle' %}?{{ siparis.al_satinalma_query }}"
+                            data-rfq-url="{% url 'stokapp:rfq_olustur' %}?{{ siparis.al_rfq_query }}"
+                            style="background-color: #1d4ed8; color: white; padding: 6px 12px; border-radius: 4px; border: none; text-decoration: none; font-size: 13px; cursor: pointer;"
+                        >
+                            ⚙️ Karar Ver
+                        </button>
+                        {% endif %}
+                        <a href="{% url 'stokapp:teklif_ekle' %}?siparis_id={{ siparis.pk }}"
+                           class="btn"
+                           style="background-color: #6366f1; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px;"
+                           title="Sipariş satırlarından teklif taslağı oluşturur (Cevap Bekleyen sekmesi)">
+                            📄 Teklif
+                        </a>
+                        {% if siparis.siparis_durumu == 'ONAY_BEKLIYOR' %}
+                        <a href="{% url 'stokapp:siparis_onayla' siparis.pk %}"
+                           class="btn"
+                           style="background-color: #22c55e; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px;">
+                            ✅ Onay
+                        </a>
+                        <form method="post" action="{% url 'stokapp:siparis_reddet' siparis.pk %}" onsubmit="return handleSiparisRed(this);">
+                            {% csrf_token %}
+                            <input type="hidden" name="red_nedeni" value="">
+                            <button type="submit"
+                                class="btn"
+                                style="background-color: #ef4444; color: white; padding: 6px 12px; border-radius: 4px; border: none; font-size: 13px; cursor: pointer;">
+                                🟥 Red
+                            </button>
+                        </form>
+                        {% endif %}
+                        <a href="{% url 'stokapp:siparis_duzenle' siparis.pk %}" 
+                           class="btn" 
+                           style="background-color: #3b82f6; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px;">
+                            ✏️ Düzenle
+                        </a>
+                        {% if siparis.siparis_durumu != 'TESLIM_EDILDI' %}
+                        {% if siparis.uretim_durumu == 'TAMAMLANDI' or siparis.uretim_durumu == 'STOKTAN_SEVK' %}
+                        <form method="post" action="{% url 'stokapp:siparis_teslim_et' siparis.pk %}" style="display:block; flex-basis:100%;">
+                            {% csrf_token %}
+                            {% if tab == 'teslimat_bekleyen' %}
+                            <input type="hidden" name="return_tab" value="teslimat_bekleyen">
+                            {% elif tab == 'teslimat_bekleyen_kalemleri' %}
+                            <input type="hidden" name="return_tab" value="teslimat_bekleyen_kalemleri">
+                            {% endif %}
+                            <button type="submit"
+                                class="btn"
+                                style="background-color: #0ea5e9; color: white; padding: 6px 12px; border-radius: 4px; border: none; font-size: 13px; cursor: pointer;">
+                                🚚 Teslim Edildi
+                            </button>
+                        </form>
+                        {% endif %}
+                        {% endif %}
+                        <a href="{% url 'stokapp:siparis_sil' siparis.pk %}" 
+                           class="btn" 
+                           style="background-color: #ef4444; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px;"
+                           onclick="return confirm('Bu siparişi silmek istediğinizden emin misiniz?');">
+                            🗑️ Sil
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="14" style="text-align: center; padding: 40px; color: #6b7280;">
+                    Henüz sipariş bulunmuyor.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+    </div>
+
+    <!-- Sayfalama -->
+    <div class="siparis-pagination" style="display: flex; justify-content: center; align-items: center; gap: 10px;">
+        {% if tab == 'acik_siparis_kalemleri' %}
+            {% if acik_siparis_kalemleri.has_previous %}
+            <a href="?tab={{ tab }}&page=1" style="padding: 8px 12px; text-decoration: none; color: #6b7280;">&lt;&lt;</a>
+            <a href="?tab={{ tab }}&page={{ acik_siparis_kalemleri.previous_page_number }}" style="padding: 8px 12px; text-decoration: none; color: #6b7280;">&lt;</a>
+            {% endif %}
+            <span style="padding: 8px 12px; background-color: #f3f4f6; border-radius: 4px; color: #374151; font-weight: 600;">
+                {{ acik_siparis_kalemleri.number }} of {{ acik_siparis_kalemleri.paginator.num_pages }}
+            </span>
+            {% if acik_siparis_kalemleri.has_next %}
+            <a href="?tab={{ tab }}&page={{ acik_siparis_kalemleri.next_page_number }}" style="padding: 8px 12px; text-decoration: none; color: #6b7280;">&gt;</a>
+            <a href="?tab={{ tab }}&page={{ acik_siparis_kalemleri.paginator.num_pages }}" style="padding: 8px 12px; text-decoration: none; color: #6b7280;">&gt;&gt;</a>
+            {% endif %}
+        {% elif tab == 'teslimat_bekleyen_kalemleri' %}
+            {% if teslimat_bekleyen_kalemleri.has_previous %}
+            <a href="?tab={{ tab }}&page=1" style="padding: 8px 12px; text-decoration: none; color: #6b7280;">&lt;&lt;</a>
+            <a href="?tab={{ tab }}&page={{ teslimat_bekleyen_kalemleri.previous_page_number }}" style="padding: 8px 12px; text-decoration: none; color: #6b7280;">&lt;</a>
+            {% endif %}
+            <span style="padding: 8px 12px; background-color: #f3f4f6; border-radius: 4px; color: #374151; font-weight: 600;">
+                {{ teslimat_bekleyen_kalemleri.number }} of {{ teslimat_bekleyen_kalemleri.paginator.num_pages }}
+            </span>
+            {% if teslimat_bekleyen_kalemleri.has_next %}
+            <a href="?tab={{ tab }}&page={{ teslimat_bekleyen_kalemleri.next_page_number }}" style="padding: 8px 12px; text-decoration: none; color: #6b7280;">&gt;</a>
+            <a href="?tab={{ tab }}&page={{ teslimat_bekleyen_kalemleri.paginator.num_pages }}" style="padding: 8px 12px; text-decoration: none; color: #6b7280;">&gt;&gt;</a>
+            {% endif %}
+        {% else %}
+            {% if siparisler.has_previous %}
+            <a href="?tab={{ tab }}&page=1{% if stok_durumu %}&stok_durumu={{ stok_durumu }}{% endif %}{% if hammadde_durumu %}&hammadde_durumu={{ hammadde_durumu }}{% endif %}{% if uretim_durumu %}&uretim_durumu={{ uretim_durumu }}{% endif %}{% if teslimat_durumu %}&teslimat_durumu={{ teslimat_durumu }}{% endif %}{% if fatura_durumu %}&fatura_durumu={{ fatura_durumu }}{% endif %}" style="padding: 8px 12px; text-decoration: none; color: #6b7280;">&lt;&lt;</a>
+            <a href="?tab={{ tab }}&page={{ siparisler.previous_page_number }}{% if stok_durumu %}&stok_durumu={{ stok_durumu }}{% endif %}{% if hammadde_durumu %}&hammadde_durumu={{ hammadde_durumu }}{% endif %}{% if uretim_durumu %}&uretim_durumu={{ uretim_durumu }}{% endif %}{% if teslimat_durumu %}&teslimat_durumu={{ teslimat_durumu }}{% endif %}{% if fatura_durumu %}&fatura_durumu={{ fatura_durumu }}{% endif %}" style="padding: 8px 12px; text-decoration: none; color: #6b7280;">&lt;</a>
+            {% endif %}
+            <span style="padding: 8px 12px; background-color: #f3f4f6; border-radius: 4px; color: #374151; font-weight: 600;">
+                {{ siparisler.number }} of {{ siparisler.paginator.num_pages }}
+            </span>
+            {% if siparisler.has_next %}
+            <a href="?tab={{ tab }}&page={{ siparisler.next_page_number }}{% if stok_durumu %}&stok_durumu={{ stok_durumu }}{% endif %}{% if hammadde_durumu %}&hammadde_durumu={{ hammadde_durumu }}{% endif %}{% if uretim_durumu %}&uretim_durumu={{ uretim_durumu }}{% endif %}{% if teslimat_durumu %}&teslimat_durumu={{ teslimat_durumu }}{% endif %}{% if fatura_durumu %}&fatura_durumu={{ fatura_durumu }}{% endif %}" style="padding: 8px 12px; text-decoration: none; color: #6b7280;">&gt;</a>
+            <a href="?tab={{ tab }}&page={{ siparisler.paginator.num_pages }}{% if stok_durumu %}&stok_durumu={{ stok_durumu }}{% endif %}{% if hammadde_durumu %}&hammadde_durumu={{ hammadde_durumu }}{% endif %}{% if uretim_durumu %}&uretim_durumu={{ uretim_durumu }}{% endif %}{% if teslimat_durumu %}&teslimat_durumu={{ teslimat_durumu }}{% endif %}{% if fatura_durumu %}&fatura_durumu={{ fatura_durumu }}{% endif %}" style="padding: 8px 12px; text-decoration: none; color: #6b7280;">&gt;&gt;</a>
+            {% endif %}
+            <select style="margin-left: 10px; padding: 8px 12px;">
+                <option>10</option>
+                <option>25</option>
+                <option>50</option>
+            </select>
+        {% endif %}
+    </div>
+</div>
+    </section>
+</div>
+<div id="productionDecisionModal" style="display:none; position:fixed; inset:0; background:rgba(17,24,39,.55); z-index:2000; align-items:center; justify-content:center;">
+    <div style="width:min(980px, 96vw); background:#fff; border-radius:12px; box-shadow:0 16px 45px rgba(0,0,0,.22); overflow:hidden;">
+        <div style="padding:16px 20px; border-bottom:1px solid #e5e7eb; display:flex; align-items:center; justify-content:space-between;">
+            <strong>Sipariş Kararı</strong>
+            <button type="button" id="productionDecisionClose" style="border:none; background:transparent; font-size:20px; cursor:pointer;">&times;</button>
+        </div>
+        <div style="padding:16px 20px;">
+            <div id="productionDecisionSummary" style="background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; padding:12px; margin-bottom:12px;"></div>
+            <div id="productionDecisionMessage" style="margin-bottom:14px; font-weight:500; color:#111827;"></div>
+            <div id="productionDecisionActions" style="display:flex; gap:10px; flex-wrap:wrap;"></div>
+        </div>
+    </div>
+</div>
+<div id="orderHoverTooltip" style="display:none; position:fixed; z-index:2200; width:min(380px, 92vw); background:#fff; border:1px solid #e5e7eb; border-radius:10px; box-shadow:0 12px 30px rgba(15,23,42,.18); padding:10px;">
+    <div style="font-size:12px; font-weight:700; margin-bottom:8px;">Sipariş Kalemleri</div>
+    <div id="orderHoverTooltipBody" style="max-height:220px; overflow:auto; font-size:12px; color:#111827;"></div>
+</div>
+<script>
+    function handleSiparisRed(formEl) {
+        const reason = prompt("Red sebebini girin:");
+        if (!reason) {
+            return false;
+        }
+        formEl.querySelector("input[name='red_nedeni']").value = reason;
+        return true;
+    }
+
+    const productionModalEl = document.getElementById("productionDecisionModal");
+    const productionSummaryEl = document.getElementById("productionDecisionSummary");
+    const productionMessageEl = document.getElementById("productionDecisionMessage");
+    const productionActionsEl = document.getElementById("productionDecisionActions");
+    const productionCloseEl = document.getElementById("productionDecisionClose");
+    const orderTooltipEl = document.getElementById("orderHoverTooltip");
+    const orderTooltipBodyEl = document.getElementById("orderHoverTooltipBody");
+    const orderItemsCache = new Map();
+    let orderHoverTimeout = null;
+    let orderTooltipOpen = false;
+    let currentHoverOrderId = null;
+    let currentHoverAnchor = null;
+    let productionActionUrls = null;
+    let productionDecisionItems = [];
+    let productionApplyUrl = null;
+
+    function getCsrfToken() {
+        const name = "csrftoken=";
+        const decodedCookie = decodeURIComponent(document.cookie || "");
+        const parts = decodedCookie.split(";");
+        for (let i = 0; i < parts.length; i += 1) {
+            const c = parts[i].trim();
+            if (c.indexOf(name) === 0) return c.substring(name.length, c.length);
+        }
+        return "";
+    }
+
+    function openProductionDecisionModal() {
+        productionModalEl.style.display = "flex";
+    }
+
+    function closeProductionDecisionModal() {
+        productionModalEl.style.display = "none";
+        productionActionUrls = null;
+        productionDecisionItems = [];
+        productionApplyUrl = null;
+        productionActionsEl.innerHTML = "";
+        productionSummaryEl.innerHTML = "";
+        productionMessageEl.textContent = "";
+    }
+
+    function escapeHtml(value) {
+        return String(value == null ? "" : value)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;");
+    }
+
+    function isProduceAction(action) {
+        return action === "produce_full" || action === "produce_remaining";
+    }
+
+    function defaultProduceQtyForAction(item, action) {
+        const orderQty = parseFloat(item.order_quantity) || 0;
+        const stockQty = parseFloat(item.stock) || 0;
+        if (action === "produce_remaining") {
+            return Math.max(0, orderQty - stockQty);
+        }
+        return orderQty;
+    }
+
+    function updateProduceSplitHint(rowEl) {
+        if (!rowEl) return;
+        const select = rowEl.querySelector(".js-item-decision");
+        const qtyInput = rowEl.querySelector(".js-produce-qty");
+        const hint = rowEl.querySelector(".js-produce-split-hint");
+        if (!select || !qtyInput || !hint) return;
+        const action = select.value;
+        const orderNeed = parseFloat(qtyInput.dataset.orderNeed || "0") || 0;
+        if (!isProduceAction(action)) {
+            hint.textContent = "—";
+            return;
+        }
+        const produceQty = parseFloat(String(qtyInput.value).replace(",", ".")) || 0;
+        const orderPart = Math.min(orderNeed, Math.max(0, produceQty));
+        const stockPart = Math.max(0, produceQty - orderNeed);
+        hint.textContent = `Sipariş: ${orderPart} · Stok: ${stockPart}`;
+    }
+
+    function syncProduceQtyEnabled(rowEl) {
+        if (!rowEl) return;
+        const select = rowEl.querySelector(".js-item-decision");
+        const qtyInput = rowEl.querySelector(".js-produce-qty");
+        if (!select || !qtyInput) return;
+        const enabled = isProduceAction(select.value);
+        qtyInput.disabled = !enabled;
+        qtyInput.style.opacity = enabled ? "1" : "0.5";
+        qtyInput.style.background = enabled ? "#fff" : "#f3f4f6";
+        updateProduceSplitHint(rowEl);
+    }
+
+    function buildActionSelectHtml(item) {
+        if (item.decision_enabled === false || (item.urun_rolu || "").toUpperCase() === "AL_SAT") {
+            return `<span style="color:#6b7280; font-size:12px;">Al-sat (satınalma)</span>`;
+        }
+        const actions = Array.isArray(item.available_actions) && item.available_actions.length
+            ? item.available_actions
+            : [{ value: "produce_full", label: "Yeni üret" }];
+        const suggested = item.suggested_action || actions[0].value;
+        const options = actions.map((a) => {
+            const selected = a.value === suggested ? " selected" : "";
+            return `<option value="${escapeHtml(a.value)}"${selected}>${escapeHtml(a.label)}</option>`;
+        }).join("");
+        return `
+            <select class="js-item-decision"
+                    data-product-id="${escapeHtml(item.product_id)}"
+                    style="width:100%; min-width:140px; padding:6px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:12px; background:#fff;">
+                ${options}
+            </select>
+        `;
+    }
+
+    function buildProduceQtyHtml(item) {
+        if (item.decision_enabled === false || (item.urun_rolu || "").toUpperCase() === "AL_SAT") {
+            return `<span style="color:#9ca3af;">—</span>`;
+        }
+        const suggested = item.suggested_action || "produce_full";
+        const defaultQty = item.default_produce_qty != null
+            ? item.default_produce_qty
+            : defaultProduceQtyForAction(item, suggested);
+        const orderNeed = suggested === "produce_remaining"
+            ? Math.max(0, (parseFloat(item.order_quantity) || 0) - (parseFloat(item.stock) || 0))
+            : (parseFloat(item.order_quantity) || 0);
+        return `
+            <div style="display:flex; flex-direction:column; gap:4px; min-width:120px;">
+                <input type="number"
+                       class="js-produce-qty"
+                       data-product-id="${escapeHtml(item.product_id)}"
+                       data-order-qty="${escapeHtml(item.order_quantity)}"
+                       data-stock-qty="${escapeHtml(item.stock)}"
+                       data-order-need="${escapeHtml(orderNeed)}"
+                       value="${escapeHtml(defaultQty)}"
+                       min="0"
+                       step="any"
+                       style="width:100%; padding:6px 8px; border:1px solid #d1d5db; border-radius:6px; font-size:12px; text-align:right;">
+                <div class="js-produce-split-hint" style="font-size:11px; color:#6b7280; white-space:nowrap;"></div>
+            </div>
+        `;
+    }
+
+    function buildSummaryHtml(data) {
+        if (Array.isArray(data.items) && data.items.length > 0) {
+            const rows = data.items.map((item) => `
+                <tr class="js-decision-row"
+                    data-product-id="${escapeHtml(item.product_id)}"
+                    data-order-quantity="${escapeHtml(item.order_quantity)}"
+                    data-stock="${escapeHtml(item.stock)}"
+                    data-suggested-action="${escapeHtml(item.suggested_action || "")}">
+                    <td style="padding:6px 8px; border-bottom:1px solid #e5e7eb;">${escapeHtml(item.product_code)}</td>
+                    <td style="padding:6px 8px; border-bottom:1px solid #e5e7eb;">${escapeHtml(item.product_name)}</td>
+                    <td style="padding:6px 8px; border-bottom:1px solid #e5e7eb; text-align:right;">${escapeHtml(item.order_quantity)} ${escapeHtml(item.unit || "")}</td>
+                    <td style="padding:6px 8px; border-bottom:1px solid #e5e7eb; text-align:right;">${escapeHtml(item.stock)} ${escapeHtml(item.unit || "")}</td>
+                    <td style="padding:6px 8px; border-bottom:1px solid #e5e7eb; text-align:right;">${escapeHtml(item.in_production || "0")} ${escapeHtml(item.unit || "")}</td>
+                    <td style="padding:6px 8px; border-bottom:1px solid #e5e7eb;">
+                        ${
+                            (item.in_production_orders || []).length
+                            ? item.in_production_orders.map((o) => `${escapeHtml(o.emir_no)} (${escapeHtml(o.miktar)})`).join("<br>")
+                            : "-"
+                        }
+                    </td>
+                    <td style="padding:6px 8px; border-bottom:1px solid #e5e7eb; text-align:right;">${escapeHtml(item.missing_quantity)} ${escapeHtml(item.unit || "")}</td>
+                    <td style="padding:6px 8px; border-bottom:1px solid #e5e7eb;">${buildActionSelectHtml(item)}</td>
+                    <td style="padding:6px 8px; border-bottom:1px solid #e5e7eb;">${buildProduceQtyHtml(item)}</td>
+                </tr>
+            `).join("");
+            return `
+                <div style="margin-bottom:8px;"><strong>Kalem Sayısı:</strong> ${data.item_count || data.items.length}</div>
+                <div style="margin-bottom:8px; font-size:12px; color:#4b5563;">
+                    Her ürün için karşılama şeklini seçin. Üretilecek miktarı artırırsanız sipariş kadar sipariş üretimi, fazlası stok üretimi olarak açılır.
+                </div>
+                <div style="max-height:360px; overflow:auto; border:1px solid #e5e7eb; border-radius:6px;">
+                    <table style="width:100%; border-collapse:collapse; font-size:12px;">
+                        <thead>
+                            <tr style="background:#f3f4f6;">
+                                <th style="padding:6px 8px; text-align:left;">Ürün Kodu</th>
+                                <th style="padding:6px 8px; text-align:left;">Ürün Adı</th>
+                                <th style="padding:6px 8px; text-align:right;">Sipariş</th>
+                                <th style="padding:6px 8px; text-align:right;">Stok</th>
+                                <th style="padding:6px 8px; text-align:right;">Üretimde</th>
+                                <th style="padding:6px 8px; text-align:left;">Üretim Emirleri</th>
+                                <th style="padding:6px 8px; text-align:right;">Eksik</th>
+                                <th style="padding:6px 8px; text-align:left; min-width:140px;">Karşılama</th>
+                                <th style="padding:6px 8px; text-align:left; min-width:130px;">Üretilecek miktar</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+            `;
+        }
+        return `
+            <div><strong>Ürün:</strong> ${escapeHtml(data.product_code)} - ${escapeHtml(data.product_name)}</div>
+            <div><strong>Sipariş Miktarı:</strong> ${escapeHtml(data.order_quantity)} ${escapeHtml(data.unit || "")}</div>
+            <div><strong>Mevcut Stok:</strong> ${escapeHtml(data.stock)} ${escapeHtml(data.unit || "")}</div>
+            <div><strong>Üretimde:</strong> ${escapeHtml(data.in_production || "0")} ${escapeHtml(data.unit || "")}</div>
+            <div><strong>Üretim Emirleri:</strong> ${
+                (data.in_production_orders || []).length
+                ? data.in_production_orders.map((o) => `${escapeHtml(o.emir_no)} (${escapeHtml(o.miktar)})`).join(", ")
+                : "-"
+            }</div>
+            <div><strong>Eksik Miktar:</strong> ${escapeHtml(data.missing_quantity)} ${escapeHtml(data.unit || "")}</div>
+        `;
+    }
+
+    function wireDecisionRowInteractions() {
+        productionSummaryEl.querySelectorAll(".js-decision-row").forEach((rowEl) => {
+            const select = rowEl.querySelector(".js-item-decision");
+            const qtyInput = rowEl.querySelector(".js-produce-qty");
+            if (select) {
+                select.addEventListener("change", () => {
+                    if (qtyInput) {
+                        const orderQty = parseFloat(qtyInput.dataset.orderQty || "0") || 0;
+                        const stockQty = parseFloat(qtyInput.dataset.stockQty || "0") || 0;
+                        const action = select.value;
+                        let orderNeed = orderQty;
+                        if (action === "produce_remaining") {
+                            orderNeed = Math.max(0, orderQty - stockQty);
+                        }
+                        qtyInput.dataset.orderNeed = String(orderNeed);
+                        if (isProduceAction(action)) {
+                            qtyInput.value = String(orderNeed);
+                        }
+                    }
+                    syncProduceQtyEnabled(rowEl);
+                });
+            }
+            if (qtyInput) {
+                qtyInput.addEventListener("input", () => updateProduceSplitHint(rowEl));
+            }
+            syncProduceQtyEnabled(rowEl);
+        });
+    }
+
+    function collectItemDecisions() {
+        const rows = productionSummaryEl.querySelectorAll(".js-decision-row");
+        const decisions = [];
+        rows.forEach((rowEl) => {
+            const select = rowEl.querySelector(".js-item-decision");
+            if (!select) return;
+            const productId = parseInt(select.dataset.productId, 10);
+            if (!productId) return;
+            const decision = {
+                product_id: productId,
+                action: select.value,
+            };
+            const qtyInput = rowEl.querySelector(".js-produce-qty");
+            if (qtyInput && isProduceAction(select.value) && !qtyInput.disabled) {
+                decision.produce_qty = qtyInput.value;
+            }
+            decisions.push(decision);
+        });
+        return decisions;
+    }
+
+    function setAllItemDecisions(actionValue) {
+        const selects = productionSummaryEl.querySelectorAll(".js-item-decision");
+        selects.forEach((sel) => {
+            const hasOption = Array.from(sel.options).some((opt) => opt.value === actionValue);
+            if (hasOption) sel.value = actionValue;
+        });
+    }
+
+    async function runDecisionAction(url) {
+        if (!url) return;
+        const res = await fetch(url, {
+            method: "POST",
+            headers: {
+                "X-CSRFToken": getCsrfToken(),
+                "X-Requested-With": "XMLHttpRequest",
+            },
+        });
+        const payload = await res.json();
+        if (!res.ok || !payload.success) {
+            alert(payload.error || "İşlem sırasında hata oluştu.");
+            return;
+        }
+        closeProductionDecisionModal();
+        window.location.reload();
+    }
+
+    async function applyItemDecisions() {
+        if (!productionApplyUrl) {
+            alert("Karar uygulama adresi bulunamadı.");
+            return;
+        }
+        const decisions = collectItemDecisions();
+        if (!decisions.length) {
+            alert("Uygulanacak kalem kararı yok.");
+            return;
+        }
+        const res = await fetch(productionApplyUrl, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": getCsrfToken(),
+                "X-Requested-With": "XMLHttpRequest",
+            },
+            body: JSON.stringify({ decisions }),
+        });
+        const payload = await res.json();
+        if (!res.ok || !payload.success) {
+            alert(payload.error || "Kararlar uygulanamadı.");
+            return;
+        }
+        closeProductionDecisionModal();
+        window.location.reload();
+    }
+
+    function renderProcurementButtons() {
+        const btnBase = "padding:8px 14px; border-radius:6px; border:none; cursor:pointer; font-size:13px;";
+        if (!productionActionUrls || !productionActionUrls.hasAlSat) return;
+        const satinalmaBtn = document.createElement("button");
+        satinalmaBtn.type = "button";
+        satinalmaBtn.textContent = "🛒 Satınalma Siparişi Oluştur";
+        satinalmaBtn.setAttribute("style", `${btnBase} background:#0ea5e9; color:#fff;`);
+        satinalmaBtn.addEventListener("click", () => {
+            window.location.href = productionActionUrls.satinalmaUrl;
+        });
+        productionActionsEl.appendChild(satinalmaBtn);
+
+        const rfqBtn = document.createElement("button");
+        rfqBtn.type = "button";
+        rfqBtn.textContent = "🧾 Satınalma Teklifi Oluştur";
+        rfqBtn.setAttribute("style", `${btnBase} background:#8b5cf6; color:#fff;`);
+        rfqBtn.addEventListener("click", () => {
+            window.location.href = productionActionUrls.rfqUrl;
+        });
+        productionActionsEl.appendChild(rfqBtn);
+    }
+
+    function renderActionsByScenario(type) {
+        productionActionsEl.innerHTML = "";
+        const addButton = (label, style, onClick) => {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.textContent = label;
+            btn.setAttribute("style", style);
+            btn.addEventListener("click", onClick);
+            productionActionsEl.appendChild(btn);
+        };
+
+        const btnBase = "padding:8px 14px; border-radius:6px; border:none; cursor:pointer; font-size:13px;";
+
+        if (type === "enough_stock") {
+            productionMessageEl.textContent = "Ürünler stokla karşılanabilir. Satır bazında stoktan veya yeni üretim seçebilirsiniz.";
+        } else if (type === "enough_in_production") {
+            productionMessageEl.textContent = "Stok + üretimdeki miktar siparişi karşılıyor. İstediğiniz kalemleri üretimden bekleyebilir, istedikleriniz için yeni emir açabilirsiniz.";
+        } else if (type === "partial_stock") {
+            productionMessageEl.textContent = "Stoklar siparişin bir kısmını karşılıyor. Her kalem için kalanı üret veya tamamını üret seçebilirsiniz.";
+        } else {
+            productionMessageEl.textContent = "Stok bulunmuyor. Her kalem için üretim seçimi yapabilirsiniz.";
+        }
+
+        addButton("Seçimleri Uygula", `${btnBase} background:#1d4ed8; color:#fff; font-weight:600;`, () => applyItemDecisions());
+
+        if (type === "enough_in_production") {
+            addButton("Tümünü üretimden", `${btnBase} background:#2563eb; color:#fff;`, () => {
+                setAllItemDecisions("from_inproduction");
+                applyItemDecisions();
+            });
+        }
+        if (type === "enough_stock") {
+            addButton("Tümünü stoktan", `${btnBase} background:#0ea5e9; color:#fff;`, () => {
+                setAllItemDecisions("from_stock");
+                applyItemDecisions();
+            });
+        }
+        addButton("Tümünü üret", `${btnBase} background:#22c55e; color:#fff;`, () => {
+            setAllItemDecisions("produce_full");
+            applyItemDecisions();
+        });
+
+        renderProcurementButtons();
+    }
+
+    function renderAlSatOnlyDecision() {
+        productionSummaryEl.innerHTML = "";
+        productionMessageEl.textContent = "Bu siparişte al-sat ürünler var. Satın alma siparişi veya teklif talebi oluşturabilirsiniz.";
+        productionActionsEl.innerHTML = "";
+        renderProcurementButtons();
+        openProductionDecisionModal();
+    }
+
+    async function handleOrderDecisionClick(buttonEl) {
+        const checkUrl = buttonEl.dataset.checkUrl;
+        const hasProduction = buttonEl.dataset.hasProduction === "1";
+        const hasAlSat = buttonEl.dataset.hasAlSat === "1";
+        const fulfillUrl = buttonEl.dataset.fulfillUrl;
+        const fulfillInproductionUrl = buttonEl.dataset.fulfillInproductionUrl;
+        const produceRemainingUrl = buttonEl.dataset.produceRemainingUrl;
+        const produceFullUrl = buttonEl.dataset.produceFullUrl;
+        const satinalmaUrl = buttonEl.dataset.satinalmaUrl;
+        const rfqUrl = buttonEl.dataset.rfqUrl;
+
+        productionActionUrls = {
+            fulfillUrl,
+            fulfillInproductionUrl,
+            produceRemainingUrl,
+            produceFullUrl,
+            satinalmaUrl,
+            rfqUrl,
+            hasAlSat,
+        };
+
+        if (!hasProduction && hasAlSat) {
+            renderAlSatOnlyDecision();
+            return;
+        }
+
+        const res = await fetch(checkUrl, { headers: { "X-Requested-With": "XMLHttpRequest" } });
+        const payload = await res.json();
+        if (!res.ok || !payload.success) {
+            alert(payload.error || "Stok kontrolü yapılamadı.");
+            return;
+        }
+
+        productionDecisionItems = payload.items || [];
+        productionApplyUrl = payload.apply_url || null;
+        productionSummaryEl.innerHTML = buildSummaryHtml(payload);
+        wireDecisionRowInteractions();
+        renderActionsByScenario(payload.type);
+        openProductionDecisionModal();
+    }
+
+    document.querySelectorAll(".js-order-decision-btn").forEach((btn) => {
+        btn.addEventListener("click", () => handleOrderDecisionClick(btn));
+    });
+    productionCloseEl.addEventListener("click", closeProductionDecisionModal);
+    productionModalEl.addEventListener("click", (event) => {
+        if (event.target === productionModalEl) closeProductionDecisionModal();
+    });
+
+    function hideOrderTooltip() {
+        if (orderHoverTimeout) {
+            clearTimeout(orderHoverTimeout);
+            orderHoverTimeout = null;
+        }
+        orderTooltipEl.style.display = "none";
+        orderTooltipOpen = false;
+        currentHoverOrderId = null;
+        currentHoverAnchor = null;
+    }
+
+    function formatOrderItemsHtml(items) {
+        if (!Array.isArray(items) || items.length === 0) {
+            return `<div style="color:#6b7280;">Sipariş kalemi bulunamadı.</div>`;
+        }
+        const rows = items.map((item) => `
+            <div style="display:grid; grid-template-columns: 1fr 1fr auto; gap:8px; padding:6px 0; border-bottom:1px solid #f1f5f9;">
+                <div style="font-weight:600;">${item.code || "-"}</div>
+                <div style="color:#374151;">${item.name || "-"}</div>
+                <div style="text-align:right; font-weight:600;">${item.quantity || "0"} ${item.unit || ""}</div>
+            </div>
+        `).join("");
+        return rows;
+    }
+
+    function positionOrderTooltip(anchorEl) {
+        const rect = anchorEl.getBoundingClientRect();
+        const margin = 10;
+        const tooltipWidth = Math.min(380, window.innerWidth * 0.92);
+        let left = rect.left;
+        let top = rect.bottom + 8;
+        if (left + tooltipWidth > window.innerWidth - margin) {
+            left = window.innerWidth - tooltipWidth - margin;
+        }
+        if (left < margin) left = margin;
+        if (top + 260 > window.innerHeight - margin) {
+            top = Math.max(margin, rect.top - 260);
+        }
+        orderTooltipEl.style.left = `${left}px`;
+        orderTooltipEl.style.top = `${top}px`;
+    }
+
+    async function showOrderTooltip(anchorEl, orderId, itemsUrl) {
+        currentHoverOrderId = orderId;
+        currentHoverAnchor = anchorEl;
+        positionOrderTooltip(anchorEl);
+        orderTooltipEl.style.display = "block";
+        orderTooltipBodyEl.innerHTML = `<div style="color:#6b7280;">Yükleniyor...</div>`;
+        orderTooltipOpen = true;
+
+        if (orderItemsCache.has(orderId)) {
+            orderTooltipBodyEl.innerHTML = formatOrderItemsHtml(orderItemsCache.get(orderId));
+            return;
+        }
+
+        try {
+            const res = await fetch(itemsUrl, { headers: { "X-Requested-With": "XMLHttpRequest" } });
+            const payload = await res.json();
+            if (!res.ok || !payload.success) {
+                orderTooltipBodyEl.innerHTML = `<div style="color:#b91c1c;">Detaylar alınamadı.</div>`;
+                return;
+            }
+            orderItemsCache.set(orderId, payload.items || []);
+            if (orderTooltipOpen && currentHoverOrderId === orderId) {
+                orderTooltipBodyEl.innerHTML = formatOrderItemsHtml(payload.items || []);
+            }
+        } catch (e) {
+            orderTooltipBodyEl.innerHTML = `<div style="color:#b91c1c;">Detaylar alınamadı.</div>`;
+        }
+    }
+
+    document.querySelectorAll(".order-hover-trigger").forEach((el) => {
+        el.addEventListener("mouseenter", () => {
+            const orderId = el.dataset.orderId;
+            const itemsUrl = el.dataset.itemsUrl;
+            if (!orderId || !itemsUrl) return;
+            if (orderHoverTimeout) clearTimeout(orderHoverTimeout);
+            orderHoverTimeout = setTimeout(() => {
+                showOrderTooltip(el, orderId, itemsUrl);
+            }, 1000);
+        });
+        el.addEventListener("mouseleave", (evt) => {
+            if (orderHoverTimeout) {
+                clearTimeout(orderHoverTimeout);
+                orderHoverTimeout = null;
+            }
+            if (orderTooltipOpen) {
+                const toEl = evt.relatedTarget;
+                if (!toEl || !orderTooltipEl.contains(toEl)) {
+                    hideOrderTooltip();
+                }
+            }
+        });
+    });
+
+    orderTooltipEl.addEventListener("mouseleave", () => {
+        hideOrderTooltip();
+    });
+    window.addEventListener("scroll", () => {
+        if (orderTooltipOpen && currentHoverAnchor) {
+            positionOrderTooltip(currentHoverAnchor);
+        }
+    }, true);
+    window.addEventListener("resize", () => {
+        if (orderTooltipOpen && currentHoverAnchor) {
+            positionOrderTooltip(currentHoverAnchor);
+        }
+    });
+</script>
+{% endblock %}

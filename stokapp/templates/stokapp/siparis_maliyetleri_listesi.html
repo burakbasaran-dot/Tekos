@@ -1,0 +1,117 @@
+{% extends "stokapp/base.html" %}
+{% load currency_filters %}
+{% load custom_filters %}
+{% block title %}Sipariş Maliyetleri{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="margin: 0;">💰 Sipariş Maliyetleri</h2>
+    </div>
+    
+    <p style="color: #6b7280; margin-bottom: 20px;">
+        Tamamlanan siparişlerin maliyetlerini görüntüleyebilirsiniz.
+    </p>
+    
+    <!-- Arama -->
+    <div style="margin-bottom: 20px;">
+        <form method="get" style="display: flex; gap: 10px;">
+            <input type="text" name="arama" value="{{ arama }}" 
+                   placeholder="Sipariş numarası veya müşteri adı ile ara..." 
+                   style="flex: 1; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+            <button type="submit" class="btn btn-primary" style="padding: 10px 20px;">🔍 Ara</button>
+            {% if arama %}
+            <a href="{% url 'stokapp:siparis_maliyetleri_listesi' %}" class="btn btn-secondary" style="padding: 10px 20px;">Temizle</a>
+            {% endif %}
+        </form>
+    </div>
+    
+    {% if siparisler_with_costs %}
+    <table style="width: 100%; border-collapse: collapse; background: white;">
+        <thead>
+            <tr style="background-color: #f9fafb; border-bottom: 2px solid #e5e7eb;">
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Sipariş Numarası</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Müşteri</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Oluşturulma Tarihi</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Tamamlanma Tarihi</th>
+                <th style="padding: 12px; text-align: right; font-weight: 600;">Sipariş Toplamı</th>
+                <th style="padding: 12px; text-align: right; font-weight: 600;">Toplam Maliyet</th>
+                <th style="padding: 12px; text-align: center; font-weight: 600;">Maliyet Kayıt Sayısı</th>
+                <th style="padding: 12px; text-align: center; font-weight: 600;">İşlemler</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in siparisler_with_costs %}
+            <tr style="border-bottom: 1px solid #e5e7eb;">
+                <td style="padding: 12px;">
+                    <a href="{% url 'stokapp:siparis_maliyetleri' item.siparis.pk %}" 
+                       style="color: #3b82f6; text-decoration: none; font-weight: 600;">
+                        {{ item.siparis.siparis_numarasi }}
+                    </a>
+                </td>
+                <td style="padding: 12px;">
+                    {{ item.siparis.musteri_adi|default:item.siparis.musteri.ad }}
+                </td>
+                <td style="padding: 12px;">{{ item.siparis.olusturulma_tarihi|date:"d.m.Y" }}</td>
+                <td style="padding: 12px;">
+                    {% if item.siparis.tamamlanma_tarihi %}
+                        {{ item.siparis.tamamlanma_tarihi|date:"d.m.Y" }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td style="padding: 12px; text-align: right; font-weight: 600;">
+                    {{ item.siparis.toplam|currency }} {{ item.siparis.para_birimi }}
+                </td>
+                <td style="padding: 12px; text-align: right; font-weight: 600; color: #1e40af;">
+                    {{ item.toplam_maliyet|currency }} TRY
+                </td>
+                <td style="padding: 12px; text-align: center;">
+                    {% if item.maliyet_sayisi > 0 %}
+                        <span style="padding: 4px 8px; border-radius: 4px; background-color: #d1fae5; color: #065f46; font-size: 12px; font-weight: 600;">
+                            {{ item.maliyet_sayisi }}
+                        </span>
+                    {% else %}
+                        <span style="padding: 4px 8px; border-radius: 4px; background-color: #fee2e2; color: #991b1b; font-size: 12px; font-weight: 600;">
+                            0
+                        </span>
+                    {% endif %}
+                </td>
+                <td style="padding: 12px; text-align: center;">
+                    <a href="{% url 'stokapp:siparis_maliyetleri' item.siparis.pk %}" 
+                       class="btn" 
+                       style="background-color: #3b82f6; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px;">
+                        📊 Maliyetleri Görüntüle
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <!-- Sayfalama -->
+    {% if siparisler.has_other_pages %}
+    <div style="margin-top: 20px; display: flex; justify-content: center; gap: 10px;">
+        {% if siparisler.has_previous %}
+        <a href="?page={{ siparisler.previous_page_number }}{% if arama %}&arama={{ arama }}{% endif %}" 
+           class="btn btn-secondary" style="padding: 8px 16px;">← Önceki</a>
+        {% endif %}
+        
+        <span style="padding: 8px 16px; display: flex; align-items: center;">
+            Sayfa {{ siparisler.number }} / {{ siparisler.paginator.num_pages }}
+        </span>
+        
+        {% if siparisler.has_next %}
+        <a href="?page={{ siparisler.next_page_number }}{% if arama %}&arama={{ arama }}{% endif %}" 
+           class="btn btn-secondary" style="padding: 8px 16px;">Sonraki →</a>
+        {% endif %}
+    </div>
+    {% endif %}
+    
+    {% else %}
+    <div style="padding: 40px; text-align: center; color: #6b7280;">
+        <p>Tamamlanan sipariş bulunmamaktadır.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

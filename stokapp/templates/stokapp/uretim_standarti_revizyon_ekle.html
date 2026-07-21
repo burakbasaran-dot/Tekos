@@ -1,0 +1,75 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Standart Revizyon Ekle - {{ standart.kod }}{% endblock %}
+{% block content %}
+<div class="card">
+    <h2>Standart Revizyon Ekle: {{ standart.kod }}</h2>
+    
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 15px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background: #fff3cd; color: #856404; border-left: 4px solid #ffc107;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+    
+    <div style="padding: 15px; background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; margin-bottom: 20px;">
+        <p style="margin: 0; color: #1e40af; font-size: 14px;">
+            ℹ️ <strong>Not:</strong> Yeni revizyon eklediğinizde, mevcut PDF dosyası ve revizyon bilgileri otomatik olarak arşive alınacaktır.
+        </p>
+    </div>
+    
+    {% if standart.pdf_dosya %}
+    <div style="padding: 15px; background-color: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 20px;">
+        <label style="display: block; font-weight: 600; color: #6b7280; font-size: 13px; margin-bottom: 8px;">Mevcut PDF Dosyası</label>
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 14px; color: #111827;">{{ standart.pdf_dosya.name|slice:"-30:" }}</span>
+            <a href="{% url 'stokapp:uretim_standarti_pdf_indir' standart.pk %}" 
+               style="color: #3b82f6; text-decoration: none; font-size: 13px;">📥 İndir</a>
+        </div>
+        {% if standart.revizyon_tarihi %}
+        <div style="margin-top: 8px; font-size: 13px; color: #6b7280;">
+            Son revizyon: {{ standart.revizyon_tarihi|date:"d.m.Y" }}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+    
+    <form method="post" enctype="multipart/form-data" style="max-width: 700px;">
+        {% csrf_token %}
+        
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.yeni_pdf_dosya.label }} <span style="color: #dc3545;">*</span></label>
+            {{ form.yeni_pdf_dosya }}
+            {% if form.yeni_pdf_dosya.errors %}
+                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.yeni_pdf_dosya.errors }}</div>
+            {% endif %}
+            <small style="color: #6b7280; font-size: 12px;">Yeni PDF dosyasını seçin.</small>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.revizyon_tarihi.label }} <span style="color: #dc3545;">*</span></label>
+            {{ form.revizyon_tarihi }}
+            {% if form.revizyon_tarihi.errors %}
+                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.revizyon_tarihi.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.revizyon_aciklama.label }}</label>
+            {{ form.revizyon_aciklama }}
+            {% if form.revizyon_aciklama.errors %}
+                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.revizyon_aciklama.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div style="margin-top: 20px; display: flex; gap: 10px;">
+            <button type="submit" class="btn btn-primary" style="background-color: #f59e0b; border-color: #f59e0b; padding: 10px 20px;">Revizyon Ekle</button>
+            <a href="{% url 'stokapp:uretim_standarti_detay' standart.pk %}" class="btn" style="background-color: #6b7280; color: white; padding: 10px 20px; text-decoration: none;">İptal</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

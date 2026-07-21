@@ -1,0 +1,219 @@
+{% extends "stokapp/base.html" %}
+{% block title %}{% if is_edit %}Araç Düzenle{% else %}Yeni Araç Ekle{% endif %}{% endblock %}
+{% block content %}
+{% include "stokapp/includes/tdk_form_styles.html" %}
+
+<style>
+  .tdk-arac-top {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 220px;
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .tdk-arac-top { grid-template-columns: 1fr; }
+  }
+  .tdk-photo-box {
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    text-align: center;
+  }
+  .tdk-photo-preview {
+    width: 100%;
+    max-width: 180px;
+    height: 140px;
+    margin: 0 auto 14px;
+    border: 2px dashed #cbd5e1;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    overflow: hidden;
+  }
+  .tdk-photo-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .tdk-file-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    font-size: 13px;
+    color: #2563eb;
+    text-decoration: none;
+  }
+  .tdk-file-link:hover { text-decoration: underline; }
+  .tdk-check-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #f8fafc;
+  }
+  .tdk-check-row label {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+    cursor: pointer;
+  }
+</style>
+
+<div class="tdk-page">
+  <div class="tdk-header">
+    <div>
+      <h1>{% if is_edit %}✏️ Araç Düzenle: {{ arac.plaka }}{% else %}🚗 Yeni Araç Ekle{% endif %}</h1>
+      <p>Filo aracı tanımı, teknik bilgiler ve belgeleri tek ekrandan yönetin.</p>
+    </div>
+    <a href="{% url 'stokapp:arac_listesi' %}" class="btn btn-secondary">← Geri</a>
+  </div>
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="tdk-alert {% if message.tags == 'error' %}tdk-alert-error{% elif message.tags == 'warning' %}tdk-alert-warning{% else %}tdk-alert-success{% endif %}">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="post" enctype="multipart/form-data" class="tdk-form-card">
+    {% csrf_token %}
+
+    <section class="tdk-section">
+      <h2 class="tdk-section-title">
+        <span class="tdk-section-icon">🚘</span>
+        Temel Bilgiler
+      </h2>
+      <div class="tdk-arac-top">
+        <div>
+          <div class="tdk-grid">
+            <div class="tdk-field tdk-has-help" data-help="Araç plaka numarası. Filo takibi ve belge eşleştirmesinde ana tanımlayıcıdır.">
+              <label class="tdk-label required" for="{{ form.plaka.id_for_label }}">{{ form.plaka.label }}</label>
+              {{ form.plaka }}
+              {% if form.plaka.errors %}<div class="tdk-error">{{ form.plaka.errors }}</div>{% endif %}
+            </div>
+            <div class="tdk-field tdk-has-help" data-help="Araç sınıfı (binek, kamyonet, ticari vb.). Raporlama ve filtrelerde kullanılır.">
+              <label class="tdk-label required" for="{{ form.arac_tipi.id_for_label }}">{{ form.arac_tipi.label }}</label>
+              {{ form.arac_tipi }}
+              {% if form.arac_tipi.errors %}<div class="tdk-error">{{ form.arac_tipi.errors }}</div>{% endif %}
+            </div>
+            <div class="tdk-field tdk-has-help" data-help="Araç markası. Filo listelerinde görünür.">
+              <label class="tdk-label required" for="{{ form.marka.id_for_label }}">{{ form.marka.label }}</label>
+              {{ form.marka }}
+              {% if form.marka.errors %}<div class="tdk-error">{{ form.marka.errors }}</div>{% endif %}
+            </div>
+            <div class="tdk-field tdk-has-help" data-help="Araç model adı.">
+              <label class="tdk-label required" for="{{ form.model.id_for_label }}">{{ form.model.label }}</label>
+              {{ form.model }}
+              {% if form.model.errors %}<div class="tdk-error">{{ form.model.errors }}</div>{% endif %}
+            </div>
+            <div class="tdk-field tdk-has-help" data-help="Model yılı. Sigorta ve bakım kayıtlarında referans olur.">
+              <label class="tdk-label required" for="{{ form.yil.id_for_label }}">{{ form.yil.label }}</label>
+              {{ form.yil }}
+              {% if form.yil.errors %}<div class="tdk-error">{{ form.yil.errors }}</div>{% endif %}
+            </div>
+            <div class="tdk-field tdk-has-help" data-help="Araç rengi. Filo tanımlamasında yardımcı bilgi.">
+              <label class="tdk-label" for="{{ form.renk.id_for_label }}">{{ form.renk.label }}</label>
+              {{ form.renk }}
+              {% if form.renk.errors %}<div class="tdk-error">{{ form.renk.errors }}</div>{% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="tdk-photo-box tdk-has-help" data-help="Araç fotoğrafı. JPEG veya PNG formatında yükleyebilirsiniz.">
+          <label class="tdk-label" for="{{ form.foto.id_for_label }}">{{ form.foto.label }}</label>
+          <div id="foto-preview" class="tdk-photo-preview">
+            {% if is_edit and arac.foto %}
+              <img src="{{ arac.foto.url }}" alt="Araç fotoğrafı" id="foto-preview-img">
+            {% else %}
+              <span style="color: #94a3b8; font-size: 13px;">Fotoğraf yükleyin</span>
+            {% endif %}
+          </div>
+          {{ form.foto }}
+          {% if form.foto.errors %}<div class="tdk-error">{{ form.foto.errors }}</div>{% endif %}
+        </div>
+      </div>
+    </section>
+
+    <section class="tdk-section">
+      <h2 class="tdk-section-title">
+        <span class="tdk-section-icon green">🔧</span>
+        Teknik Bilgiler
+      </h2>
+      <div class="tdk-grid">
+        <div class="tdk-field tdk-has-help" data-help="Araç şasi numarası. Resmi kayıt ve sigorta eşleştirmesinde kullanılır.">
+          <label class="tdk-label" for="{{ form.sasi_no.id_for_label }}">{{ form.sasi_no.label }}</label>
+          {{ form.sasi_no }}
+          {% if form.sasi_no.errors %}<div class="tdk-error">{{ form.sasi_no.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Araç motor numarası. Teknik servis kayıtlarında referans olur.">
+          <label class="tdk-label" for="{{ form.motor_no.id_for_label }}">{{ form.motor_no.label }}</label>
+          {{ form.motor_no }}
+          {% if form.motor_no.errors %}<div class="tdk-error">{{ form.motor_no.errors }}</div>{% endif %}
+        </div>
+      </div>
+    </section>
+
+    <section class="tdk-section">
+      <h2 class="tdk-section-title">
+        <span class="tdk-section-icon amber">📄</span>
+        Belgeler ve Notlar
+      </h2>
+      <div class="tdk-grid">
+        <div class="tdk-field tdk-has-help" data-help="Araç ruhsatı PDF dosyası. Belge arşivinde saklanır.">
+          <label class="tdk-label" for="{{ form.ruhsat_pdf.id_for_label }}">{{ form.ruhsat_pdf.label }}</label>
+          {{ form.ruhsat_pdf }}
+          {% if is_edit and arac.ruhsat_pdf %}
+            <a href="{{ arac.ruhsat_pdf.url }}" target="_blank" class="tdk-file-link">📄 Mevcut ruhsat PDF'ini görüntüle</a>
+          {% endif %}
+          {% if form.ruhsat_pdf.errors %}<div class="tdk-error">{{ form.ruhsat_pdf.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Pasif araçlar listede gizlenebilir; geçmiş kayıtlar korunur.">
+          <label class="tdk-label" for="{{ form.aktif.id_for_label }}">{{ form.aktif.label }}</label>
+          <div class="tdk-check-row">
+            {{ form.aktif }}
+            <label for="{{ form.aktif.id_for_label }}">Araç filoda aktif olarak görünsün</label>
+          </div>
+          {% if form.aktif.errors %}<div class="tdk-error">{{ form.aktif.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help full" data-help="Araç hakkında dahili not veya ek bilgi.">
+          <label class="tdk-label" for="{{ form.aciklama.id_for_label }}">{{ form.aciklama.label }}</label>
+          {{ form.aciklama }}
+          {% if form.aciklama.errors %}<div class="tdk-error">{{ form.aciklama.errors }}</div>{% endif %}
+        </div>
+      </div>
+    </section>
+
+    <div class="tdk-footer">
+      <a href="{% url 'stokapp:arac_listesi' %}" class="btn btn-secondary">İptal</a>
+      <button type="submit" class="btn btn-primary">💾 Kaydet</button>
+    </div>
+  </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var fotoInput = document.querySelector('#id_foto');
+  var fotoPreview = document.getElementById('foto-preview');
+  if (!fotoInput || !fotoPreview) return;
+
+  fotoInput.addEventListener('change', function (e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function (ev) {
+      fotoPreview.innerHTML = '<img src="' + ev.target.result + '" alt="Önizleme">';
+    };
+    reader.readAsDataURL(file);
+  });
+});
+</script>
+{% endblock %}

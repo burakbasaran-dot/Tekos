@@ -1,0 +1,170 @@
+{% extends "stokapp/base.html" %}
+{% block title %}{{ op.operasyon_no }}{% endblock %}
+{% block content %}
+<div class="card">
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:14px;">
+    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+      <a href="{% url 'stokapp:dis_operasyon_listesi' %}" class="btn btn-secondary">← Liste</a>
+      <h2 style="margin:0;">{{ op.operasyon_no }}</h2>
+      {% for e in etiketler %}
+        {% if e == 'gecikti' %}<span style="padding:4px 8px;background:#fee2e2;color:#991b1b;border-radius:8px;font-size:11px;font-weight:700;">Gecikti</span>{% endif %}
+        {% if e == 'eksik_donus' %}<span style="padding:4px 8px;background:#fef3c7;color:#92400e;border-radius:8px;font-size:11px;font-weight:700;">Eksik dönüş</span>{% endif %}
+      {% endfor %}
+    </div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+      {% if op.durum == 'TASLAK' %}
+      <form method="post" action="{% url 'stokapp:dis_operasyon_gonder' op.pk %}" onsubmit="return confirm('Stok düşülecek ve kayıt tedarikçiye gönderilmiş sayılacak. Devam?');">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary">Gönder (stok düş)</button>
+      </form>
+      <a href="{% url 'stokapp:dis_operasyon_duzenle' op.pk %}" class="btn btn-secondary">Düzenle</a>
+      {% endif %}
+      {% if op.durum != 'TASLAK' and op.durum != 'IPTAL' and op.durum != 'ARSIV' and not op.arsivli %}
+      <a href="{% url 'stokapp:dis_operasyon_donus_al' op.pk %}" class="btn btn-primary">Dönüş Al</a>
+      {% endif %}
+      {% if not op.arsivli %}
+      <form method="post" action="{% url 'stokapp:dis_operasyon_arsivle' op.pk %}" onsubmit="return confirm('Arşivlemek istediğinize emin misiniz?');">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-secondary">Arşivle</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if messages %}
+    {% for m in messages %}
+    <div style="padding:10px;margin-bottom:10px;border-radius:8px;{% if m.tags == 'error' %}background:#fee2e2{% else %}background:#d1fae5{% endif %}">{{ m }}</div>
+    {% endfor %}
+  {% endif %}
+
+  <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px; border-bottom:2px solid #e5e7eb;">
+    <a href="?tab=genel" style="padding:8px 12px;border-radius:6px 6px 0 0;text-decoration:none;font-weight:600;{% if tab == 'genel' %}background:#f3f4f6;border:1px solid #e5e7eb;border-bottom:none;color:#111827{% else %}color:#6b7280{% endif %}">Genel</a>
+    <a href="?tab=gonderim" style="padding:8px 12px;border-radius:6px 6px 0 0;text-decoration:none;font-weight:600;{% if tab == 'gonderim' %}background:#f3f4f6;border:1px solid #e5e7eb;border-bottom:none;color:#111827{% else %}color:#6b7280{% endif %}">Gönderim</a>
+    <a href="?tab=donuslar" style="padding:8px 12px;border-radius:6px 6px 0 0;text-decoration:none;font-weight:600;{% if tab == 'donuslar' %}background:#f3f4f6;border:1px solid #e5e7eb;border-bottom:none;color:#111827{% else %}color:#6b7280{% endif %}">Dönüşler</a>
+    <a href="?tab=kalite" style="padding:8px 12px;border-radius:6px 6px 0 0;text-decoration:none;font-weight:600;{% if tab == 'kalite' %}background:#f3f4f6;border:1px solid #e5e7eb;border-bottom:none;color:#111827{% else %}color:#6b7280{% endif %}">Kalite</a>
+    <a href="?tab=maliyet" style="padding:8px 12px;border-radius:6px 6px 0 0;text-decoration:none;font-weight:600;{% if tab == 'maliyet' %}background:#f3f4f6;border:1px solid #e5e7eb;border-bottom:none;color:#111827{% else %}color:#6b7280{% endif %}">Maliyet</a>
+    <a href="?tab=dosyalar" style="padding:8px 12px;border-radius:6px 6px 0 0;text-decoration:none;font-weight:600;{% if tab == 'dosyalar' %}background:#f3f4f6;border:1px solid #e5e7eb;border-bottom:none;color:#111827{% else %}color:#6b7280{% endif %}">Dosyalar</a>
+    <a href="?tab=log" style="padding:8px 12px;border-radius:6px 6px 0 0;text-decoration:none;font-weight:600;{% if tab == 'log' %}background:#f3f4f6;border:1px solid #e5e7eb;border-bottom:none;color:#111827{% else %}color:#6b7280{% endif %}">Geçmiş</a>
+  </div>
+
+  {% if tab == 'genel' or tab == 'gonderim' %}
+  <div style="display:grid; grid-template-columns:160px 1fr; gap:10px 16px; font-size:14px;">
+    <div style="color:#6b7280;font-weight:600;">Durum</div><div>{{ op.get_durum_display }}</div>
+    <div style="color:#6b7280;font-weight:600;">Kalite durumu</div><div>{{ op.get_kalite_durumu_display }}</div>
+    <div style="color:#6b7280;font-weight:600;">Ürün</div><div><a href="{% url 'stokapp:stok_detay' op.stok_item.pk %}">{{ op.stok_item.stok_kodu }}</a> — {{ op.stok_item.ad }}</div>
+    <div style="color:#6b7280;font-weight:600;">Operasyon tipi</div><div>{{ op.operasyon_tipi.ad }}</div>
+    <div style="color:#6b7280;font-weight:600;">Tedarikçi</div><div>{{ op.tedarikci.ad }}</div>
+    <div style="color:#6b7280;font-weight:600;">Gönderilen</div><div>{{ op.gonderilen_miktar }} {{ op.birim }}</div>
+    <div style="color:#6b7280;font-weight:600;">Tedarikçide kalan</div><div>{{ op.miktar_tedarikcide_kalan }} {{ op.birim }}</div>
+    <div style="color:#6b7280;font-weight:600;">Kalite bekleyen</div><div>{{ op.miktar_kalite_bekliyor }} {{ op.birim }}</div>
+    <div style="color:#6b7280;font-weight:600;">Toplam dönen</div><div>{{ op.toplam_donen_miktar }} {{ op.birim }}</div>
+    <div style="color:#6b7280;font-weight:600;">Fire / eksik</div><div>{{ op.toplam_fire_miktar }} / {{ op.toplam_eksik_miktar }}</div>
+    {% if tab == 'gonderim' %}
+    <div style="color:#6b7280;font-weight:600;">Gönderim deposu</div><div>{{ op.gonderim_deposu|default:"—" }}</div>
+    <div style="color:#6b7280;font-weight:600;">Lokasyon</div><div>{{ op.dis_operasyon_lokasyonu|default:"—" }}</div>
+    <div style="color:#6b7280;font-weight:600;">Gönderim tarihi</div><div>{{ op.gonderim_tarihi|date:"d.m.Y" }}</div>
+    <div style="color:#6b7280;font-weight:600;">Beklenen dönüş</div><div>{{ op.beklenen_donus_tarihi|date:"d.m.Y"|default:"—" }}</div>
+    <div style="color:#6b7280;font-weight:600;">Sevk evrak no</div><div>{{ op.sevk_evrak_no|default:"—" }}</div>
+    <div style="color:#6b7280;font-weight:600;">Parti no</div><div>{{ op.parti_no|default:"—" }}</div>
+    {% endif %}
+  </div>
+  {% if tab == 'genel' %}
+  <p style="margin-top:16px;"><strong>Açıklama:</strong> {{ op.aciklama|default:"—"|linebreaks }}</p>
+  {% endif %}
+  {% endif %}
+
+  {% if tab == 'donuslar' %}
+  <table>
+    <thead><tr><th>Tarih</th><th>Dönen</th><th>Fire</th><th>Eksik</th><th>KC gerekli</th><th>KC yapıldı</th><th>Maliyet</th><th></th></tr></thead>
+    <tbody>
+      {% for d in donuslar %}
+      <tr>
+        <td>{{ d.donus_tarihi|date:"d.m.Y" }}</td>
+        <td>{{ d.donen_miktar }}</td>
+        <td>{{ d.fire_miktari }}</td>
+        <td>{{ d.eksik_miktari }}</td>
+        <td>{% if d.kalite_kontrol_gerekli %}Evet{% else %}Hayır{% endif %}</td>
+        <td>{% if d.kalite_islenildi %}Evet{% else %}Hayır{% endif %}</td>
+        <td>{{ d.toplam_maliyet }}</td>
+        <td>
+          {% if d.kalite_kontrol_gerekli and not d.kalite_islenildi %}
+          <a class="btn btn-primary" style="padding:4px 8px;font-size:12px;" href="{% url 'stokapp:dis_operasyon_kalite' d.pk %}">Kalite</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="8">Henüz dönüş yok.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  {% if tab == 'kalite' %}
+  <table>
+    <thead><tr><th>Tarih</th><th>Kontrol eden</th><th>Sonuç</th><th>Kabul</th><th>Red</th><th>Not</th></tr></thead>
+    <tbody>
+      {% for k in kaliteler %}
+      <tr>
+        <td>{{ k.kontrol_tarihi|date:"d.m.Y" }}</td>
+        <td>{{ k.kontrol_eden }}</td>
+        <td>{{ k.get_sonuc_display }}</td>
+        <td>{{ k.kabul_miktari }}</td>
+        <td>{{ k.red_miktari }}</td>
+        <td>{{ k.aciklama|truncatechars:40 }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6">Kalite kaydı yok.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  {% if tab == 'maliyet' %}
+  <p><strong>Toplam gerçekleşen maliyet:</strong> {{ toplam_maliyet }} {{ op.get_para_birimi_display }}</p>
+  <p><strong>Birim başına ek maliyet (gönderilene göre):</strong> {{ birim_ek_maliyet }} {{ op.get_para_birimi_display }}</p>
+  <p style="color:#6b7280;font-size:13px;">Ürün maliyetine otomatik dağıtım ikinci aşamada eklenebilir; şu an toplamlar burada tutulur.</p>
+  {% endif %}
+
+  {% if tab == 'dosyalar' %}
+  <form method="post" action="{% url 'stokapp:dis_operasyon_dosya_ekle' op.pk %}" enctype="multipart/form-data" style="margin-bottom:16px;display:grid;gap:8px;max-width:480px;">
+    {% csrf_token %}
+    <input type="file" name="dosya" required>
+    <select name="dosya_tipi">
+      <option value="GENEL">Genel</option>
+      <option value="GONDERIM">Gönderim</option>
+      <option value="DONUS">Dönüş</option>
+      <option value="KALITE">Kalite</option>
+    </select>
+    <input name="aciklama" placeholder="Açıklama" style="padding:8px;border-radius:8px;border:1px solid #e5e7eb;">
+    <button type="submit" class="btn btn-primary">Yükle</button>
+  </form>
+  <ul>
+    {% for f in dosyalar %}
+    <li><a href="{{ f.dosya.url }}" target="_blank">{{ f.get_dosya_tipi_display }}</a> — {{ f.aciklama|default:f.dosya.name }} ({{ f.uploaded_at|date:"d.m.Y H:i" }})</li>
+    {% empty %}
+    <li>Dosya yok.</li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+
+  {% if tab == 'log' %}
+  <table>
+    <thead><tr><th>Tarih</th><th>İşlem</th><th>Eski</th><th>Yeni</th><th>Kullanıcı</th><th>Açıklama</th></tr></thead>
+    <tbody>
+      {% for l in loglar %}
+      <tr>
+        <td>{{ l.tarih|date:"d.m.Y H:i" }}</td>
+        <td>{{ l.islem }}</td>
+        <td>{{ l.eski_durum }}</td>
+        <td>{{ l.yeni_durum }}</td>
+        <td>{{ l.kullanici }}</td>
+        <td>{{ l.aciklama|truncatechars:60 }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6">Log yok.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endblock %}

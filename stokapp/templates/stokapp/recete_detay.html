@@ -1,0 +1,3054 @@
+{% extends "stokapp/base.html" %}
+{% load static %}
+{% load custom_filters %}
+{% block title %}Reçete Detay - {{ recete.urun.stok_kodu }}{% endblock %}
+{% block content %}
+<style>
+  .recete-sira-sec { width: 18px; height: 18px; cursor: pointer; vertical-align: middle; }
+  .stok-detay-link { color: #2563eb; font-weight: 600; text-decoration: none; }
+  .stok-detay-link:hover { text-decoration: underline; }
+</style>
+<div class="card">
+    <div style="display:none" aria-hidden="true">{% csrf_token %}</div>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <div>
+            <h2>📋 Ürün Reçetesi</h2>
+            <div style="margin-top: 10px;">
+                <a href="{% url 'stokapp:stok_ekle' recete.urun.pk %}" class="stok-detay-link" style="background: #f3f4f6; padding: 6px 12px; border-radius: 6px; font-size: 16px; display: inline-block;">
+                    {{ recete.urun.stok_kodu }}
+                </a>
+                <span style="margin-left: 15px; color: #6b7280;">{{ recete.urun.ad }}</span>
+            </div>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <a href="{% url 'stokapp:recete_duzenle' recete.pk %}" class="btn btn-secondary">✏️ Düzenle</a>
+            <a href="{% url 'stokapp:recete_detay_export_pdf' recete.pk %}" class="btn btn-secondary">📄 PDF</a>
+            <span id="receteSiraAracCubugu" style="display: none; align-items: center; gap: 6px;" title="Bileşenler veya Operasyonlar sekmesinde satır seçin">
+                <button type="button" class="btn btn-secondary" onclick="receteSiraSatirYukari()" style="padding: 8px 14px; font-weight: 700; min-width: 44px;" title="Seçili satırı yukarı">↑</button>
+                <button type="button" class="btn btn-secondary" onclick="receteSiraSatirAsagi()" style="padding: 8px 14px; font-weight: 700; min-width: 44px;" title="Seçili satırı aşağı">↓</button>
+            </span>
+            <a href="{% url 'stokapp:recete_sil' recete.pk %}" 
+               class="btn" 
+               style="background: #dc3545; color: white;"
+               onclick="return confirm('Bu reçeteyi silmek istediğinizden emin misiniz?');">
+                🗑️ Sil
+            </a>
+            <a href="{% url 'stokapp:recete_listesi' %}" class="btn btn-secondary">← Geri</a>
+        </div>
+    </div>
+    
+    <!-- Reçete Bilgileri -->
+    <div style="background: #f9fafb; padding: 20px; border-radius: 12px; margin-bottom: 30px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+            <div>
+                <div style="color: #6b7280; font-size: 12px; margin-bottom: 5px;">Versiyon</div>
+                <div style="font-size: 18px; font-weight: 600; color: #111827;">
+                    <span style="background: #e0e7ff; color: #4338ca; padding: 4px 10px; border-radius: 12px;">
+                        v{{ recete.versiyon }}
+                    </span>
+                </div>
+            </div>
+            <div>
+                <div style="color: #6b7280; font-size: 12px; margin-bottom: 5px;">Durum</div>
+                <div>
+                    {% if recete.aktif %}
+                    <span style="padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; background: #d4edda; color: #155724;">
+                        ✅ Aktif
+                    </span>
+                    {% else %}
+                    <span style="padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; background: #f8d7da; color: #721c24;">
+                        ❌ Pasif
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            <div>
+                <div style="color: #6b7280; font-size: 12px; margin-bottom: 5px;">Oluşturulma</div>
+                <div style="font-size: 14px; color: #111827;">{{ recete.created_at|date:"d.m.Y H:i" }}</div>
+            </div>
+        </div>
+        {% if recete.aciklama %}
+        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+            <div style="color: #6b7280; font-size: 12px; margin-bottom: 5px;">Açıklama</div>
+            <div style="color: #111827;">{{ recete.aciklama }}</div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div style="margin-bottom: 22px; padding: 12px 14px; border-radius: 8px; border: 1px solid #bfdbfe; background: #eff6ff; color: #1e3a8a; font-size: 13px;">
+        {% if recete.urun.urun_rolu == 'BILESEN' %}
+            Bu ürün <strong>Üretim Bileşeni</strong> rolünde. Reçete bileşeni eklemek opsiyoneldir; sadece operasyon, talimat ve kalite dokümantasyonu ile de süreç yönetebilirsiniz.
+        {% elif recete.urun.urun_rolu == 'NIHAI_URUN' %}
+            Bu ürün <strong>Nihai Ürün</strong> rolünde. Maliyet ve izlenebilirlik için reçete bileşenleri ve operasyon adımları tanımlamanız önerilir.
+        {% else %}
+            Bu ürün <strong>Al-Sat Ürün</strong> rolünde. Reçete bileşeni zorunlu değildir; gerektiğinde kontrol/operasyon adımları için reçete kullanılabilir.
+        {% endif %}
+    </div>
+    
+    <!-- Sekmeler -->
+    <div style="margin-bottom: 30px;">
+        <div class="tekos-tab-buttons">
+            <button type="button"
+                    class="tekos-tab-btn tab-blue recete-tab-btn active"
+                    onclick="showReceteTab('bilesenler')"
+                    data-tab="bilesenler">
+                <span class="tab-icon" aria-hidden="true">📋</span>
+                <span>Reçete Bileşenleri</span>
+            </button>
+            <button type="button"
+                    class="tekos-tab-btn tab-eval recete-tab-btn"
+                    onclick="showReceteTab('operasyonlar')"
+                    data-tab="operasyonlar">
+                <span class="tab-icon" aria-hidden="true">⚙️</span>
+                <span>Operasyonlar</span>
+            </button>
+            <button type="button"
+                    class="tekos-tab-btn tab-fason recete-tab-btn"
+                    onclick="showReceteTab('dis-operasyonlar')"
+                    data-tab="dis-operasyonlar">
+                <span class="tab-icon" aria-hidden="true">🏭</span>
+                <span>Dış Operasyonlar</span>
+            </button>
+            <button type="button"
+                    class="tekos-tab-btn tab-open-items recete-tab-btn"
+                    onclick="showReceteTab('talimatlar')"
+                    data-tab="talimatlar">
+                <span class="tab-icon" aria-hidden="true">📝</span>
+                <span>Talimatlar</span>
+            </button>
+            <button type="button"
+                    class="tekos-tab-btn tab-detail recete-tab-btn"
+                    onclick="showReceteTab('dosyalar')"
+                    data-tab="dosyalar">
+                <span class="tab-icon" aria-hidden="true">📁</span>
+                <span>Dosyalar</span>
+            </button>
+        </div>
+        
+        <!-- Reçete Bileşenleri Sekmesi -->
+        <div id="bilesenler-tab" class="recete-tab-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                <div>
+                    <h3 style="margin: 0;">Reçete Bileşenleri</h3>
+                    <p style="margin: 6px 0 0; font-size: 12px; color: #64748b;">Sol kutudan bir satır seçin; üstteki ↑ ↓ ile sırayı değiştirin. Her adımda kayıt sunucuya yazılır.</p>
+                </div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                    <button type="button" class="btn btn-secondary" onclick="openReceteDisaridanKopyala('bilesenler')" style="padding:8px 14px;">
+                        📋 Dışarıdan reçete bileşeni kopyala
+                    </button>
+                    <button class="btn btn-primary" onclick="addBilesenRow()" id="addBilesenBtn">
+                        ➕ Bileşen Ekle
+                    </button>
+                </div>
+            </div>
+            
+            {% if detaylar %}
+            <table id="bilesenTable" style="width: 100%; border-collapse: collapse; background: white;">
+                <thead>
+                    <tr>
+                        <th style="padding: 8px; text-align: center; border-bottom: 1px solid #ddd; background: #34495e; color: white; width: 44px;" title="Seç">Seç</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd; background: #34495e; color: white;">Sıra</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd; background: #34495e; color: white;">Stok</th>
+                        <th style="padding: 12px; text-align: right; border-bottom: 1px solid #ddd; background: #34495e; color: white;">Miktar</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd; background: #34495e; color: white;">Birim</th>
+                        <th style="padding: 12px; text-align: right; border-bottom: 1px solid #ddd; background: #34495e; color: white;">Birim Fiyat</th>
+                        <th style="padding: 12px; text-align: right; border-bottom: 1px solid #ddd; background: #34495e; color: white;">Tutar</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd; background: #34495e; color: white;">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody id="bilesenTbody">
+                    {% for detay_data in detaylar_with_prices %}
+                    {% with detay=detay_data.detay %}
+                    <tr data-detay-id="{{ detay.pk }}"
+                        data-stok-item-id="{{ detay.stok_item_id }}"
+                        data-miktar="{{ detay.miktar }}"
+                        data-birim="{{ detay.birim }}"
+                        data-stok-kodu="{{ detay.stok_item.stok_kodu }}"
+                        data-stok-ad="{{ detay.stok_item.ad }}"
+                        style="border-bottom: 1px solid #ddd;">
+                        <td style="padding: 8px; text-align: center; vertical-align: middle;">
+                            <input type="checkbox" class="recete-sira-sec" value="{{ detay.pk }}" title="Sıra için seç" aria-label="Satır seç">
+                        </td>
+                        <td class="recete-sira-cell" style="padding: 12px;">{{ detay.sira }}</td>
+                        <td style="padding: 12px;">
+                            <a href="{% url 'stokapp:stok_ekle' detay.stok_item.pk %}" class="stok-detay-link">
+                                <strong>{{ detay.stok_item.stok_kodu }}</strong>
+                            </a>
+                            <div style="color: #6b7280; font-size: 12px; margin-top: 4px;">
+                                {{ detay.stok_item.ad }}
+                            </div>
+                        </td>
+                        <td style="padding: 12px; text-align: right;">{{ detay.miktar|format_decimal }}</td>
+                        <td style="padding: 12px;">{{ detay.birim }}</td>
+                        <td style="padding: 12px; text-align: right;">
+                            {% if detay_data.birim_fiyat is not None %}
+                                {{ detay_data.para_sembol }} {{ detay_data.birim_fiyat|floatformat:2 }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td style="padding: 12px; text-align: right;">
+                            {% if detay_data.tutar is not None %}
+                                {{ detay_data.para_sembol }} {{ detay_data.tutar|floatformat:2 }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td style="padding: 12px;">
+                            <span style="display: inline-flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+                                <button type="button"
+                                        class="btn"
+                                        data-detay-id="{{ detay.pk }}"
+                                        style="padding: 6px 12px; font-size: 13px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;"
+                                        onclick="openBilesenDegistirModal({{ detay.pk }})">
+                                    🔄 Değiştir
+                                </button>
+                                <button type="button" class="btn delete-bilesen-btn" 
+                                        data-detay-id="{{ detay.pk }}"
+                                        style="padding: 6px 12px; font-size: 13px; background: #dc3545; color: white; border: none; border-radius: 6px; cursor: pointer;"
+                                        onclick="deleteBilesen({{ detay.pk }})">
+                                    🗑️ Sil
+                                </button>
+                            </span>
+                        </td>
+                    </tr>
+                    {% endwith %}
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr style="background-color: #f3f4f6; border-top: 2px solid #34495e;">
+                        <td colspan="5" style="padding: 12px; text-align: right; font-weight: 600;">
+                            <strong>Reçete Bileşenleri Toplamı:</strong>
+                        </td>
+                        <td colspan="2" id="bilesenFooterToplamlar" style="padding: 12px; text-align: right; font-weight: 600;">
+                            {% if toplam_by_para_birimi %}
+                                {% for para_birimi, toplam_data in toplam_by_para_birimi.items %}
+                                    <div style="margin-bottom: 4px;">
+                                        {{ toplam_data.para_sembol }} {{ toplam_data.toplam|floatformat:2 }}
+                                    </div>
+                                {% endfor %}
+                            {% else %}
+                                <span style="color: #6b7280;">-</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 12px;"></td>
+                    </tr>
+                </tfoot>
+            </table>
+            {% else %}
+            <div id="emptyMessage" style="text-align: center; padding: 40px; background: #f9fafb; border-radius: 8px; color: #6b7280;">
+                Henüz reçete bileşeni eklenmemiş. <button onclick="addBilesenRow()" class="btn btn-primary" style="margin-top: 10px;">İlk Bileşeni Ekle</button>
+            </div>
+            <table id="bilesenTable" style="display: none; width: 100%; border-collapse: collapse; background: white;">
+                <thead>
+                    <tr>
+                        <th style="padding: 8px; text-align: center; border-bottom: 1px solid #ddd; background: #34495e; color: white; width: 44px;" title="Seç">Seç</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd; background: #34495e; color: white;">Sıra</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd; background: #34495e; color: white;">Stok</th>
+                        <th style="padding: 12px; text-align: right; border-bottom: 1px solid #ddd; background: #34495e; color: white;">Miktar</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd; background: #34495e; color: white;">Birim</th>
+                        <th style="padding: 12px; text-align: right; border-bottom: 1px solid #ddd; background: #34495e; color: white;">Birim Fiyat</th>
+                        <th style="padding: 12px; text-align: right; border-bottom: 1px solid #ddd; background: #34495e; color: white;">Tutar</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 1px solid #ddd; background: #34495e; color: white;">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody id="bilesenTbody">
+                </tbody>
+                <tfoot id="bilesenTableFooter" style="display: none;">
+                    <tr style="background-color: #f3f4f6; border-top: 2px solid #34495e;">
+                        <td colspan="5" style="padding: 12px; text-align: right; font-weight: 600;">
+                            <strong>Reçete Bileşenleri Toplamı:</strong>
+                        </td>
+                        <td colspan="2" id="bilesenFooterToplamlar" style="padding: 12px; text-align: right; font-weight: 600;">
+                            <span style="color: #6b7280;">-</span>
+                        </td>
+                        <td style="padding: 12px;"></td>
+                    </tr>
+                </tfoot>
+            </table>
+            {% endif %}
+        </div>
+        
+        <!-- Operasyonlar Sekmesi -->
+        <div id="operasyonlar-tab" class="recete-tab-content" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+                <div>
+                    <h3 style="margin: 0;">Operasyonlar</h3>
+                    <p style="margin: 6px 0 0; font-size: 12px; color: #64748b;">
+                        {% if recete.urun.urun_rolu == 'BILESEN' or recete.urun.urun_rolu == 'AL_SAT' %}
+                            İsterseniz bileşen ekleyip bileşen bazlı operasyon tanımlayabilir, isterseniz bileşensiz genel operasyonlarla süreci yönetebilirsiniz.
+                        {% else %}
+                            Önce reçete bileşeni seçin, ardından o bileşene operasyon tanımlayın. + ile bileşen operasyonlarını genişletin.
+                        {% endif %}
+                    </p>
+                </div>
+                <button type="button" class="btn btn-secondary" onclick="openReceteDisaridanKopyala('operasyonlar')" style="padding:8px 14px;">
+                    📋 Dışarıdan operasyon adımı kopyala
+                </button>
+            </div>
+            <div id="operasyonAgaciWrap">
+                {% include "stokapp/partials/recete_operasyon_agaci.html" %}
+            </div>
+            <div id="operasyonToplamBar" style="margin-top: 16px; padding: 12px 16px; background: #f3f4f6; border-radius: 8px; text-align: right; font-weight: 600;">
+                Operasyonlar Toplamı: ₺ {{ operasyonlar_toplam_maliyet|floatformat:2|default:"0,00" }}
+            </div>
+            <button id="addOperasyonFAB" onclick="addOperasyonModal()"
+                    style="position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; border-radius: 50%; background: #3b82f6; color: white; border: none; font-size: 24px; cursor: pointer; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4); z-index: 1000; display: none; align-items: center; justify-content: center;"
+                    title="Bileşene operasyon ekle">➕</button>
+        </div>
+
+        <!-- Dış Operasyonlar Sekmesi -->
+        <div id="dis-operasyonlar-tab" class="recete-tab-content" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+                <div>
+                    <h3 style="margin: 0;">Dış Operasyonlar</h3>
+                    <p style="margin: 6px 0 0; font-size: 12px; color: #64748b;">
+                        Ürün geneline veya reçete bileşenlerine dış operasyon (galvaniz, boya, kumlama vb.) atayın.
+                    </p>
+                </div>
+                <button type="button" class="btn btn-secondary" onclick="openReceteDisaridanKopyala('dis_operasyonlar')" style="padding:8px 14px;">
+                    📋 Dışarıdan dış operasyon kopyala
+                </button>
+            </div>
+            <div id="disOperasyonAgaciWrap">
+                <div class="dis-op-empty">Yükleniyor…</div>
+            </div>
+            <button id="addDisOperasyonFAB" onclick="addReceteDisOperasyonModal()"
+                    style="position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; border-radius: 50%; background: #059669; color: white; border: none; font-size: 24px; cursor: pointer; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.4); z-index: 1000; display: none; align-items: center; justify-content: center;"
+                    title="Dış operasyon ekle">➕</button>
+        </div>
+        
+        <!-- Talimatlar Sekmesi -->
+        <div id="talimatlar-tab" class="recete-tab-content" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0;">Talimatlar</h3>
+                <button onclick="showYeniMaddeForm()" class="btn btn-primary" style="background-color: #22c55e; border-color: #22c55e; padding: 8px 16px;">
+                    ➕ Yeni Madde Ekle
+                </button>
+            </div>
+            
+            <div id="talimatlarContainer" style="display: flex; flex-direction: column; gap: 20px;">
+                <!-- Talimatlar buraya dinamik olarak eklenecek -->
+            </div>
+        </div>
+        
+        <!-- Dosyalar Sekmesi -->
+        <div id="dosyalar-tab" class="recete-tab-content" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 style="margin: 0;">Dosyalar</h3>
+                <button class="btn btn-primary" onclick="alert('Dosya yükleme özelliği yakında eklenecek.')">
+                    ➕ Dosya Yükle
+                </button>
+            </div>
+            
+            <div style="text-align: center; padding: 40px; background: #f9fafb; border-radius: 8px; color: #6b7280;">
+                <p>Dosya yönetimi yakında eklenecek.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.new-bilesen-row {
+    background: #f0f9ff;
+    border: 2px solid #3b82f6;
+}
+
+.stok-search-container {
+    position: relative;
+}
+
+.stok-search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 2px solid #e5e7eb;
+    border-radius: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    display: none;
+}
+
+.stok-search-result-item {
+    padding: 12px 15px;
+    border-bottom: 1px solid #f3f4f6;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.stok-search-result-item:hover {
+    background: #f9fafb;
+}
+
+.stok-search-result-item.selected {
+    background: #dbeafe;
+    border-left: 4px solid #3b82f6;
+}
+
+.recete-tab-btn {
+    transition: all 0.2s ease;
+}
+
+.recete-tab-btn:hover {
+    color: #3b82f6 !important;
+    background: #f0f9ff;
+}
+
+.recete-tab-content {
+    animation: fadeIn 0.3s ease;
+}
+
+.dis-op-agaci { display: flex; flex-direction: column; gap: 10px; }
+.dis-op-node { border: 1px solid #e5e7eb; border-radius: 10px; background: #fff; overflow: hidden; }
+.dis-op-genel-node { border-color: #bbf7d0; }
+.dis-op-genel-node .dis-op-header { background: #ecfdf5; }
+.dis-op-header { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: #f8fafc; border-bottom: 1px solid #e5e7eb; }
+.dis-op-toggle { width: 28px; height: 28px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; cursor: pointer; font-weight: 700; font-size: 16px; line-height: 1; flex-shrink: 0; }
+.dis-op-toggle.expanded { background: #dbeafe; border-color: #3b82f6; color: #1d4ed8; }
+.dis-op-title { flex: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px; }
+.dis-op-title span { color: #64748b; }
+.dis-op-count { font-size: 11px; background: #d1fae5; color: #065f46; padding: 2px 8px; border-radius: 999px; }
+.dis-op-panel { padding: 0 12px 12px; }
+.dis-op-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.dis-op-table th { background: #34495e; color: #fff; padding: 8px; text-align: left; font-size: 12px; }
+.dis-op-table td { padding: 8px; border-bottom: 1px solid #e5e7eb; vertical-align: middle; }
+.dis-op-empty { text-align: center; padding: 40px; color: #6b7280; background: #f9fafb; border-radius: 8px; }
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+</style>
+
+<script>
+const receteId = {{ recete.pk }};
+window.stokDetayHref = function(stokItemId) {
+    return "{% url 'stokapp:stok_ekle' 0 %}".replace('/0/', '/' + String(stokItemId) + '/');
+};
+window.RECETE_DETAY_SIRA_URL = "{{ detay_sira_post_url|escapejs }}";
+window.RECETE_OPERASYON_SIRA_URL = "{{ operasyon_sira_post_url|escapejs }}";
+window.RECETE_OPERASYON_LIST_URL = "{% url 'stokapp:recete_operasyon_listesi' recete.pk %}";
+window.RECETE_DIS_OPERASYON_LIST_URL = "{% url 'stokapp:recete_dis_operasyon_listesi' recete.pk %}";
+window.RECETE_DIS_OPERASYON_EKLE_URL = "{% url 'stokapp:recete_dis_operasyon_ekle' recete.pk %}";
+window.RECETE_DIS_OPERASYON_DUZENLE_URL = "{% url 'stokapp:recete_dis_operasyon_duzenle' recete.pk 0 %}";
+window.RECETE_DIS_OPERASYON_SIL_URL = "{% url 'stokapp:recete_dis_operasyon_sil' recete.pk 0 %}";
+window.DIS_OPERASYON_TIPI_EKLE_URL = "{% url 'stokapp:dis_operasyon_tipi_ekle' %}";
+window.RECETE_DIS_OP_CFG = {
+    tedarikciler: [{% for ted in dis_tedarikciler %}{ id: {{ ted.pk }}, ad: "{{ ted.ad|escapejs }}" }{% if not forloop.last %},{% endif %}{% endfor %}],
+    depolar: [{% for d in dis_depolar %}{ id: {{ d.pk }}, ad: "{{ d.ad|escapejs }}" }{% if not forloop.last %},{% endif %}{% endfor %}],
+};
+let searchTimeout = null;
+
+// Miktarı akıllıca formatla (tam sayı ise tam sayı, virgüllü ise virgüllü)
+function formatMiktar(value) {
+    if (value === null || value === undefined || value === '') {
+        return '';
+    }
+    const num = parseFloat(value);
+    if (isNaN(num)) {
+        return value;
+    }
+    // Tam sayı kontrolü
+    if (num === Math.floor(num)) {
+        return Math.floor(num).toString();
+    }
+    // Virgüllü sayı - gereksiz sıfırları temizle (en fazla 3 ondalık basamak)
+    return num.toFixed(3).replace(/\.?0+$/, '');
+}
+
+// CSRF token'ı al
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+/** CSRF: önce sayfadaki gizli input, yoksa cookie (JSON POST) */
+function getReceteCsrfToken() {
+    const inp = document.querySelector('input[name="csrfmiddlewaretoken"]');
+    if (inp && inp.value) return inp.value;
+    return getCookie('csrftoken') || '';
+}
+
+const RECETE_KAYNAK_ARA_URL = "{% url 'stokapp:recete_kaynak_ara' %}";
+const RECETE_DISARIDAN_KOPYALA_URL = "{% url 'stokapp:recete_disaridan_kopyala' recete.pk %}";
+const RECETE_HEDEF_PK = {{ recete.pk }};
+let _disaridanKopyalaSearchTimer = null;
+
+function openReceteDisaridanKopyala(tip) {
+    closeReceteDisaridanKopyala();
+    const labels = {
+        bilesenler: {
+            title: 'Dışarıdan reçete bileşeni kopyala',
+            hint: 'Kaynak ürünü arayıp seçin. O reçetedeki bileşenler buraya eklenir (aynı stok zaten varsa atlanır).'
+        },
+        operasyonlar: {
+            title: 'Dışarıdan operasyon adımı kopyala',
+            hint: 'Kaynak ürünü arayıp seçin. Operasyonlar buraya eklenir. Kaynak bileşen bu reçetede yoksa adım genel operasyon olarak gelir.'
+        },
+        dis_operasyonlar: {
+            title: 'Dışarıdan dış operasyon kopyala',
+            hint: 'Kaynak ürünü arayıp seçin. Dış operasyon atamaları buraya eklenir.'
+        }
+    };
+    const meta = labels[tip] || labels.bilesenler;
+
+    const overlay = document.createElement('div');
+    overlay.id = 'receteDisaridanKopyalaModal';
+    overlay.dataset.tip = tip;
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px;';
+    overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) closeReceteDisaridanKopyala();
+    });
+
+    const card = document.createElement('div');
+    card.style.cssText = 'background:#fff;border-radius:12px;max-width:560px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 20px 40px rgba(0,0,0,0.15);padding:24px;';
+    card.addEventListener('click', function(e) { e.stopPropagation(); });
+    card.innerHTML =
+        '<h3 style="margin:0 0 8px;font-size:18px;color:#111827;">' + meta.title + '</h3>' +
+        '<p style="margin:0 0 16px;font-size:13px;color:#6b7280;">' + meta.hint + '</p>' +
+        '<label style="display:block;font-weight:600;font-size:13px;color:#374151;margin-bottom:6px;">Ürün / reçete ara</label>' +
+        '<input type="text" id="disaridanKopyalaAra" autocomplete="off" placeholder="Stok kodu veya ürün adı…" ' +
+        'style="width:100%;padding:10px 12px;border-radius:8px;border:2px solid #e5e7eb;font-size:14px;margin-bottom:12px;box-sizing:border-box;">' +
+        '<div id="disaridanKopyalaSonuclar" style="min-height:80px;max-height:320px;overflow-y:auto;border:2px solid #e5e7eb;border-radius:8px;background:#fafafa;">' +
+        '<div style="padding:16px;color:#9ca3af;text-align:center;font-size:13px;">Aramak için yazmaya başlayın</div></div>' +
+        '<div style="margin-top:16px;display:flex;justify-content:flex-end;">' +
+        '<button type="button" class="btn btn-secondary" onclick="closeReceteDisaridanKopyala()" style="padding:8px 16px;">Kapat</button></div>';
+
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+
+    const input = document.getElementById('disaridanKopyalaAra');
+    input.focus();
+    input.addEventListener('input', function() {
+        const q = this.value.trim();
+        clearTimeout(_disaridanKopyalaSearchTimer);
+        _disaridanKopyalaSearchTimer = setTimeout(function() {
+            searchReceteKaynak(q, tip);
+        }, 280);
+    });
+}
+
+function closeReceteDisaridanKopyala() {
+    const el = document.getElementById('receteDisaridanKopyalaModal');
+    if (el) el.remove();
+}
+
+function searchReceteKaynak(q, tip) {
+    const box = document.getElementById('disaridanKopyalaSonuclar');
+    if (!box) return;
+    if (!q || q.length < 1) {
+        box.innerHTML = '<div style="padding:16px;color:#9ca3af;text-align:center;font-size:13px;">Aramak için yazmaya başlayın</div>';
+        return;
+    }
+    box.innerHTML = '<div style="padding:16px;color:#6b7280;text-align:center;font-size:13px;">Aranıyor…</div>';
+    const url = RECETE_KAYNAK_ARA_URL + '?q=' + encodeURIComponent(q) +
+        '&exclude=' + encodeURIComponent(RECETE_HEDEF_PK) +
+        '&tip=' + encodeURIComponent(tip);
+    fetch(url)
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            const results = data.results || [];
+            if (!results.length) {
+                box.innerHTML = '<div style="padding:16px;color:#6b7280;text-align:center;">Sonuç bulunamadı.</div>';
+                return;
+            }
+            box.innerHTML = '';
+            results.forEach(function(item) {
+                const row = document.createElement('div');
+                row.style.cssText = 'padding:12px 14px;border-bottom:1px solid #e5e7eb;cursor:pointer;background:#fff;';
+                const countLabel = tip === 'bilesenler'
+                    ? (item.bilesen_count + ' bileşen')
+                    : (tip === 'operasyonlar'
+                        ? (item.op_count + ' operasyon')
+                        : (item.dis_count + ' dış operasyon'));
+                row.innerHTML =
+                    '<div style="font-weight:600;color:#111827;">' + escapeHtml(item.stok_kodu) +
+                    ' <span style="font-weight:400;color:#6b7280;">v' + escapeHtml(item.versiyon) +
+                    (item.aktif ? '' : ' · pasif') + '</span></div>' +
+                    '<div style="font-size:13px;color:#4b5563;margin-top:2px;">' + escapeHtml(item.ad) + '</div>' +
+                    '<div style="font-size:12px;color:#2563eb;margin-top:4px;">' + countLabel + ' · Bu reçeteyi seç</div>';
+                row.onmouseover = function() { row.style.background = '#eff6ff'; };
+                row.onmouseout = function() { row.style.background = '#fff'; };
+                row.onclick = function() {
+                    confirmAndCopyReceteKaynak(item, tip);
+                };
+                box.appendChild(row);
+            });
+        })
+        .catch(function() {
+            box.innerHTML = '<div style="padding:16px;color:#b91c1c;text-align:center;">Arama hatası.</div>';
+        });
+}
+
+function confirmAndCopyReceteKaynak(item, tip) {
+    const tipAd = tip === 'bilesenler' ? 'bileşenlerini'
+        : (tip === 'operasyonlar' ? 'operasyonlarını' : 'dış operasyonlarını');
+    const ok = confirm(
+        item.stok_kodu + ' (v' + item.versiyon + ') reçetesinin ' + tipAd +
+        ' bu reçeteye eklenecek. Devam edilsin mi?'
+    );
+    if (!ok) return;
+
+    const fd = new FormData();
+    fd.append('kaynak_recete_id', item.recete_id);
+    fd.append('tip', tip);
+    const csrf = getReceteCsrfToken();
+    if (csrf) fd.append('csrfmiddlewaretoken', csrf);
+
+    fetch(RECETE_DISARIDAN_KOPYALA_URL, {
+        method: 'POST',
+        body: fd,
+        headers: csrf ? { 'X-CSRFToken': csrf } : {},
+        credentials: 'same-origin'
+    })
+        .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, d: d }; }); })
+        .then(function(res) {
+            if (!res.ok || !res.d.success) {
+                alert((res.d && res.d.error) || 'Kopyalama başarısız.');
+                return;
+            }
+            closeReceteDisaridanKopyala();
+            alert(res.d.message || 'Kopyalandı.');
+            if (tip === 'bilesenler') {
+                window.location.reload();
+            } else if (tip === 'operasyonlar') {
+                if (typeof reloadOperasyonAgaci === 'function') reloadOperasyonAgaci();
+                else window.location.reload();
+            } else {
+                if (typeof reloadDisOperasyonAgaci === 'function') reloadDisOperasyonAgaci();
+                else window.location.reload();
+            }
+        })
+        .catch(function() {
+            alert('Kopyalama sırasında bağlantı hatası.');
+        });
+}
+
+function escapeHtml(text) {
+    if (text === null || text === undefined) {
+        return '';
+    }
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function bilesenIslemButonlari(detayId) {
+    return (
+        '<span style="display: inline-flex; gap: 6px; flex-wrap: wrap; align-items: center;">' +
+        '<button type="button" class="btn" style="padding: 6px 12px; font-size: 13px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer;" onclick="openBilesenDegistirModal(' + detayId + ')">🔄 Değiştir</button>' +
+        '<button type="button" class="btn delete-bilesen-btn" data-detay-id="' + detayId + '" style="padding: 6px 12px; font-size: 13px; background: #dc3545; color: white; border: none; border-radius: 6px; cursor: pointer;" onclick="deleteBilesen(' + detayId + ')">🗑️ Sil</button>' +
+        '</span>'
+    );
+}
+
+function syncBilesenRowDataset(row, detay) {
+    if (!row || !detay) {
+        return;
+    }
+    row.dataset.stokItemId = String(detay.stok_item_id || '');
+    row.dataset.miktar = detay.miktar != null ? String(detay.miktar) : '';
+    row.dataset.birim = detay.birim || '';
+    row.dataset.stokKodu = detay.stok_kodu || '';
+    row.dataset.stokAd = detay.ad || '';
+}
+
+function bilesenSatirInnerHTML(detay) {
+    let paraSembol = detay.para_sembol;
+    if (!paraSembol && detay.para_birimi) {
+        paraSembol = detay.para_birimi === 'TL' ? '₺' : detay.para_birimi === 'USD' ? '$' : detay.para_birimi === 'EUR' ? '€' : detay.para_birimi === 'GBP' ? '£' : detay.para_birimi;
+    }
+    if (!paraSembol) {
+        paraSembol = '₺';
+    }
+    const birimFiyat = parseFloat(detay.birim_fiyat || 0);
+    const tutar = parseFloat(detay.tutar || 0);
+    const detayId = detay.id;
+    const bfStr = (birimFiyat !== null && birimFiyat !== undefined && !isNaN(birimFiyat)) ? paraSembol + ' ' + birimFiyat.toFixed(2) : '-';
+    const tStr = (tutar !== null && tutar !== undefined && !isNaN(tutar)) ? paraSembol + ' ' + tutar.toFixed(2) : '-';
+    return (
+        '<td style="padding: 8px; text-align: center; vertical-align: middle; border-bottom: 1px solid #ddd;">' +
+            '<input type="checkbox" class="recete-sira-sec" value="' + escapeHtml(String(detayId)) + '" title="Sıra için seç">' +
+        '</td>' +
+        '<td class="recete-sira-cell" style="padding: 12px; border-bottom: 1px solid #ddd;">' + escapeHtml(String(detay.sira)) + '</td>' +
+        '<td style="padding: 12px; border-bottom: 1px solid #ddd;">' +
+            (detay.stok_item_id && typeof window.stokDetayHref === 'function'
+                ? '<a href="' + escapeHtml(window.stokDetayHref(detay.stok_item_id)) + '" class="stok-detay-link"><strong>' + escapeHtml(detay.stok_kodu) + '</strong></a>'
+                : '<strong>' + escapeHtml(detay.stok_kodu) + '</strong>') +
+            '<div style="color: #6b7280; font-size: 12px; margin-top: 4px;">' + escapeHtml(detay.ad) + '</div>' +
+        '</td>' +
+        '<td style="padding: 12px; text-align: right; border-bottom: 1px solid #ddd;">' + escapeHtml(formatMiktar(detay.miktar)) + '</td>' +
+        '<td style="padding: 12px; border-bottom: 1px solid #ddd;">' + escapeHtml(detay.birim) + '</td>' +
+        '<td style="padding: 12px; text-align: right; border-bottom: 1px solid #ddd;">' + bfStr + '</td>' +
+        '<td style="padding: 12px; text-align: right; border-bottom: 1px solid #ddd;">' + tStr + '</td>' +
+        '<td style="padding: 12px; border-bottom: 1px solid #ddd;">' + bilesenIslemButonlari(detayId) + '</td>'
+    );
+}
+
+function updateBilesenFooterTotals(list) {
+    const cell = document.getElementById('bilesenFooterToplamlar');
+    if (!cell) {
+        return;
+    }
+    if (!list || !list.length) {
+        cell.innerHTML = '<span style="color: #6b7280;">-</span>';
+        return;
+    }
+    cell.innerHTML = list.map(function(t) {
+        return '<div style="margin-bottom: 4px;">' + escapeHtml(t.para_sembol) + ' ' + parseFloat(t.toplam).toFixed(2) + '</div>';
+    }).join('');
+}
+
+let bilesenDegistirSearchTimeout = null;
+
+function closeBilesenDegistirModal() {
+    const m = document.getElementById('bilesenDegistirModal');
+    if (m) {
+        m.remove();
+    }
+}
+
+function urlReceteDetayDegistir(detayId) {
+    return "{% url 'stokapp:recete_detay_degistir' recete.pk 0 %}".replace(/\/detay\/\d+\//, '/detay/' + detayId + '/');
+}
+
+function renderBilesenDegistirSonuclar(results) {
+    const sonuc = document.getElementById('bilesenDegistirSonuclar');
+    if (!sonuc) {
+        return;
+    }
+    if (!results.length) {
+        sonuc.innerHTML = '<div style="padding: 20px; text-align: center; color: #6b7280;">Sonuç bulunamadı.</div>';
+        return;
+    }
+    sonuc.innerHTML = results.map(function(item) {
+        const stokTipi = item.stok_tipi || 'HAM_MADDE';
+        const bg = stokTipi === 'URUN' ? '#dbeafe' : stokTipi === 'YARI_MAMUL' ? '#fef3c7' : '#dcfce7';
+        const fg = stokTipi === 'URUN' ? '#1e40af' : stokTipi === 'YARI_MAMUL' ? '#92400e' : '#166534';
+        const tipLabel = stokTipi === 'URUN' ? 'Ürün' : stokTipi === 'YARI_MAMUL' ? 'Yarı Mamül' : 'Ham Madde';
+        return (
+            '<div class="bilesen-degistir-sec-item" data-stok-id="' + item.id + '" style="padding: 12px 14px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">' +
+            '<div><strong style="color:#111827;">' + escapeHtml(item.stok_kodu) + '</strong> <span style="color:#6b7280;margin-left:8px;">' + escapeHtml(item.ad) + '</span></div>' +
+            '<span style="background:' + bg + ';color:' + fg + ';padding:4px 10px;border-radius:12px;font-size:11px;font-weight:600;">' + tipLabel + '</span>' +
+            '</div>'
+        );
+    }).join('');
+    results.forEach(function(item, index) {
+        const div = sonuc.querySelectorAll('.bilesen-degistir-sec-item')[index];
+        if (!div) {
+            return;
+        }
+        div.addEventListener('click', function() {
+            setBilesenDegistirSeciliStok(item);
+        });
+        div.addEventListener('mouseenter', function() {
+            this.style.background = '#f3f4f6';
+        });
+        div.addEventListener('mouseleave', function() {
+            this.style.background = 'transparent';
+        });
+    });
+}
+
+function setBilesenDegistirSeciliStok(item) {
+    const overlay = document.getElementById('bilesenDegistirModal');
+    if (!overlay || !item || !item.id) {
+        return;
+    }
+    overlay.dataset.stokItemId = String(item.id);
+    const secili = document.getElementById('bilesenDegistirSecili');
+    if (secili) {
+        secili.innerHTML = '<strong style="color:#111827;">' + escapeHtml(item.stok_kodu) + '</strong> <span style="color:#6b7280;margin-left:8px;">' + escapeHtml(item.ad) + '</span>';
+    }
+    const birimEl = document.getElementById('bilesenDegistirBirim');
+    if (birimEl && item.birim) {
+        birimEl.textContent = item.birim;
+    }
+}
+
+function kaydetBilesenDegistir() {
+    const overlay = document.getElementById('bilesenDegistirModal');
+    if (!overlay) {
+        return;
+    }
+    const detayId = overlay.dataset.detayId;
+    const stokItemId = overlay.dataset.stokItemId;
+    const miktarEl = document.getElementById('bilesenDegistirMiktar');
+    const miktar = miktarEl ? miktarEl.value.trim() : '';
+    if (!stokItemId) {
+        alert('Lütfen bir stok seçin.');
+        return;
+    }
+    if (!miktar || parseFloat(String(miktar).replace(',', '.')) <= 0) {
+        alert('Geçerli bir miktar girin.');
+        return;
+    }
+    postBilesenDegistir(detayId, stokItemId, miktar);
+}
+
+function postBilesenDegistir(detayId, stokItemId, miktar) {
+    const formData = new FormData();
+    formData.append('stok_item_id', stokItemId);
+    formData.append('miktar', miktar);
+    const csrftoken = getCookie('csrftoken');
+    if (csrftoken) {
+        formData.append('csrfmiddlewaretoken', csrftoken);
+    }
+    fetch(urlReceteDetayDegistir(detayId), {
+        method: 'POST',
+        body: formData
+    })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            if (data.success) {
+                closeBilesenDegistirModal();
+                const row = document.querySelector('tr[data-detay-id="' + detayId + '"]');
+                if (row) {
+                    syncBilesenRowDataset(row, data.detay);
+                    row.innerHTML = bilesenSatirInnerHTML(data.detay);
+                }
+                if (data.toplam_by_para_birimi) {
+                    updateBilesenFooterTotals(data.toplam_by_para_birimi);
+                }
+            } else {
+                alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+            }
+        })
+        .catch(function(err) {
+            console.error(err);
+            alert('Bileşen güncellenirken bir hata oluştu.');
+        });
+}
+
+function openBilesenDegistirModal(detayId) {
+    closeBilesenDegistirModal();
+    const row = document.querySelector('tr[data-detay-id="' + detayId + '"]');
+    const baslangicStokId = row ? (row.dataset.stokItemId || '') : '';
+    const baslangicMiktar = row ? (row.dataset.miktar || '') : '';
+    const baslangicBirim = row ? (row.dataset.birim || '') : '';
+    const baslangicKod = row ? (row.dataset.stokKodu || '') : '';
+    const baslangicAd = row ? (row.dataset.stokAd || '') : '';
+
+    const overlay = document.createElement('div');
+    overlay.id = 'bilesenDegistirModal';
+    overlay.dataset.detayId = String(detayId);
+    overlay.dataset.stokItemId = baslangicStokId;
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px;';
+    overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) {
+            closeBilesenDegistirModal();
+        }
+    });
+    const card = document.createElement('div');
+    card.style.cssText = 'background:#fff;border-radius:12px;max-width:520px;width:100%;max-height:90vh;overflow:auto;box-shadow:0 20px 40px rgba(0,0,0,0.15);padding:24px;';
+    card.addEventListener('click', function(e) {
+        e.stopPropagation();
+    });
+    card.innerHTML =
+        '<h3 style="margin:0 0 8px;font-size:18px;color:#111827;">Bileşeni düzenle</h3>' +
+        '<p style="margin:0 0 16px;font-size:13px;color:#6b7280;">Stok değiştirebilir veya miktarı güncelleyebilirsiniz. Birim fiyat, stok kartındaki güncel alış fiyatından otomatik alınır.</p>' +
+        '<label style="display:block;font-weight:600;font-size:13px;color:#374151;margin-bottom:6px;">Miktar</label>' +
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">' +
+        '<input type="number" id="bilesenDegistirMiktar" step="0.001" min="0.001" value="' + escapeHtml(baslangicMiktar) + '" style="flex:1;padding:10px 12px;border-radius:8px;border:2px solid #e5e7eb;font-size:14px;">' +
+        '<span id="bilesenDegistirBirim" style="min-width:56px;font-size:13px;color:#6b7280;font-weight:600;">' + escapeHtml(baslangicBirim) + '</span>' +
+        '</div>' +
+        '<label style="display:block;font-weight:600;font-size:13px;color:#374151;margin-bottom:6px;">Seçili stok</label>' +
+        '<div id="bilesenDegistirSecili" style="padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;margin-bottom:12px;font-size:14px;">' +
+        '<strong style="color:#111827;">' + escapeHtml(baslangicKod) + '</strong> <span style="color:#6b7280;margin-left:8px;">' + escapeHtml(baslangicAd) + '</span></div>' +
+        '<label style="display:block;font-weight:600;font-size:13px;color:#374151;margin-bottom:6px;">Stok değiştir (ara)</label>' +
+        '<input type="text" id="bilesenDegistirAra" autocomplete="off" placeholder="Örn. M8 somun (kelimeleri boşlukla ayırın)…" style="width:100%;padding:10px 12px;border-radius:8px;border:2px solid #e5e7eb;font-size:14px;margin-bottom:12px;">' +
+        '<div id="bilesenDegistirSonuclar" style="min-height:48px;max-height:240px;overflow-y:auto;border:2px solid #e5e7eb;border-radius:8px;background:#fafafa;"></div>' +
+        '<div style="margin-top:16px;display:flex;justify-content:flex-end;gap:8px;">' +
+        '<button type="button" class="btn btn-secondary" onclick="closeBilesenDegistirModal()" style="padding:8px 16px;">İptal</button>' +
+        '<button type="button" class="btn btn-primary" onclick="kaydetBilesenDegistir()" style="padding:8px 16px;">Kaydet</button></div>';
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+    const inp = document.getElementById('bilesenDegistirAra');
+    const sonucEl = document.getElementById('bilesenDegistirSonuclar');
+    const miktarInp = document.getElementById('bilesenDegistirMiktar');
+    sonucEl.innerHTML = '<div style="padding:16px;color:#6b7280;font-size:13px;">Stok değiştirmek için en az 2 karakter yazın.</div>';
+    if (miktarInp) {
+        miktarInp.focus();
+        miktarInp.select();
+    }
+    if (inp) {
+        inp.addEventListener('keyup', function() {
+            clearTimeout(bilesenDegistirSearchTimeout);
+            const q = inp.value.trim();
+            if (q.length < 2) {
+                sonucEl.innerHTML = '<div style="padding:16px;color:#6b7280;font-size:13px;">Stok değiştirmek için en az 2 karakter yazın.</div>';
+                return;
+            }
+            bilesenDegistirSearchTimeout = setTimeout(function() {
+                fetch('{% url "stokapp:recete_stok_ara" %}?q=' + encodeURIComponent(q))
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        renderBilesenDegistirSonuclar(data.results || []);
+                    })
+                    .catch(function() {
+                        sonucEl.innerHTML = '<div style="padding:16px;color:#b91c1c;">Arama başarısız.</div>';
+                    });
+            }, 300);
+        });
+    }
+}
+
+function addBilesenRow() {
+    // Boş mesajı gizle
+    const emptyMsg = document.getElementById('emptyMessage');
+    if (emptyMsg) emptyMsg.style.display = 'none';
+    
+    // Tabloyu göster
+    const table = document.getElementById('bilesenTable');
+    if (table) {
+        table.style.display = 'table';
+        table.style.width = '100%';
+        table.style.borderCollapse = 'collapse';
+        table.style.background = 'white';
+    }
+    
+    // Yeni satır oluştur
+    const tbody = document.getElementById('bilesenTbody');
+    const row = document.createElement('tr');
+    row.className = 'new-bilesen-row';
+    row.innerHTML = `
+        <td></td>
+        <td>
+            <input type="number" class="sira-input" value="0" min="0" style="width: 60px; padding: 6px; border-radius: 4px; border: 1px solid #ddd;">
+        </td>
+        <td>
+            <div class="stok-search-container">
+                <input type="text" 
+                       class="stok-search-input" 
+                       placeholder="Örn. M8 somun (kelimeleri boşlukla ayırın)…"
+                       style="width: 100%; padding: 8px; border-radius: 6px; border: 2px solid #3b82f6;"
+                       onkeyup="searchStok(this.value, this)">
+                <input type="hidden" class="stok-item-id">
+                <div class="stok-search-results"></div>
+            </div>
+        </td>
+        <td>
+            <input type="number" 
+                   class="miktar-input" 
+                   step="0.001" 
+                   min="0"
+                   placeholder="0.000"
+                   style="width: 100px; padding: 8px; border-radius: 6px; border: 1px solid #ddd;">
+        </td>
+        <td>
+            <input type="text" 
+                   class="birim-input" 
+                   placeholder="Birim"
+                   style="width: 80px; padding: 8px; border-radius: 6px; border: 1px solid #ddd;">
+        </td>
+        <td style="padding: 12px; text-align: right; color: #6b7280;">
+            <span class="birim-fiyat-goster">-</span>
+        </td>
+        <td style="padding: 12px; text-align: right; color: #6b7280;">
+            <span class="tutar-goster">-</span>
+        </td>
+        <td>
+            <button class="btn btn-primary" onclick="saveBilesen(this)" style="padding: 6px 12px; font-size: 13px; margin-right: 5px;">
+                💾 Kaydet
+            </button>
+            <button class="btn btn-secondary" onclick="cancelBilesenRow(this)" style="padding: 6px 12px; font-size: 13px;">
+                ✕ İptal
+            </button>
+        </td>
+    `;
+    
+    tbody.appendChild(row);
+    
+    // İlk input'a focus
+    const firstInput = row.querySelector('.stok-search-input');
+    if (firstInput) firstInput.focus();
+}
+
+function cancelBilesenRow(btn) {
+    const row = btn.closest('tr');
+    row.remove();
+    
+    // Eğer tablo boşsa boş mesajı göster
+    const tbody = document.getElementById('bilesenTbody');
+    if (tbody && tbody.children.length === 0) {
+        const emptyMsg = document.getElementById('emptyMessage');
+        if (emptyMsg) emptyMsg.style.display = 'block';
+        const table = document.getElementById('bilesenTable');
+        if (table) table.style.display = 'none';
+    }
+}
+
+function searchStok(query, input) {
+    clearTimeout(searchTimeout);
+    
+    if (query.length < 2) {
+        const resultsDiv = input.closest('.stok-search-container').querySelector('.stok-search-results');
+        resultsDiv.style.display = 'none';
+        return;
+    }
+    
+    searchTimeout = setTimeout(() => {
+        fetch(`{% url 'stokapp:recete_stok_ara' %}?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(data => {
+                displaySearchResults(data.results, input);
+            })
+            .catch(error => {
+                console.error('Arama hatası:', error);
+            });
+    }, 300);
+}
+
+function displaySearchResults(results, input) {
+    const container = input.closest('.stok-search-container');
+    const resultsDiv = container.querySelector('.stok-search-results');
+    const hiddenInput = container.querySelector('.stok-item-id');
+    
+    if (results.length === 0) {
+        resultsDiv.innerHTML = '<div style="padding: 20px; text-align: center; color: #6b7280;">Sonuç bulunamadı.</div>';
+        resultsDiv.style.display = 'block';
+        return;
+    }
+    
+    resultsDiv.innerHTML = results.map(item => `
+        <div class="stok-search-result-item" 
+             data-id="${item.id}"
+             data-kodu="${item.stok_kodu}"
+             data-ad="${item.ad}"
+             data-birim="${item.birim}"
+             data-birim-fiyat="${item.birim_fiyat || 0}"
+             data-para-birimi="${item.para_birimi || 'TL'}"
+             data-para-sembol="${item.para_sembol || '₺'}"
+             onclick="selectStokItem(this, '${input.id || ''}')">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <strong style="color: #111827;">${item.stok_kodu}</strong>
+                    <span style="color: #6b7280; margin-left: 10px;">${item.ad}</span>
+                </div>
+                <span style="background: ${item.stok_tipi === 'URUN' ? '#dbeafe' : item.stok_tipi === 'YARI_MAMUL' ? '#fef3c7' : '#dcfce7'}; 
+                      color: ${item.stok_tipi === 'URUN' ? '#1e40af' : item.stok_tipi === 'YARI_MAMUL' ? '#92400e' : '#166534'}; 
+                      padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;">
+                    ${item.stok_tipi === 'URUN' ? 'Ürün' : item.stok_tipi === 'YARI_MAMUL' ? 'Yarı Mamül' : 'Ham Madde'}
+                </span>
+            </div>
+        </div>
+    `).join('');
+    
+    resultsDiv.style.display = 'block';
+}
+
+function selectStokItem(element, inputId) {
+    const container = element.closest('.stok-search-container');
+    const input = container.querySelector('.stok-search-input');
+    const hiddenInput = container.querySelector('.stok-item-id');
+    const birimInput = container.closest('tr').querySelector('.birim-input');
+    const row = container.closest('tr');
+    
+    hiddenInput.value = element.dataset.id;
+    input.value = `${element.dataset.kodu} - ${element.dataset.ad}`;
+    
+    // Birim otomatik doldur
+    if (birimInput && element.dataset.birim) {
+        birimInput.value = element.dataset.birim;
+    }
+    
+    // Birim fiyat ve tutar güncelle
+    const birimFiyatGoster = row.querySelector('.birim-fiyat-goster');
+    const tutarGoster = row.querySelector('.tutar-goster');
+    const miktarInput = row.querySelector('.miktar-input');
+    
+    const birimFiyat = parseFloat(element.dataset.birimFiyat || 0);
+    const paraSembol = element.dataset.paraSembol || '₺';
+    
+    if (birimFiyatGoster) {
+        // 0 fiyat da gösterilmeli (sadece null/undefined değilse)
+        if (element.dataset.birimFiyat !== undefined && element.dataset.birimFiyat !== null && element.dataset.birimFiyat !== '') {
+            birimFiyatGoster.textContent = paraSembol + ' ' + birimFiyat.toFixed(2);
+        } else {
+            birimFiyatGoster.textContent = '-';
+        }
+    }
+    
+    // Miktar değiştiğinde tutarı güncelle
+    if (miktarInput) {
+        const updateTutar = () => {
+            const miktar = parseFloat(miktarInput.value || 0);
+            const tutar = miktar * birimFiyat;
+            if (tutarGoster) {
+                // 0 tutar da gösterilmeli (sadece miktar > 0 ise)
+                if (miktar > 0 && element.dataset.birimFiyat !== undefined && element.dataset.birimFiyat !== null && element.dataset.birimFiyat !== '') {
+                    tutarGoster.textContent = paraSembol + ' ' + tutar.toFixed(2);
+                } else {
+                    tutarGoster.textContent = '-';
+                }
+            }
+        };
+        miktarInput.removeEventListener('input', updateTutar);
+        miktarInput.addEventListener('input', updateTutar);
+        updateTutar();
+    }
+    
+    // Sonuçları gizle
+    container.querySelector('.stok-search-results').style.display = 'none';
+    
+    // Miktar input'una focus
+    if (miktarInput) miktarInput.focus();
+}
+
+function saveBilesen(btn) {
+    const row = btn.closest('tr');
+    const stokItemId = row.querySelector('.stok-item-id').value;
+    const miktar = row.querySelector('.miktar-input').value;
+    const birim = row.querySelector('.birim-input').value;
+    const sira = row.querySelector('.sira-input').value;
+    
+    if (!stokItemId) {
+        alert('Lütfen bir stok seçin.');
+        return;
+    }
+    
+    if (!miktar || parseFloat(miktar) <= 0) {
+        alert('Lütfen geçerli bir miktar girin.');
+        return;
+    }
+    
+    // FormData oluştur
+    const formData = new FormData();
+    formData.append('stok_item_id', stokItemId);
+    formData.append('miktar', miktar);
+    formData.append('birim', birim || 'Adet');
+    formData.append('sira', sira || '0');
+    // CSRF token'ı al
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                     document.cookie.match(/csrftoken=([^;]+)/)?.[1];
+    if (csrftoken) {
+        formData.append('csrfmiddlewaretoken', csrftoken);
+    }
+    
+    // AJAX ile kaydet
+    fetch(`{% url 'stokapp:recete_detay_ekle' recete.pk %}`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Satırı güncelle
+            row.className = '';
+            row.setAttribute('data-detay-id', data.detay.id);
+            syncBilesenRowDataset(row, data.detay);
+            row.innerHTML = bilesenSatirInnerHTML(data.detay);
+            
+            // Tabloyu göster
+            const table = document.getElementById('bilesenTable');
+            if (table) {
+                table.style.display = 'table';
+            }
+        } else {
+            alert('Hata: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Kaydetme hatası:', error);
+        alert('Bileşen kaydedilirken bir hata oluştu.');
+    });
+}
+
+function deleteBilesen(detayId) {
+    if (!confirm('Bu bileşeni silmek istediğinizden emin misiniz?')) {
+        return;
+    }
+    
+    const formData = new FormData();
+    // CSRF token'ı al
+    const csrftoken = getCookie('csrftoken');
+    if (csrftoken) {
+        formData.append('csrfmiddlewaretoken', csrftoken);
+    }
+    
+    fetch(`{% url 'stokapp:recete_detay_sil' recete.pk 0 %}`.replace('0', detayId), {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const row = document.querySelector(`tr[data-detay-id="${detayId}"]`);
+            if (row) row.remove();
+            renumerateBilesenSiraCells();
+            receteSiraAracCubuguGuncelle();
+
+            // Eğer tablo boşsa boş mesajı göster
+            const tbody = document.getElementById('bilesenTbody');
+            if (tbody && tbody.children.length === 0) {
+                const emptyMsg = document.getElementById('emptyMessage');
+                if (emptyMsg) emptyMsg.style.display = 'block';
+                const table = document.getElementById('bilesenTable');
+                if (table) table.style.display = 'none';
+            }
+        } else {
+            alert('Hata: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Silme hatası:', error);
+        alert('Bileşen silinirken bir hata oluştu.');
+    });
+}
+
+// Dışarı tıklandığında arama sonuçlarını gizle
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.stok-search-container')) {
+        document.querySelectorAll('.stok-search-results').forEach(div => {
+            div.style.display = 'none';
+        });
+    }
+});
+
+// Operasyon Modal - Hem ekleme hem düzenleme için
+let currentEditOperasyonId = null;
+let currentOperasyonDetayId = null;
+
+function addOperasyonModal(detayId) {
+    currentEditOperasyonId = null;
+    if (detayId === 0 || detayId === '0') {
+        currentOperasyonDetayId = 0;
+    } else {
+        currentOperasyonDetayId = detayId || null;
+    }
+    openOperasyonModal();
+}
+
+function editOperasyon(operasyonId) {
+    currentEditOperasyonId = operasyonId;
+    
+    // Operasyon bilgilerini al
+    fetch(`{% url 'stokapp:recete_operasyon_listesi' recete.pk %}`)
+        .then(response => response.json())
+        .then(data => {
+            const operasyon = data.results.find(op => op.id === operasyonId);
+            if (operasyon) {
+                openOperasyonModal(operasyon);
+            } else {
+                alert('Operasyon bilgisi alınamadı.');
+            }
+        })
+        .catch(error => {
+            console.error('Hata:', error);
+            alert('Operasyon bilgisi alınırken bir hata oluştu.');
+        });
+}
+
+function openOperasyonModal(operasyonData = null) {
+    // Modal oluştur veya mevcut modal'ı kullan
+    let modal = document.getElementById('operasyonModal');
+    if (modal) {
+        modal.remove();
+    }
+    
+    modal = document.createElement('div');
+    modal.id = 'operasyonModal';
+    modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 2000; display: flex; align-items: center; justify-content: center;';
+    
+    const isEditMode = currentEditOperasyonId !== null;
+    const title = isEditMode ? '✏️ Operasyon Düzenle' : '➕ Operasyon Ekle';
+    
+    modal.innerHTML = `
+        <div style="background: white; border-radius: 12px; padding: 30px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                <h3 style="margin: 0;">${title}</h3>
+                <button onclick="closeOperasyonModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280;">&times;</button>
+            </div>
+            
+            <form id="operasyonForm" onsubmit="saveOperasyon(event)">
+                <input type="hidden" id="operasyonIdInput" value="${currentEditOperasyonId || ''}">
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #111827;">Operasyon kapsamı <span style="color: #dc3545;">*</span></label>
+                    <button type="button" id="genelOperasyonSec" ${isEditMode ? 'disabled' : ''} style="width: 100%; padding: 12px 14px; margin-bottom: 10px; border: 2px solid #c7d2fe; border-radius: 10px; background: #eef2ff; color: #312e81; font-weight: 700; font-size: 14px; text-align: left; cursor: pointer;">
+                        Genel Operasyon
+                    </button>
+                    <input type="hidden" id="genelOperasyonInput" value="0">
+                    <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #111827;">Reçete Bileşeni</label>
+                    <select id="bilesenSelect" ${isEditMode ? 'disabled' : ''} style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid #e5e7eb; font-size: 14px;">
+                        <option value="">Bileşen seçin...</option>
+                    </select>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #111827;">Operasyon <span style="color: #dc3545;">*</span></label>
+                    <select id="operasyonSelect" required style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid #e5e7eb; font-size: 14px;">
+                        <option value="">Operasyon seçin...</option>
+                    </select>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #111827;">İstasyon</label>
+                    <select id="istasyonSelect" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid #e5e7eb; font-size: 14px;">
+                        <option value="">İstasyon seçin...</option>
+                    </select>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #111827;">Üretim Standartı</label>
+                    <select id="standartSelect" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid #e5e7eb; font-size: 14px;">
+                        <option value="">Standart seçin (isteğe bağlı)...</option>
+                    </select>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                    <div>
+                        <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #111827;">Maliyet (TRY/saat)</label>
+                        <input type="number" id="maliyetInput" step="0.01" min="0" value="${operasyonData ? operasyonData.maliyet : '0'}" required style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid #e5e7eb; font-size: 14px;">
+                    </div>
+                    <div>
+                        <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #111827;">Süre (Dakika)</label>
+                        <input type="number" id="sureInput" min="0" value="${operasyonData ? operasyonData.sure_dakika : '0'}" required style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid #e5e7eb; font-size: 14px;">
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #111827;">Açıklama</label>
+                    <textarea id="aciklamaInput" rows="3" style="width: 100%; padding: 10px; border-radius: 8px; border: 2px solid #e5e7eb; font-size: 14px; resize: vertical;">${operasyonData ? (operasyonData.aciklama || '') : ''}</textarea>
+                </div>
+
+                <div id="disOpReceteBlock" style="display: none; margin-bottom: 20px; padding: 16px; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 10px;">
+                    <div style="font-weight: 700; color: #92400e; margin-bottom: 12px;">Dış operasyon (iş emri ile otomatik)</div>
+                    <p style="font-size: 12px; color: #78350f; margin: 0 0 14px; line-height: 1.45;">İş emrinde bu adımda <strong>İşi Başlat</strong> dediğinizde gönderim tarihi ve miktar (emir adedi) oluşur; <strong>İşi Bitir</strong> ile tam dönüş kaydı oluşturulur. Aşağıdaki alanlar reçetede bir kez tanımlanır.</p>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div>
+                            <label style="display:block;font-weight:600;font-size:13px;margin-bottom:6px;">Dış operasyon tipi *</label>
+                            <select id="disTipSelect" style="width:100%;padding:10px;border-radius:8px;border:2px solid #e5e7eb;font-size:14px;">
+                                <option value="">Seçin…</option>
+                                {% for t in dis_tipleri %}
+                                <option value="{{ t.pk }}">{{ t.ad|escapejs }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display:block;font-weight:600;font-size:13px;margin-bottom:6px;">Taşeron *</label>
+                            <select id="disTedSelect" style="width:100%;padding:10px;border-radius:8px;border:2px solid #e5e7eb;font-size:14px;">
+                                <option value="">Seçin…</option>
+                                {% for ted in dis_tedarikciler %}
+                                <option value="{{ ted.pk }}">{{ ted.ad|escapejs }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div style="margin-top: 12px;">
+                        <label style="display:block;font-weight:600;font-size:13px;margin-bottom:6px;">Gönderim deposu (isteğe bağlı)</label>
+                        <select id="disDepoSelect" style="width:100%;padding:10px;border-radius:8px;border:2px solid #e5e7eb;font-size:14px;">
+                            <option value="">—</option>
+                            {% for d in dis_depolar %}
+                            <option value="{{ d.pk }}">{{ d.ad|escapejs }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 12px;">
+                        <div>
+                            <label style="display:block;font-weight:600;font-size:13px;margin-bottom:6px;">Birim işlem fiyatı</label>
+                            <input type="number" id="disBirimFiyatInput" step="0.0001" min="0" value="${operasyonData ? operasyonData.dis_birim_fiyat : '0'}" style="width:100%;padding:10px;border-radius:8px;border:2px solid #e5e7eb;font-size:14px;">
+                        </div>
+                        <div>
+                            <label style="display:block;font-weight:600;font-size:13px;margin-bottom:6px;">Para birimi</label>
+                            <select id="disParaSelect" style="width:100%;padding:10px;border-radius:8px;border:2px solid #e5e7eb;font-size:14px;">
+                                {% for code, label in para_birimleri %}
+                                <option value="{{ code }}">{{ label|escapejs }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display:block;font-weight:600;font-size:13px;margin-bottom:6px;">Beklenen dönüş (gün)</label>
+                            <input type="number" id="disGunInput" min="0" value="${operasyonData ? operasyonData.dis_beklenen_donus_gun : '7'}" style="width:100%;padding:10px;border-radius:8px;border:2px solid #e5e7eb;font-size:14px;">
+                        </div>
+                    </div>
+                    <div style="margin-top: 12px;">
+                        <label style="display:block;font-weight:600;font-size:13px;margin-bottom:6px;">Sevk evrak / irsaliye no (isteğe bağlı)</label>
+                        <input type="text" id="disSevkInput" maxlength="120" value="${operasyonData ? (operasyonData.dis_sevk_evrak_no || '') : ''}" style="width:100%;padding:10px;border-radius:8px;border:2px solid #e5e7eb;font-size:14px;">
+                    </div>
+                    <p id="disTahminiHint" style="font-size:12px;color:#78350f;margin:12px 0 0;">Tahmini toplam maliyet: iş emri miktarı × birim fiyat (otomatik hesaplanır).</p>
+                </div>
+                
+                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 25px; padding-top: 20px; border-top: 2px solid #e5e7eb;">
+                    <button type="button" onclick="closeOperasyonModal()" class="btn btn-secondary" style="padding: 10px 20px;">İptal</button>
+                    <button type="submit" class="btn btn-primary" style="padding: 10px 20px;">💾 ${isEditMode ? 'Güncelle' : 'Kaydet'}</button>
+                </div>
+            </form>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    const bilesenSelect = document.getElementById('bilesenSelect');
+    const genelBtn = document.getElementById('genelOperasyonSec');
+    const genelInput = document.getElementById('genelOperasyonInput');
+
+    function setGenelOperasyonSecili(aktif) {
+        if (!genelBtn || !genelInput || !bilesenSelect) return;
+        genelInput.value = aktif ? '1' : '0';
+        genelBtn.style.borderColor = aktif ? '#4338ca' : '#c7d2fe';
+        genelBtn.style.background = aktif ? '#c7d2fe' : '#eef2ff';
+        genelBtn.style.boxShadow = aktif ? 'inset 0 0 0 1px #4338ca' : 'none';
+        if (!isEditMode) {
+            bilesenSelect.disabled = aktif;
+            if (aktif) bilesenSelect.value = '';
+        }
+    }
+
+    if (bilesenSelect && window.RECETE_BILESENLER) {
+        window.RECETE_BILESENLER.forEach(function(b) {
+            const opt = document.createElement('option');
+            opt.value = b.id;
+            opt.textContent = b.kod + ' — ' + b.ad;
+            bilesenSelect.appendChild(opt);
+        });
+    }
+
+    const isGenelData = operasyonData && (operasyonData.genel_operasyon || !operasyonData.recete_detay_id);
+    const preGenel = currentOperasyonDetayId === 0 || currentOperasyonDetayId === '0';
+    const preDetay = (operasyonData && operasyonData.recete_detay_id) || (currentOperasyonDetayId && currentOperasyonDetayId !== 0 ? currentOperasyonDetayId : null);
+
+    if (isGenelData || preGenel) {
+        setGenelOperasyonSecili(true);
+    } else if (preDetay && bilesenSelect) {
+        bilesenSelect.value = String(preDetay);
+        setGenelOperasyonSecili(false);
+    }
+
+    if (genelBtn && !isEditMode) {
+        genelBtn.addEventListener('click', function() {
+            const secili = genelInput.value === '1';
+            setGenelOperasyonSecili(!secili);
+        });
+    }
+    if (bilesenSelect && !isEditMode) {
+        bilesenSelect.addEventListener('change', function() {
+            if (bilesenSelect.value) setGenelOperasyonSecili(false);
+        });
+    }
+    
+    // Operasyon, istasyon ve standart listelerini yükle
+    loadOperasyonlar(operasyonData);
+    loadIstasyonlar(operasyonData);
+    loadStandartlar(operasyonData);
+
+    const opSelEl = document.getElementById('operasyonSelect');
+    const refreshDisReceteBlock = () => {
+        const opt = opSelEl && opSelEl.options[opSelEl.selectedIndex];
+        const show = opt && opt.dataset.akisDis === '1';
+        const b = document.getElementById('disOpReceteBlock');
+        if (b) b.style.display = show ? 'block' : 'none';
+    };
+    if (opSelEl) {
+        opSelEl.addEventListener('change', refreshDisReceteBlock);
+        refreshDisReceteBlock();
+    }
+    if (operasyonData) {
+        const dt = document.getElementById('disTipSelect');
+        const ted = document.getElementById('disTedSelect');
+        const dep = document.getElementById('disDepoSelect');
+        const par = document.getElementById('disParaSelect');
+        if (dt && operasyonData.dis_operasyon_tipi_id) dt.value = String(operasyonData.dis_operasyon_tipi_id);
+        if (ted && operasyonData.dis_tedarikci_id) ted.value = String(operasyonData.dis_tedarikci_id);
+        if (dep && operasyonData.dis_gonderim_deposu_id) dep.value = String(operasyonData.dis_gonderim_deposu_id);
+        if (par && operasyonData.dis_para_birimi) par.value = operasyonData.dis_para_birimi;
+    }
+}
+
+function closeOperasyonModal() {
+    const modal = document.getElementById('operasyonModal');
+    if (modal) modal.remove();
+    currentEditOperasyonId = null;
+    currentOperasyonDetayId = null;
+}
+
+function loadOperasyonlar(operasyonData = null) {
+    const select = document.getElementById('operasyonSelect');
+    if (!select) return;
+    
+    // Mevcut seçili değeri kaydet
+    const selectedValue = operasyonData ? operasyonData.operasyon_id : null;
+    
+    // Context'ten gelen operasyonları kullan
+    const operasyonlar = [
+        {% for op in tum_operasyonlar %}
+        {id: {{ op.pk }}, ad: '{{ op.ad|escapejs }}', akis_dis: {% if op.akis_dis_operasyon %}true{% else %}false{% endif %}}{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    operasyonlar.forEach(op => {
+        const option = document.createElement('option');
+        option.value = op.id;
+        option.textContent = op.ad;
+        option.dataset.akisDis = op.akis_dis ? '1' : '0';
+        if (selectedValue && op.id == selectedValue) {
+            option.selected = true;
+        }
+        select.appendChild(option);
+    });
+}
+
+function loadIstasyonlar(operasyonData = null) {
+    const select = document.getElementById('istasyonSelect');
+    if (!select) return;
+    
+    // Mevcut seçili değeri kaydet
+    const selectedValue = operasyonData ? operasyonData.istasyon_id : null;
+    
+    // Context'ten gelen istasyonları kullan
+    const istasyonlar = [
+        {% for ist in tum_istasyonlar %}
+        {id: {{ ist.pk }}, ad: '{{ ist.ad|escapejs }}'}{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    istasyonlar.forEach(ist => {
+        const option = document.createElement('option');
+        option.value = ist.id;
+        option.textContent = ist.ad;
+        if (selectedValue && ist.id == selectedValue) {
+            option.selected = true;
+        }
+        select.appendChild(option);
+    });
+    
+    // İstasyon seçildiğinde maliyet alanını otomatik doldur (sadece bir kez ekle)
+    if (!select.dataset.listenerAdded) {
+        select.addEventListener('change', function() {
+            const istasyonId = this.value;
+            const maliyetInput = document.getElementById('maliyetInput');
+            
+            if (istasyonId && maliyetInput) {
+                // AJAX ile istasyon maliyet bilgisini getir
+                fetch(`{% url 'stokapp:istasyon_maliyet_getir' 0 %}`.replace('0', istasyonId))
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success && data.maliyet) {
+                            // Sadece maliyet alanı boşsa veya 0 ise otomatik doldur
+                            // Kullanıcı manuel değer girdiyse değiştirmez
+                            if (!maliyetInput.value || maliyetInput.value === '0') {
+                                maliyetInput.value = parseFloat(data.maliyet).toFixed(2);
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('İstasyon maliyet bilgisi alınırken hata:', error);
+                    });
+            }
+        });
+        select.dataset.listenerAdded = 'true';
+    }
+}
+
+function loadStandartlar(operasyonData = null) {
+    const select = document.getElementById('standartSelect');
+    if (!select) return;
+    
+    // Mevcut seçili değeri kaydet
+    const selectedValue = operasyonData ? operasyonData.standart_id : null;
+    
+    // Context'ten gelen standartları kullan
+    const standartlar = [
+        {% for st in tum_standartlar %}
+        {id: {{ st.pk }}, kod: '{{ st.kod|escapejs }}', ad: '{{ st.ad|escapejs }}'}{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    standartlar.forEach(st => {
+        const option = document.createElement('option');
+        option.value = st.id;
+        option.textContent = `${st.kod} - ${st.ad}`;
+        if (selectedValue && st.id == selectedValue) {
+            option.selected = true;
+        }
+        select.appendChild(option);
+    });
+}
+
+function saveOperasyon(event) {
+    event.preventDefault();
+    
+    const editOperasyonId = currentEditOperasyonId;
+    const operasyonId = document.getElementById('operasyonSelect').value;
+    const bilesenSelect = document.getElementById('bilesenSelect');
+    const genelInput = document.getElementById('genelOperasyonInput');
+    const genelOperasyon = genelInput && genelInput.value === '1';
+    const receteDetayId = bilesenSelect ? bilesenSelect.value : '';
+    
+    if (!operasyonId) {
+        alert('Lütfen bir operasyon seçin.');
+        return;
+    }
+    if (!genelOperasyon && !receteDetayId) {
+        alert('Lütfen Genel Operasyon seçin veya bir reçete bileşeni belirleyin.');
+        return;
+    }
+    
+    const formData = new FormData();
+    if (genelOperasyon) {
+        formData.append('genel_operasyon', '1');
+    } else {
+        formData.append('recete_detay_id', receteDetayId);
+    }
+    formData.append('operasyon_id', operasyonId);
+    const istasyonId = document.getElementById('istasyonSelect').value;
+    const standartId = document.getElementById('standartSelect').value;
+    const maliyet = document.getElementById('maliyetInput').value;
+    const sure = document.getElementById('sureInput').value;
+    const aciklama = document.getElementById('aciklamaInput').value;
+    if (istasyonId) formData.append('istasyon_id', istasyonId);
+    if (standartId) formData.append('standart_id', standartId);
+    formData.append('maliyet', maliyet);
+    formData.append('sure_dakika', sure);
+    formData.append('aciklama', aciklama);
+
+    const opSel2 = document.getElementById('operasyonSelect');
+    const opt2 = opSel2 && opSel2.options[opSel2.selectedIndex];
+    if (opt2 && opt2.dataset.akisDis === '1') {
+        formData.append('dis_operasyon_tipi_id', document.getElementById('disTipSelect').value);
+        formData.append('dis_tedarikci_id', document.getElementById('disTedSelect').value);
+        formData.append('dis_gonderim_deposu_id', document.getElementById('disDepoSelect').value);
+        formData.append('dis_birim_fiyat', document.getElementById('disBirimFiyatInput').value);
+        formData.append('dis_para_birimi', document.getElementById('disParaSelect').value);
+        formData.append('dis_beklenen_donus_gun', document.getElementById('disGunInput').value);
+        formData.append('dis_sevk_evrak_no', document.getElementById('disSevkInput').value);
+    }
+    
+    const csrftoken = getCookie('csrftoken');
+    if (csrftoken) {
+        formData.append('csrfmiddlewaretoken', csrftoken);
+    }
+    
+    // URL belirle - ekleme mi düzenleme mi?
+    const url = editOperasyonId 
+        ? `{% url 'stokapp:recete_operasyon_duzenle' recete.pk 0 %}`.replace('0', editOperasyonId)
+        : `{% url 'stokapp:recete_operasyon_ekle' recete.pk %}`;
+    
+    fetch(url, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            closeOperasyonModal();
+            reloadOperasyonAgaci();
+        } else {
+            alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+        }
+    })
+    .catch(error => {
+        console.error('Kaydetme hatası:', error);
+        alert('Operasyon kaydedilirken bir hata oluştu.');
+    });
+}
+
+function deleteOperasyon(operasyonId) {
+    if (!confirm('Bu operasyonu silmek istediğinizden emin misiniz?')) {
+        return;
+    }
+    
+    const formData = new FormData();
+    const csrftoken = getCookie('csrftoken');
+    if (csrftoken) {
+        formData.append('csrfmiddlewaretoken', csrftoken);
+    }
+    
+    fetch(`{% url 'stokapp:recete_operasyon_sil' recete.pk 0 %}`.replace('0', operasyonId), {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            reloadOperasyonAgaci();
+        } else {
+            alert('Hata: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Silme hatası:', error);
+        alert('Operasyon silinirken bir hata oluştu.');
+    });
+}
+
+function renumerateBilesenSiraCells() {
+    document.querySelectorAll('#bilesenTbody tr[data-detay-id]').forEach(function(tr, i) {
+        const c = tr.querySelector('.recete-sira-cell');
+        if (c) c.textContent = String(i + 1);
+    });
+}
+
+function persistBilesenSira() {
+    const tbody = document.getElementById('bilesenTbody');
+    if (!tbody) return;
+    const ids = [...tbody.querySelectorAll('tr[data-detay-id]')].map(function(tr) { return parseInt(tr.getAttribute('data-detay-id'), 10); });
+    if (!ids.length) return;
+    const csrftoken = getReceteCsrfToken();
+    if (!csrftoken) {
+        alert('Güvenlik anahtarı bulunamadı. Sayfayı yenileyip tekrar deneyin.');
+        return;
+    }
+    fetch(window.RECETE_DETAY_SIRA_URL, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken,
+        },
+        body: JSON.stringify({ ids: ids }),
+    })
+        .then(function(r) {
+            return r.text().then(function(text) {
+                var data = {};
+                try {
+                    data = text ? JSON.parse(text) : {};
+                } catch (e) {
+                    if (!r.ok) {
+                        if (r.status === 404) {
+                            throw new Error('Sıra kaydetme adresi bulunamadı (404). Geliştirme sunucusunu yeniden başlatın; üretimde URL yönlendirmesini kontrol edin.');
+                        }
+                        if (r.status === 403) {
+                            throw new Error('Erişim engellendi (403). Sayfayı yenileyip tekrar deneyin.');
+                        }
+                        throw new Error('Sunucu yanıtı ' + r.status + '.');
+                    }
+                    throw new Error('Geçersiz yanıt');
+                }
+                if (!r.ok) {
+                    throw new Error((data && data.error) ? data.error : ('İstek reddedildi (' + r.status + ').'));
+                }
+                return data;
+            });
+        })
+        .then(function(data) {
+            if (!data.success) {
+                alert(data.error || 'Sıra kaydedilemedi.');
+                window.location.reload();
+                return;
+            }
+            renumerateBilesenSiraCells();
+        })
+        .catch(function(err) {
+            alert(err && err.message ? err.message : 'Sıra kaydedilirken hata oluştu.');
+            window.location.reload();
+        });
+}
+
+function persistOperasyonSira() {
+    const cb = document.querySelector('#operasyonlar-tab .operasyon-sira-tbody .recete-sira-sec:checked');
+    const tbody = cb ? cb.closest('.operasyon-sira-tbody') : null;
+    if (!tbody) return;
+    const detayId = tbody.getAttribute('data-detay-id');
+    const ids = [...tbody.querySelectorAll('tr[data-operasyon-id]')].map(function(tr) { return parseInt(tr.getAttribute('data-operasyon-id'), 10); });
+    if (!ids.length || detayId === null || detayId === undefined || detayId === '') return;
+    const csrftoken = getReceteCsrfToken();
+    if (!csrftoken) {
+        alert('Güvenlik anahtarı bulunamadı. Sayfayı yenileyip tekrar deneyin.');
+        return;
+    }
+    fetch(window.RECETE_OPERASYON_SIRA_URL, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrftoken,
+        },
+        body: JSON.stringify({ ids: ids, recete_detay_id: parseInt(detayId, 10) }),
+    })
+        .then(function(r) {
+            return r.text().then(function(text) {
+                var data = {};
+                try {
+                    data = text ? JSON.parse(text) : {};
+                } catch (e) {
+                    if (!r.ok) {
+                        if (r.status === 404) {
+                            throw new Error('Sıra kaydetme adresi bulunamadı (404). Geliştirme sunucusunu yeniden başlatın; üretimde URL yönlendirmesini kontrol edin.');
+                        }
+                        if (r.status === 403) {
+                            throw new Error('Erişim engellendi (403). Sayfayı yenileyip tekrar deneyin.');
+                        }
+                        throw new Error('Sunucu yanıtı ' + r.status + '.');
+                    }
+                    throw new Error('Geçersiz yanıt');
+                }
+                if (!r.ok) {
+                    throw new Error((data && data.error) ? data.error : ('İstek reddedildi (' + r.status + ').'));
+                }
+                return data;
+            });
+        })
+        .then(function(data) {
+            if (!data.success) {
+                alert(data.error || 'Sıra kaydedilemedi.');
+                window.location.reload();
+                return;
+            }
+        })
+        .catch(function(err) {
+            alert(err && err.message ? err.message : 'Sıra kaydedilirken hata oluştu.');
+            window.location.reload();
+        });
+}
+
+function receteAktifSekmeAdi() {
+    const a = document.querySelector('.recete-tab-btn.active');
+    return a ? a.getAttribute('data-tab') : '';
+}
+
+function recetePrevDataRow(tr, attrName) {
+    let p = tr.previousElementSibling;
+    while (p && !p.getAttribute(attrName)) {
+        p = p.previousElementSibling;
+    }
+    return p;
+}
+
+function receteNextDataRow(tr, attrName) {
+    let n = tr.nextElementSibling;
+    while (n && !n.getAttribute(attrName)) {
+        n = n.nextElementSibling;
+    }
+    return n;
+}
+
+function receteSiraAracCubuguGuncelle() {
+    const bar = document.getElementById('receteSiraAracCubugu');
+    if (!bar) return;
+    const tab = receteAktifSekmeAdi();
+    let show = false;
+    if (tab === 'bilesenler') {
+        show = !!document.querySelector('#bilesenTbody .recete-sira-sec:checked');
+    } else if (tab === 'operasyonlar') {
+        show = !!document.querySelector('#operasyonlar-tab .operasyon-sira-tbody .recete-sira-sec:checked');
+    }
+    bar.style.display = show ? 'inline-flex' : 'none';
+}
+
+function receteSiraSecimDegisti(changed) {
+    const tbody = changed.closest('tbody');
+    if (!tbody) return;
+    if (changed.checked) {
+        tbody.querySelectorAll('.recete-sira-sec').forEach(function(cb) {
+            if (cb !== changed) cb.checked = false;
+        });
+    }
+    receteSiraAracCubuguGuncelle();
+}
+
+function receteSiraSatirYukari() {
+    const tab = receteAktifSekmeAdi();
+    if (tab === 'bilesenler') {
+        const tbody = document.getElementById('bilesenTbody');
+        const cb = tbody && tbody.querySelector('.recete-sira-sec:checked');
+        if (!cb || !tbody) return;
+        const tr = cb.closest('tr[data-detay-id]');
+        if (!tr) return;
+        const prev = recetePrevDataRow(tr, 'data-detay-id');
+        if (!prev) return;
+        tbody.insertBefore(tr, prev);
+        renumerateBilesenSiraCells();
+        persistBilesenSira();
+    } else if (tab === 'operasyonlar') {
+        const cb = document.querySelector('#operasyonlar-tab .operasyon-sira-tbody .recete-sira-sec:checked');
+        const tbody = cb ? cb.closest('.operasyon-sira-tbody') : null;
+        if (!cb || !tbody) return;
+        const tr = cb.closest('tr[data-operasyon-id]');
+        if (!tr) return;
+        const prev = recetePrevDataRow(tr, 'data-operasyon-id');
+        if (!prev) return;
+        tbody.insertBefore(tr, prev);
+        persistOperasyonSira();
+    }
+}
+
+function receteSiraSatirAsagi() {
+    const tab = receteAktifSekmeAdi();
+    if (tab === 'bilesenler') {
+        const tbody = document.getElementById('bilesenTbody');
+        const cb = tbody && tbody.querySelector('.recete-sira-sec:checked');
+        if (!cb || !tbody) return;
+        const tr = cb.closest('tr[data-detay-id]');
+        if (!tr) return;
+        const nxt = receteNextDataRow(tr, 'data-detay-id');
+        if (!nxt) return;
+        tbody.insertBefore(tr, nxt.nextElementSibling);
+        renumerateBilesenSiraCells();
+        persistBilesenSira();
+    } else if (tab === 'operasyonlar') {
+        const cb = document.querySelector('#operasyonlar-tab .operasyon-sira-tbody .recete-sira-sec:checked');
+        const tbody = cb ? cb.closest('.operasyon-sira-tbody') : null;
+        if (!cb || !tbody) return;
+        const tr = cb.closest('tr[data-operasyon-id]');
+        if (!tr) return;
+        const nxt = receteNextDataRow(tr, 'data-operasyon-id');
+        if (!nxt) return;
+        tbody.insertBefore(tr, nxt.nextElementSibling);
+        persistOperasyonSira();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const bil = document.getElementById('bilesenler-tab');
+    if (bil) {
+        bil.addEventListener('change', function(e) {
+            if (e.target.classList.contains('recete-sira-sec')) {
+                receteSiraSecimDegisti(e.target);
+            }
+        });
+    }
+    const opTab = document.getElementById('operasyonlar-tab');
+    if (opTab) {
+        opTab.addEventListener('change', function(e) {
+            if (e.target.classList.contains('recete-sira-sec')) {
+                receteSiraSecimDegisti(e.target);
+            }
+        });
+    }
+});
+
+// Sekme geçişi
+function showReceteTab(tabName) {
+    // Tüm sekme butonlarını güncelle
+    document.querySelectorAll('.recete-tab-btn').forEach(btn => {
+        btn.classList.remove('active', 'is-active');
+        btn.style.borderBottom = '';
+        btn.style.color = '';
+        btn.style.fontWeight = '';
+    });
+    
+    // Aktif sekme butonunu güncelle
+    const activeBtn = document.querySelector(`[data-tab="${tabName}"]`);
+    if (activeBtn) {
+        activeBtn.classList.add('active', 'is-active');
+    }
+    
+    // Tüm sekme içeriklerini gizle
+    document.querySelectorAll('.recete-tab-content').forEach(content => {
+        content.style.display = 'none';
+    });
+    
+    // Seçilen sekme içeriğini göster
+    const activeContent = document.getElementById(`${tabName}-tab`);
+    if (activeContent) {
+        activeContent.style.display = 'block';
+    }
+    
+    // Operasyonlar sekmesi açıldığında tabloyu yükle ve FAB'ı göster
+    if (tabName === 'operasyonlar') {
+            reloadOperasyonAgaci();
+        const fab = document.getElementById('addOperasyonFAB');
+        if (fab) fab.style.display = 'flex';
+        const disFab = document.getElementById('addDisOperasyonFAB');
+        if (disFab) disFab.style.display = 'none';
+    } else if (tabName === 'dis-operasyonlar') {
+        if (typeof reloadDisOperasyonAgaci === 'function') reloadDisOperasyonAgaci();
+        const fab = document.getElementById('addOperasyonFAB');
+        if (fab) fab.style.display = 'none';
+        const disFab = document.getElementById('addDisOperasyonFAB');
+        if (disFab) disFab.style.display = 'flex';
+    } else {
+        // Diğer sekmelerde FAB'ları gizle
+        const fab = document.getElementById('addOperasyonFAB');
+        if (fab) fab.style.display = 'none';
+        const disFab = document.getElementById('addDisOperasyonFAB');
+        if (disFab) disFab.style.display = 'none';
+    }
+    
+    // Talimatlar sekmesi açıldığında talimatları yükle
+    if (tabName === 'talimatlar') {
+        loadTalimatlar();
+    }
+    receteSiraAracCubuguGuncelle();
+}
+
+// ==================== TALİMATLAR YÖNETİMİ ====================
+
+let currentTalimatId = null;
+
+function loadTalimatlar() {
+    fetch(`{% url 'stokapp:recete_talimat_listesi' recete.pk %}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                renderTalimatlar(data.talimatlar);
+            }
+        })
+        .catch(error => {
+            console.error('Talimatlar yüklenirken hata:', error);
+        });
+}
+
+function renderTalimatlar(talimatlar) {
+    const container = document.getElementById('talimatlarContainer');
+    if (!container) return;
+    
+    if (talimatlar.length === 0) {
+        container.innerHTML = '<div style="text-align: center; padding: 40px; background: #f9fafb; border-radius: 8px; color: #6b7280;"><p>Henüz talimat eklenmemiş.</p></div>';
+        return;
+    }
+    
+    container.innerHTML = talimatlar.map(talimat => createTalimatHTML(talimat)).join('');
+    
+    // Dropdown event listener'larını ekle
+    setupTalimatDropdowns();
+}
+
+function createTalimatHTML(talimat) {
+    const olculerHTML = talimat.olculer.map(olcu => `
+        <tr>
+            <td style="padding: 8px; border: 1px solid #e5e7eb; font-weight: ${olcu.aciklama ? '600' : '400'};">${olcu.aciklama || '-'}</td>
+            <td style="padding: 8px; border: 1px solid #e5e7eb;">${olcu.nominal_deger || '-'}</td>
+            <td style="padding: 8px; border: 1px solid #e5e7eb;">${olcu.birim || '-'}</td>
+            <td style="padding: 8px; border: 1px solid #e5e7eb;">${olcu.min_deger || '-'}</td>
+            <td style="padding: 8px; border: 1px solid #e5e7eb;">${olcu.max_deger || '-'}</td>
+            <td style="padding: 8px; border: 1px solid #e5e7eb; text-align: center;">
+                <button onclick="editOlcu(${talimat.id}, ${olcu.id})" style="padding: 4px 8px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-right: 5px;">✏️</button>
+                <button onclick="deleteOlcu(${talimat.id}, ${olcu.id})" style="padding: 4px 8px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️</button>
+            </td>
+        </tr>
+    `).join('');
+    
+    const dosyalarHTML = talimat.dosyalar.map(dosya => `
+        <div style="display: flex; align-items: center; gap: 10px; padding: 8px; background: #f9fafb; border-radius: 4px; margin-bottom: 5px;">
+            <span style="flex: 0 0 150px; font-weight: 600; color: #374151;">${dosya.aciklama || '-'}</span>
+            <a href="${dosya.dosya_url}" target="_blank" style="flex: 1; color: #3b82f6; text-decoration: none;">${dosya.dosya_adi}</a>
+            <button onclick="deleteDosya(${talimat.id}, ${dosya.id})" style="padding: 4px 8px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️</button>
+        </div>
+    `).join('');
+    
+    const ekipmanlarHTML = talimat.ekipmanlar.map(ekipman => `
+        <div style="display: flex; align-items: center; gap: 10px; padding: 8px; background: #f9fafb; border-radius: 4px; margin-bottom: 5px;">
+            <span style="flex: 0 0 100px; font-size: 12px; color: #6b7280; font-weight: 500;">${ekipman.ekipman_numarasi || '-'}</span>
+            <span style="flex: 1;"><strong>${ekipman.ad}</strong>${ekipman.aciklama ? ': ' + ekipman.aciklama : ''}</span>
+            <button onclick="deleteEkipman(${talimat.id}, ${ekipman.id})" style="padding: 4px 8px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️</button>
+        </div>
+    `).join('');
+    
+    const fiksturlerHTML = talimat.fiksturler ? talimat.fiksturler.map(fikstur => `
+        <div style="display: flex; align-items: center; gap: 10px; padding: 8px; background: #f9fafb; border-radius: 4px; margin-bottom: 5px;">
+            <span style="flex: 0 0 100px; font-size: 12px; color: #6b7280; font-weight: 500;">${fikstur.fikstur_numarasi || '-'}</span>
+            <span style="flex: 1;"><strong>${fikstur.ad}</strong>${fikstur.aciklama ? ': ' + fikstur.aciklama : ''}</span>
+            <button onclick="deleteFikstur(${talimat.id}, ${fikstur.id})" style="padding: 4px 8px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️</button>
+        </div>
+    `).join('') : '';
+    
+    const olcuAletleriHTML = talimat.olcu_aletleri ? talimat.olcu_aletleri.map(olcu_aleti => `
+        <div style="display: flex; align-items: center; gap: 10px; padding: 8px; background: #f9fafb; border-radius: 4px; margin-bottom: 5px;">
+            <span style="flex: 0 0 120px; font-size: 12px; color: #6b7280; font-weight: 500;">${olcu_aleti.seri_no || '-'}</span>
+            <span style="flex: 1;"><strong>${olcu_aleti.marka || ''} ${olcu_aleti.model || ''}</strong></span>
+            <button onclick="deleteOlcuAleti(${talimat.id}, ${olcu_aleti.id})" style="padding: 4px 8px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️</button>
+        </div>
+    `).join('') : '';
+    
+    const programlarHTML = talimat.programlar.map(program => `
+        <div style="display: flex; align-items: center; gap: 10px; padding: 8px; background: #f9fafb; border-radius: 4px; margin-bottom: 5px;">
+            <span style="flex: 1;"><strong>${program.program_adi}</strong>${program.aciklama ? ': ' + program.aciklama : ''}</span>
+            <button onclick="deleteProgram(${talimat.id}, ${program.id})" style="padding: 4px 8px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️</button>
+        </div>
+    `).join('');
+    
+    const ekAciklamalarHTML = talimat.ek_aciklamalar ? talimat.ek_aciklamalar.map(aciklama => `
+        <div style="display: flex; align-items: start; gap: 10px; padding: 12px; background: #f9fafb; border-radius: 4px; margin-bottom: 8px; border-left: 4px solid #3b82f6;">
+            <div style="flex: 1;">
+                <p style="margin: 0; color: #111827; line-height: 1.6; white-space: pre-wrap;">${aciklama.aciklama}</p>
+            </div>
+            <div style="display: flex; gap: 5px;">
+                <button onclick="editAciklama(${talimat.id}, ${aciklama.id})" style="padding: 4px 8px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">✏️</button>
+                <button onclick="deleteAciklama(${talimat.id}, ${aciklama.id})" style="padding: 4px 8px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️</button>
+            </div>
+        </div>
+    `).join('') : '';
+    
+    const kurulumDosyalariHTML = talimat.kurulum_dosyalari ? talimat.kurulum_dosyalari.map(kurulum => `
+        <div style="display: flex; align-items: start; gap: 10px; padding: 12px; background: #f0f9ff; border-radius: 4px; margin-bottom: 8px; border-left: 4px solid #0ea5e9;">
+            <div style="flex: 1;">
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <div><strong>Parça:</strong> ${kurulum.urun_parcasi || '-'}</div>
+                    ${kurulum.istasyon_adi ? `<div><strong>İstasyon:</strong> ${kurulum.istasyon_adi}</div>` : ''}
+                    <div><strong>Versiyon:</strong> ${kurulum.versiyon || '-'}</div>
+                    ${kurulum.aciklama ? `<div style="margin-top: 8px; color: #374151; line-height: 1.5;">${kurulum.aciklama}</div>` : ''}
+                </div>
+            </div>
+            <div style="display: flex; gap: 5px; align-items: start;">
+                ${kurulum.pdf_url ? `<button onclick="window.open('${kurulum.pdf_url}', '_blank')" style="padding: 6px 12px; background: #0ea5e9; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">👁️ Görüntüle</button>` : ''}
+                <button onclick="deleteKurulumDosyasi(${talimat.id}, ${kurulum.id})" style="padding: 4px 8px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️</button>
+            </div>
+        </div>
+    `).join('') : '';
+    
+    return `
+        <div class="talimat-item" data-talimat-id="${talimat.id}" style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; background: white;">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
+                <div style="flex: 1;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                        <span style="font-weight: 600; color: #3b82f6; font-size: 16px;">#${talimat.sira}</span>
+                        <span style="color: #111827; font-size: 14px;">${talimat.aciklama}</span>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 5px; align-items: center;">
+                    <select class="talimat-dropdown" data-talimat-id="${talimat.id}" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; background: white; cursor: pointer;">
+                        <option value="">Ekle...</option>
+                        <option value="olcu">Ölçü Ekle</option>
+                        <option value="dosya">Fotoğraf/PDF Ekle</option>
+                        <option value="ekipman">Ekipman Ekle</option>
+                        <option value="fikstur">Fikstür Ekle</option>
+                        <option value="aciklama">Açıklama Ekle</option>
+                        <option value="kurulum_dosyasi">Kurulum Dosyası Ekle</option>
+                        <option value="olcu_aleti">Ölçü Aleti Ekle</option>
+                        <option value="program">Program Adı Ekle</option>
+                    </select>
+                    <button onclick="editTalimat(${talimat.id})" style="padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">✏️ Düzenle</button>
+                    <button onclick="deleteTalimat(${talimat.id})" style="padding: 6px 12px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">🗑️ Sil</button>
+                </div>
+            </div>
+            
+            <!-- Ölçüler -->
+            <div id="olculer-${talimat.id}" style="margin-bottom: 15px; ${talimat.olculer.length > 0 ? '' : 'display: none;'}">
+                <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 10px; color: #374151;">Ölçüler</h4>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 10px;">
+                    <thead>
+                        <tr style="background: #f9fafb;">
+                            <th style="padding: 8px; border: 1px solid #e5e7eb; text-align: left; font-size: 12px;">Açıklama</th>
+                            <th style="padding: 8px; border: 1px solid #e5e7eb; text-align: left; font-size: 12px;">Nominal</th>
+                            <th style="padding: 8px; border: 1px solid #e5e7eb; text-align: left; font-size: 12px;">Birim</th>
+                            <th style="padding: 8px; border: 1px solid #e5e7eb; text-align: left; font-size: 12px;">Min</th>
+                            <th style="padding: 8px; border: 1px solid #e5e7eb; text-align: left; font-size: 12px;">Max</th>
+                            <th style="padding: 8px; border: 1px solid #e5e7eb; text-align: center; font-size: 12px;">İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${olculerHTML || '<tr><td colspan="6" style="text-align: center; padding: 10px; color: #6b7280;">Henüz ölçü eklenmemiş.</td></tr>'}
+                    </tbody>
+                </table>
+                <button onclick="showOlcuForm(${talimat.id})" style="padding: 6px 12px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">➕ Ölçü Ekle</button>
+            </div>
+            
+            <!-- Dosyalar -->
+            <div id="dosyalar-${talimat.id}" style="margin-bottom: 15px; ${talimat.dosyalar.length > 0 ? '' : 'display: none;'}">
+                <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 10px; color: #374151;">Dosyalar</h4>
+                ${dosyalarHTML || '<p style="color: #6b7280; font-size: 12px;">Henüz dosya eklenmemiş.</p>'}
+                <button onclick="showDosyaForm(${talimat.id})" style="padding: 6px 12px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-top: 10px;">➕ Dosya Ekle</button>
+            </div>
+            
+            <!-- Ekipmanlar -->
+            <div id="ekipmanlar-${talimat.id}" style="margin-bottom: 15px; ${talimat.ekipmanlar.length > 0 ? '' : 'display: none;'}">
+                <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 10px; color: #374151;">Ekipmanlar</h4>
+                ${ekipmanlarHTML || '<p style="color: #6b7280; font-size: 12px;">Henüz ekipman eklenmemiş.</p>'}
+                <button onclick="showEkipmanForm(${talimat.id})" style="padding: 6px 12px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-top: 10px;">➕ Ekipman Ekle</button>
+            </div>
+            
+            <!-- Fikstürler -->
+            <div id="fiksturler-${talimat.id}" style="margin-bottom: 15px; ${talimat.fiksturler && talimat.fiksturler.length > 0 ? '' : 'display: none;'}">
+                <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 10px; color: #374151;">Fikstürler</h4>
+                ${fiksturlerHTML || '<p style="color: #6b7280; font-size: 12px;">Henüz fikstür eklenmemiş.</p>'}
+                <button onclick="showFiksturForm(${talimat.id})" style="padding: 6px 12px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-top: 10px;">➕ Fikstür Ekle</button>
+            </div>
+            
+            <!-- Ek Açıklamalar -->
+            <div id="ek-aciklamalar-${talimat.id}" style="margin-bottom: 15px; ${talimat.ek_aciklamalar && talimat.ek_aciklamalar.length > 0 ? '' : 'display: none;'}">
+                <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 10px; color: #374151;">Ek Açıklamalar</h4>
+                ${ekAciklamalarHTML || '<p style="color: #6b7280; font-size: 12px;">Henüz açıklama eklenmemiş.</p>'}
+                <button onclick="showAciklamaForm(${talimat.id})" style="padding: 6px 12px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-top: 10px;">➕ Açıklama Ekle</button>
+            </div>
+            
+            <!-- Kurulum Dosyaları -->
+            <div id="kurulum-dosyalari-${talimat.id}" style="margin-bottom: 15px; ${talimat.kurulum_dosyalari && talimat.kurulum_dosyalari.length > 0 ? '' : 'display: none;'}">
+                <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 10px; color: #374151;">Kurulum Dosyaları</h4>
+                ${kurulumDosyalariHTML || '<p style="color: #6b7280; font-size: 12px;">Henüz kurulum dosyası eklenmemiş.</p>'}
+                <button onclick="showKurulumDosyasiForm(${talimat.id})" style="padding: 6px 12px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-top: 10px;">➕ Kurulum Dosyası Ekle</button>
+            </div>
+            
+            <!-- Ölçü Aletleri -->
+            <div id="olcu-aletleri-${talimat.id}" style="margin-bottom: 15px; ${talimat.olcu_aletleri && talimat.olcu_aletleri.length > 0 ? '' : 'display: none;'}">
+                <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 10px; color: #374151;">Ölçü Aletleri</h4>
+                ${olcuAletleriHTML || '<p style="color: #6b7280; font-size: 12px;">Henüz ölçü aleti eklenmemiş.</p>'}
+                <button onclick="showOlcuAletiForm(${talimat.id})" style="padding: 6px 12px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-top: 10px;">➕ Ölçü Aleti Ekle</button>
+            </div>
+            
+            <!-- Programlar -->
+            <div id="programlar-${talimat.id}" style="margin-bottom: 15px; ${talimat.programlar.length > 0 ? '' : 'display: none;'}">
+                <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 10px; color: #374151;">Programlar</h4>
+                ${programlarHTML || '<p style="color: #6b7280; font-size: 12px;">Henüz program eklenmemiş.</p>'}
+                <button onclick="showProgramForm(${talimat.id})" style="padding: 6px 12px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; margin-top: 10px;">➕ Program Ekle</button>
+            </div>
+        </div>
+    `;
+}
+
+// Her talimat için dropdown event listener'ları ekle
+function setupTalimatDropdowns() {
+    document.querySelectorAll('.talimat-dropdown').forEach(dropdown => {
+        // Önce eski listener'ı kaldır (eğer varsa)
+        const newDropdown = dropdown.cloneNode(true);
+        dropdown.parentNode.replaceChild(newDropdown, dropdown);
+    });
+    
+    // Yeni listener'ları ekle
+    document.querySelectorAll('.talimat-dropdown').forEach(dropdown => {
+        dropdown.addEventListener('change', function() {
+            const value = this.value;
+            const talimatId = this.getAttribute('data-talimat-id');
+            
+            if (!value) return;
+            
+            if (value === 'olcu') {
+                showOlcuForm(talimatId);
+            } else if (value === 'dosya') {
+                showDosyaForm(talimatId);
+            } else if (value === 'ekipman') {
+                showEkipmanForm(talimatId);
+            } else if (value === 'fikstur') {
+                showFiksturForm(talimatId);
+            } else if (value === 'aciklama') {
+                showAciklamaForm(talimatId);
+            } else if (value === 'kurulum_dosyasi') {
+                showKurulumDosyasiForm(talimatId);
+            } else if (value === 'olcu_aleti') {
+                showOlcuAletiForm(talimatId);
+            } else if (value === 'program') {
+                showProgramForm(talimatId);
+            }
+            
+            // Dropdown'ı sıfırla
+            this.value = '';
+        });
+    });
+}
+
+function showYeniMaddeForm() {
+    const aciklama = prompt('Talimat açıklamasını girin:');
+    if (!aciklama) return;
+    
+    const formData = new FormData();
+    formData.append('aciklama', aciklama);
+    
+    fetch(`{% url 'stokapp:recete_talimat_ekle' recete.pk %}`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadTalimatlar();
+        } else {
+            alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+        }
+    })
+    .catch(error => {
+        console.error('Hata:', error);
+        alert('Talimat eklenirken hata oluştu.');
+    });
+}
+
+function showOlcuForm(talimatId, olcuId = null, olcuData = null) {
+    const container = document.getElementById(`olculer-${talimatId}`);
+    if (!container) return;
+    
+    // Bölümü göster
+    container.style.display = 'block';
+    
+    // Form zaten varsa kaldır ve yeniden oluştur
+    const existingForm = container.querySelector('.olcu-form');
+    if (existingForm) {
+        existingForm.remove();
+    }
+    
+    // Form değerlerini belirle
+    const aciklamaValue = olcuData ? (olcuData.aciklama || '') : '';
+    const nominalValue = olcuData ? (olcuData.nominal_deger || '') : '';
+    const birimValue = olcuData ? (olcuData.birim || '') : '';
+    const minValue = olcuData ? (olcuData.min_deger || '') : '';
+    const maxValue = olcuData ? (olcuData.max_deger || '') : '';
+    
+    // Form oluştur
+    const formHTML = `
+        <div class="olcu-form" style="background: #f9fafb; padding: 15px; border-radius: 6px; margin-top: 10px;">
+            <div style="margin-bottom: 10px;">
+                <input type="text" id="olcu-aciklama-${talimatId}" value="${aciklamaValue}" placeholder="Açıklama (örn: En, Boy, Kalınlık)" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; margin-bottom: 10px;">
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                <input type="number" step="0.001" id="nominal-${talimatId}" value="${nominalValue}" placeholder="Nominal Değer" style="padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
+                <input type="text" id="birim-${talimatId}" value="${birimValue}" placeholder="Birim (mm, kg, vb.)" style="padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
+                <input type="number" step="0.001" id="min-${talimatId}" value="${minValue}" placeholder="Min Değer" style="padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
+                <input type="number" step="0.001" id="max-${talimatId}" value="${maxValue}" placeholder="Max Değer" style="padding: 8px; border: 1px solid #d1d5db; border-radius: 4px;">
+            </div>
+            <div style="display: flex; gap: 5px;">
+                <button onclick="saveOlcu(${talimatId}${olcuId ? ', ' + olcuId : ''})" style="padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer;">Kaydet</button>
+                <button onclick="hideOlcuForm(${talimatId})" style="padding: 8px 16px; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer;">İptal</button>
+            </div>
+        </div>
+    `;
+    
+    container.insertAdjacentHTML('beforeend', formHTML);
+}
+
+function hideOlcuForm(talimatId) {
+    const container = document.getElementById(`olculer-${talimatId}`);
+    if (container) {
+        const form = container.querySelector('.olcu-form');
+        if (form) form.remove();
+        // Eğer ölçü yoksa bölümü gizle
+        const tbody = container.querySelector('tbody');
+        if (tbody && tbody.children.length === 1 && tbody.children[0].textContent.includes('Henüz ölçü eklenmemiş')) {
+            container.style.display = 'none';
+        }
+    }
+}
+
+function editOlcu(talimatId, olcuId) {
+    // Mevcut ölçü verilerini al
+    fetch(`{% url 'stokapp:recete_talimat_listesi' recete.pk %}`)
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success) return;
+            
+            // Talimat ve ölçüyü bul
+            const talimat = data.talimatlar.find(t => t.id === talimatId);
+            if (!talimat) return;
+            
+            const olcu = talimat.olculer.find(o => o.id === olcuId);
+            if (!olcu) return;
+            
+            // Formu göster ve verileri doldur
+            showOlcuForm(talimatId, olcuId, olcu);
+        })
+        .catch(error => {
+            console.error('Hata:', error);
+            alert('Ölçü verileri yüklenirken hata oluştu.');
+        });
+}
+
+function saveOlcu(talimatId, olcuId = null) {
+    const aciklamaEl = document.getElementById(`olcu-aciklama-${talimatId}`);
+    const nominalEl = document.getElementById(`nominal-${talimatId}`);
+    const birimEl = document.getElementById(`birim-${talimatId}`);
+    const minEl = document.getElementById(`min-${talimatId}`);
+    const maxEl = document.getElementById(`max-${talimatId}`);
+    
+    if (!aciklamaEl || !nominalEl || !birimEl || !minEl || !maxEl) {
+        console.error('Form elementleri bulunamadı');
+        return;
+    }
+    
+    const aciklama = aciklamaEl.value;
+    const nominal = nominalEl.value;
+    const birim = birimEl.value;
+    const min = minEl.value;
+    const max = maxEl.value;
+    
+    const formData = new FormData();
+    if (aciklama) formData.append('aciklama', aciklama);
+    if (nominal) formData.append('nominal_deger', nominal);
+    if (birim) formData.append('birim', birim);
+    if (min) formData.append('min_deger', min);
+    if (max) formData.append('max_deger', max);
+    
+    // Düzenleme modunda mı?
+    const url = olcuId 
+        ? `{% url 'stokapp:recete_talimat_olcu_duzenle' recete.pk 0 0 %}`.replace('0', talimatId).replace('0', olcuId)
+        : `{% url 'stokapp:recete_talimat_olcu_ekle' recete.pk 0 %}`.replace('0', talimatId);
+    
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const form = document.querySelector(`#olculer-${talimatId} .olcu-form`);
+            if (form) form.remove();
+            loadTalimatlar();
+        } else {
+            alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+        }
+    })
+    .catch(error => {
+        console.error('Hata:', error);
+        alert('Ölçü kaydedilirken hata oluştu.');
+    });
+}
+
+function deleteOlcu(talimatId, olcuId) {
+    if (!confirm('Bu ölçüyü silmek istediğinizden emin misiniz?')) return;
+    
+    fetch(`{% url 'stokapp:recete_talimat_olcu_sil' recete.pk 0 0 %}`.replace('0', talimatId).replace('0', olcuId), {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadTalimatlar();
+        } else {
+            alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+        }
+    })
+    .catch(error => {
+        console.error('Hata:', error);
+        alert('Ölçü silinirken hata oluştu.');
+    });
+}
+
+function showDosyaForm(talimatId) {
+    const aciklama = prompt('Açıklama (örn: İşlem Öncesi Görsel, Montaj Şeması):');
+    if (aciklama === null) return;
+    
+    const dosyaAdi = prompt('Dosya adı (opsiyonel):');
+    const dosyaInput = document.createElement('input');
+    dosyaInput.type = 'file';
+    dosyaInput.accept = 'image/*,.pdf';
+    dosyaInput.onchange = function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const formData = new FormData();
+        formData.append('dosya', file);
+        if (aciklama) formData.append('aciklama', aciklama);
+        if (dosyaAdi) formData.append('dosya_adi', dosyaAdi);
+        
+        // Dosya tipini belirle
+        const fileName = file.name.toLowerCase();
+        if (fileName.endsWith('.pdf')) {
+            formData.append('dosya_tipi', 'pdf');
+        } else if (fileName.match(/\.(jpg|jpeg|png|gif|bmp)$/)) {
+            formData.append('dosya_tipi', 'foto');
+        }
+        
+        fetch(`{% url 'stokapp:recete_talimat_dosya_ekle' recete.pk 0 %}`.replace('0', talimatId), {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                loadTalimatlar();
+            } else {
+                alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+            }
+        })
+        .catch(error => {
+            console.error('Hata:', error);
+            alert('Dosya eklenirken hata oluştu.');
+        });
+    };
+    dosyaInput.click();
+}
+
+function deleteDosya(talimatId, dosyaId) {
+    if (!confirm('Bu dosyayı silmek istediğinizden emin misiniz?')) return;
+    
+    fetch(`{% url 'stokapp:recete_talimat_dosya_sil' recete.pk 0 0 %}`.replace('0', talimatId).replace('0', dosyaId), {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadTalimatlar();
+        } else {
+            alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+        }
+    })
+    .catch(error => {
+        console.error('Hata:', error);
+        alert('Dosya silinirken hata oluştu.');
+    });
+}
+
+function showEkipmanForm(talimatId) {
+    // Ekipman seçim modal'ı oluştur
+    const ekipmanlar = [
+        {% for ekipman in tum_ekipmanlar %}
+        {id: {{ ekipman.pk }}, numara: '{{ ekipman.ekipman_numarasi|escapejs }}', ad: '{{ ekipman.ad|escapejs }}'}{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    if (ekipmanlar.length === 0) {
+        alert('Henüz ekipman eklenmemiş. Önce Ayarlar > Ekipmanlar bölümünden ekipman ekleyin.');
+        return;
+    }
+    
+    let optionsHTML = '<option value="">Ekipman Seçin...</option>';
+    ekipmanlar.forEach(ekipman => {
+        optionsHTML += `<option value="${ekipman.id}">${ekipman.numara} - ${ekipman.ad}</option>`;
+    });
+    
+    const selectedId = prompt('Ekipman seçin:\n\n' + ekipmanlar.map(e => `${e.id}: ${e.numara} - ${e.ad}`).join('\n') + '\n\nEkipman ID\'sini girin:');
+    if (!selectedId) return;
+    
+    const selectedEkipman = ekipmanlar.find(e => e.id == selectedId);
+    if (!selectedEkipman) {
+        alert('Geçersiz ekipman seçimi.');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('ekipman_id', selectedEkipman.id);
+    
+    fetch(`{% url 'stokapp:recete_talimat_ekipman_ekle' recete.pk 0 %}`.replace('0', talimatId), {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadTalimatlar();
+        } else {
+            alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+        }
+    })
+    .catch(error => {
+        console.error('Hata:', error);
+        alert('Ekipman eklenirken hata oluştu.');
+    });
+}
+
+function showFiksturForm(talimatId) {
+    // Fikstür seçim modal'ı oluştur
+    const fiksturler = [
+        {% for fikstur in tum_fiksturler %}
+        {id: {{ fikstur.pk }}, numara: '{{ fikstur.fikstur_numarasi|escapejs }}', ad: '{{ fikstur.ad|escapejs }}'}{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    if (fiksturler.length === 0) {
+        alert('Henüz fikstür eklenmemiş. Önce Ayarlar > Fikstürler bölümünden fikstür ekleyin.');
+        return;
+    }
+    
+    let optionsHTML = '<option value="">Fikstür Seçin...</option>';
+    fiksturler.forEach(fikstur => {
+        optionsHTML += `<option value="${fikstur.id}">${fikstur.numara} - ${fikstur.ad}</option>`;
+    });
+    
+    const selectedId = prompt('Fikstür seçin:\n\n' + fiksturler.map(f => `${f.id}: ${f.numara} - ${f.ad}`).join('\n') + '\n\nFikstür ID\'sini girin:');
+    if (!selectedId) return;
+    
+    const selectedFikstur = fiksturler.find(f => f.id == selectedId);
+    if (!selectedFikstur) {
+        alert('Geçersiz fikstür seçimi.');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('fikstur_id', selectedFikstur.id);
+    
+    fetch(`{% url 'stokapp:recete_talimat_fikstur_ekle' recete.pk 0 %}`.replace('0', talimatId), {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadTalimatlar();
+        } else {
+            alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+        }
+    })
+    .catch(error => {
+        console.error('Hata:', error);
+        alert('Fikstür eklenirken hata oluştu.');
+    });
+}
+
+function showOlcuAletiForm(talimatId) {
+    // Ölçü aleti seçim modal'ı oluştur
+    const olcuAletleri = [
+        {% for olcu_aleti in tum_olcu_aletleri %}
+        {id: {{ olcu_aleti.pk }}, seri_no: '{{ olcu_aleti.seri_no|escapejs }}', marka: '{{ olcu_aleti.marka|escapejs }}', model: '{{ olcu_aleti.model|escapejs }}'}{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    if (olcuAletleri.length === 0) {
+        alert('Henüz ölçü aleti eklenmemiş. Önce Ayarlar > Ölçü Aletleri bölümünden ölçü aleti ekleyin.');
+        return;
+    }
+    
+    const selectedId = prompt('Ölçü aleti seçin:\n\n' + olcuAletleri.map(o => `${o.id}: ${o.seri_no} - ${o.marka} ${o.model}`).join('\n') + '\n\nÖlçü Aleti ID\'sini girin:');
+    if (!selectedId) return;
+    
+    const selectedOlcuAleti = olcuAletleri.find(o => o.id == selectedId);
+    if (!selectedOlcuAleti) {
+        alert('Geçersiz ölçü aleti seçimi.');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('olcu_aleti_id', selectedOlcuAleti.id);
+    
+    fetch(`{% url 'stokapp:recete_talimat_olcu_aleti_ekle' recete.pk 0 %}`.replace('0', talimatId), {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadTalimatlar();
+        } else {
+            alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+        }
+    })
+    .catch(error => {
+        console.error('Hata:', error);
+        alert('Ölçü aleti eklenirken hata oluştu.');
+    });
+}
+
+function deleteFikstur(talimatId, fiksturId) {
+    if (!confirm('Bu fikstürü silmek istediğinizden emin misiniz?')) return;
+    
+    fetch(`{% url 'stokapp:recete_talimat_fikstur_sil' recete.pk 0 0 %}`.replace('0', talimatId).replace('0', fiksturId), {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadTalimatlar();
+        } else {
+            alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+        }
+    })
+    .catch(error => {
+        console.error('Hata:', error);
+        alert('Fikstür silinirken hata oluştu.');
+    });
+}
+
+function deleteEkipman(talimatId, ekipmanId) {
+    if (!confirm('Bu ekipmanı silmek istediğinizden emin misiniz?')) return;
+    
+    fetch(`{% url 'stokapp:recete_talimat_ekipman_sil' recete.pk 0 0 %}`.replace('0', talimatId).replace('0', ekipmanId), {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadTalimatlar();
+        } else {
+            alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+        }
+    })
+    .catch(error => {
+        console.error('Hata:', error);
+        alert('Ekipman silinirken hata oluştu.');
+    });
+}
+
+function showProgramForm(talimatId) {
+    const programAdi = prompt('Program adı:');
+    if (!programAdi) return;
+    
+    const aciklama = prompt('Açıklama (opsiyonel):');
+    
+    const formData = new FormData();
+    formData.append('program_adi', programAdi);
+    if (aciklama) formData.append('aciklama', aciklama);
+    
+    fetch(`{% url 'stokapp:recete_talimat_program_ekle' recete.pk 0 %}`.replace('0', talimatId), {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadTalimatlar();
+        } else {
+            alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+        }
+    })
+    .catch(error => {
+        console.error('Hata:', error);
+        alert('Program eklenirken hata oluştu.');
+    });
+}
+
+function deleteProgram(talimatId, programId) {
+    if (!confirm('Bu programı silmek istediğinizden emin misiniz?')) return;
+    
+    fetch(`{% url 'stokapp:recete_talimat_program_sil' recete.pk 0 0 %}`.replace('0', talimatId).replace('0', programId), {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadTalimatlar();
+        } else {
+            alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+        }
+    })
+    .catch(error => {
+        console.error('Hata:', error);
+        alert('Program silinirken hata oluştu.');
+    });
+}
+
+function editTalimat(talimatId) {
+    const talimatItem = document.querySelector(`[data-talimat-id="${talimatId}"]`);
+    if (!talimatItem) return;
+    
+    const aciklamaElement = talimatItem.querySelector('span[style*="color: #111827"]');
+    const currentAciklama = aciklamaElement ? aciklamaElement.textContent.trim() : '';
+    
+    const newAciklama = prompt('Talimat açıklamasını düzenleyin:', currentAciklama);
+    if (newAciklama === null || newAciklama === currentAciklama) return;
+    
+    const formData = new FormData();
+    formData.append('aciklama', newAciklama);
+    
+    fetch(`{% url 'stokapp:recete_talimat_duzenle' recete.pk 0 %}`.replace('0', talimatId), {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadTalimatlar();
+        } else {
+            alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+        }
+    })
+    .catch(error => {
+        console.error('Hata:', error);
+        alert('Talimat düzenlenirken hata oluştu.');
+    });
+}
+
+function showAciklamaForm(talimatId, aciklamaId = null, aciklamaData = null) {
+    const container = document.getElementById(`ek-aciklamalar-${talimatId}`);
+    if (!container) return;
+    
+    // Bölümü göster
+    container.style.display = 'block';
+    
+    // Form zaten varsa kaldır ve yeniden oluştur
+    const existingForm = container.querySelector('.aciklama-form');
+    if (existingForm) {
+        existingForm.remove();
+    }
+    
+    // Form değerlerini belirle
+    const aciklamaValue = aciklamaData ? (aciklamaData.aciklama || '') : '';
+    
+    // Form oluştur
+    const formHTML = `
+        <div class="aciklama-form" style="background: #f9fafb; padding: 15px; border-radius: 6px; margin-top: 10px;">
+            <div style="margin-bottom: 10px;">
+                <textarea id="aciklama-textarea-${talimatId}" 
+                          placeholder="Açıklama giriniz..." 
+                          rows="4"
+                          style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px; font-family: inherit; resize: vertical; min-height: 100px;">${aciklamaValue}</textarea>
+            </div>
+            <div style="display: flex; gap: 5px;">
+                <button onclick="saveAciklama(${talimatId}${aciklamaId ? ', ' + aciklamaId : ''})" style="padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Kaydet</button>
+                <button onclick="hideAciklamaForm(${talimatId})" style="padding: 8px 16px; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">İptal</button>
+            </div>
+        </div>
+    `;
+    
+    container.insertAdjacentHTML('beforeend', formHTML);
+    
+    // Textarea'ya focus ver
+    const textarea = document.getElementById(`aciklama-textarea-${talimatId}`);
+    if (textarea) {
+        textarea.focus();
+    }
+}
+
+function hideAciklamaForm(talimatId) {
+    const container = document.getElementById(`ek-aciklamalar-${talimatId}`);
+    if (container) {
+        const form = container.querySelector('.aciklama-form');
+        if (form) form.remove();
+    }
+}
+
+function saveAciklama(talimatId, aciklamaId = null) {
+    const textarea = document.getElementById(`aciklama-textarea-${talimatId}`);
+    if (!textarea) {
+        console.error('Textarea bulunamadı');
+        return;
+    }
+    
+    const aciklama = textarea.value.trim();
+    if (!aciklama) {
+        alert('Lütfen bir açıklama girin.');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('aciklama', aciklama);
+    
+    const url = aciklamaId 
+        ? `{% url 'stokapp:recete_talimat_aciklama_duzenle' recete.pk 0 0 %}`.replace('0', talimatId).replace('0', aciklamaId)
+        : `{% url 'stokapp:recete_talimat_aciklama_ekle' recete.pk 0 %}`.replace('0', talimatId);
+    
+    fetch(url, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadTalimatlar();
+        } else {
+            alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+        }
+    })
+    .catch(error => {
+        console.error('Hata:', error);
+        alert('Açıklama kaydedilirken hata oluştu.');
+    });
+}
+
+function editAciklama(talimatId, aciklamaId) {
+    // Mevcut açıklama verilerini al
+    fetch(`{% url 'stokapp:recete_talimat_listesi' recete.pk %}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const talimat = data.talimatlar.find(t => t.id === talimatId);
+                if (talimat && talimat.ek_aciklamalar) {
+                    const aciklama = talimat.ek_aciklamalar.find(a => a.id === aciklamaId);
+                    if (aciklama) {
+                        showAciklamaForm(talimatId, aciklamaId, aciklama);
+                    } else {
+                        alert('Açıklama bulunamadı.');
+                    }
+                } else {
+                    alert('Talimat bulunamadı.');
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Hata:', error);
+            alert('Açıklama verileri yüklenirken hata oluştu.');
+        });
+}
+
+function deleteAciklama(talimatId, aciklamaId) {
+    if (!confirm('Bu açıklamayı silmek istediğinizden emin misiniz?')) return;
+    
+    fetch(`{% url 'stokapp:recete_talimat_aciklama_sil' recete.pk 0 0 %}`.replace('0', talimatId).replace('0', aciklamaId), {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadTalimatlar();
+        } else {
+            alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+        }
+    })
+    .catch(error => {
+        console.error('Hata:', error);
+        alert('Açıklama silinirken hata oluştu.');
+    });
+}
+
+function showKurulumDosyasiForm(talimatId) {
+    const container = document.getElementById(`kurulum-dosyalari-${talimatId}`);
+    if (!container) return;
+    
+    container.style.display = 'block';
+    
+    // Form zaten varsa kaldır ve yeniden oluştur
+    const existingForm = container.querySelector('.kurulum-dosyasi-form');
+    if (existingForm) {
+        existingForm.remove();
+    }
+    
+    // Önce kurulum dosyalarını yükle
+    fetch(`{% url 'stokapp:recete_talimat_kurulum_dosyalari_listesi' recete.pk %}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const optionsHTML = data.kurulum_dosyalari.map(kd => 
+                    `<option value="${kd.id}">${kd.urun_parcasi} - ${kd.istasyon_adi || 'İstasyon yok'} - v${kd.versiyon}</option>`
+                ).join('');
+                
+                const formHTML = `
+                    <div class="kurulum-dosyasi-form" style="background: #f9fafb; padding: 15px; border-radius: 6px; margin-top: 10px;">
+                        <div style="margin-bottom: 10px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #374151;">Kurulum Dosyası Seç:</label>
+                            <select id="kurulum-dosyasi-select-${talimatId}" style="width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px;">
+                                <option value="">-- Seçiniz --</option>
+                                ${optionsHTML}
+                            </select>
+                        </div>
+                        <div style="display: flex; gap: 5px;">
+                            <button onclick="saveKurulumDosyasi(${talimatId})" style="padding: 8px 16px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">Kaydet</button>
+                            <button onclick="hideKurulumDosyasiForm(${talimatId})" style="padding: 8px 16px; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">İptal</button>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', formHTML);
+            } else {
+                alert('Kurulum dosyaları yüklenirken hata oluştu: ' + (data.error || 'Bilinmeyen hata'));
+            }
+        })
+        .catch(error => {
+            console.error('Hata:', error);
+            alert('Kurulum dosyaları yüklenirken hata oluştu.');
+        });
+}
+
+function hideKurulumDosyasiForm(talimatId) {
+    const container = document.getElementById(`kurulum-dosyalari-${talimatId}`);
+    if (container) {
+        const form = container.querySelector('.kurulum-dosyasi-form');
+        if (form) form.remove();
+    }
+}
+
+function saveKurulumDosyasi(talimatId) {
+    const selectEl = document.getElementById(`kurulum-dosyasi-select-${talimatId}`);
+    if (!selectEl) {
+        console.error('Kurulum dosyası select elementi bulunamadı');
+        return;
+    }
+    
+    const kurulumDosyasiId = selectEl.value;
+    if (!kurulumDosyasiId) {
+        alert('Lütfen bir kurulum dosyası seçin.');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('kurulum_dosyasi_id', kurulumDosyasiId);
+    
+    fetch(`{% url 'stokapp:recete_talimat_kurulum_dosyasi_ekle' recete.pk 0 %}`.replace('0', talimatId), {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+        },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadTalimatlar();
+        } else {
+            alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+        }
+    })
+    .catch(error => {
+        console.error('Hata:', error);
+        alert('Kurulum dosyası kaydedilirken hata oluştu.');
+    });
+}
+
+function deleteKurulumDosyasi(talimatId, kurulumDosyasiId) {
+    if (!confirm('Bu kurulum dosyasını silmek istediğinizden emin misiniz?')) return;
+    
+    fetch(`{% url 'stokapp:recete_talimat_kurulum_dosyasi_sil' recete.pk 0 0 %}`.replace('0', talimatId).replace('0', kurulumDosyasiId), {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadTalimatlar();
+        } else {
+            alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+        }
+    })
+    .catch(error => {
+        console.error('Hata:', error);
+        alert('Kurulum dosyası silinirken hata oluştu.');
+    });
+}
+
+function deleteTalimat(talimatId) {
+    if (!confirm('Bu talimatı silmek istediğinizden emin misiniz? Tüm ölçüler, dosyalar, ekipmanlar ve programlar da silinecektir.')) return;
+    
+    fetch(`{% url 'stokapp:recete_talimat_sil' recete.pk 0 %}`.replace('0', talimatId), {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            loadTalimatlar();
+        } else {
+            alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+        }
+    })
+    .catch(error => {
+        console.error('Hata:', error);
+        alert('Talimat silinirken hata oluştu.');
+    });
+}
+</script>
+<script src="{% static 'stokapp/js/recete_operasyon_agaci.js' %}"></script>
+<script src="{% static 'stokapp/js/recete_dis_operasyon.js' %}?v=3"></script>
+{% endblock %}
+

@@ -1,0 +1,45 @@
+<section class="rapor-card">
+  <h3 class="rapor-section-title">Filtreler</h3>
+  <form id="report-filter-form" class="rapor-filter-grid">
+    <label>Tarih Başlangıç
+      <input type="date" name="date_start">
+    </label>
+    <label>Tarih Bitiş
+      <input type="date" name="date_end">
+    </label>
+    <label>Personel
+      <select name="personel">
+        <option value="">Tümü</option>
+        {% for personel in personeller %}
+          <option value="{{ personel.id }}">{{ personel.ad }} {{ personel.soyad }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>İş Emri No
+      <input type="text" name="emir_no" placeholder="Örn: UEMR-2026-001">
+    </label>
+    <label>Ürün Kodu
+      <input type="text" name="urun_kodu" placeholder="Ürün kodu">
+    </label>
+    <label>Ürün Adı
+      <input type="text" name="urun_adi" placeholder="Ürün adı">
+    </label>
+    <label>Operasyon
+      <input type="text" name="operasyon" placeholder="Operasyon adı">
+    </label>
+    <label>Durum
+      <select name="durum">
+        <option value="">Tümü</option>
+        {% for durum_kod, durum_ad in durumlar %}
+          <option value="{{ durum_kod }}">{{ durum_ad }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <div class="rapor-filter-actions">
+      <button type="submit" class="btn btn-primary">Filtrele</button>
+      <button type="button" id="report-clear-btn" class="btn btn-secondary">Temizle</button>
+      <a href="{% url 'stokapp:uretim_raporlari_export_excel' %}" id="report-export-excel-btn" class="btn btn-secondary">📊 Excel</a>
+      <a href="{% url 'stokapp:uretim_raporlari_export_pdf' %}" id="report-export-pdf-btn" class="btn btn-secondary">📄 PDF</a>
+    </div>
+  </form>
+</section>

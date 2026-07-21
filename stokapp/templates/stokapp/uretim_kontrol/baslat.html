@@ -1,0 +1,120 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Kontrol Başlat{% endblock %}
+{% block content %}
+{% include "stokapp/uretim_kontrol/_uk_form_shell.html" %}
+<div class="card uk-page">
+  <p class="uk-breadcrumb">
+    {% if locked_plan %}
+    <a href="{% url 'stokapp:uretim_kontrol_urun' locked_plan.product_id %}">← {{ locked_plan.product.stok_kodu }}</a>
+    {% else %}
+    <a href="{% url 'stokapp:uretim_kontrol_ana' %}">← Üretim Kontrol</a>
+    {% endif %}
+  </p>
+  <div class="uk-page-header">
+    <h2>Kontrol Başlat</h2>
+    <p class="uk-subtitle">Ölçüm oturumunu başlatın; sipariş veya iş emrine bağlayabilir veya bağımsız kontrol seçebilirsiniz.</p>
+  </div>
+
+  {% if locked_plan %}
+  <div class="uk-plan-summary">
+    <dl>
+      <div>
+        <dt>Ürün</dt>
+        <dd>{{ locked_plan.product.stok_kodu }} — {{ locked_plan.product.ad }}</dd>
+      </div>
+      <div>
+        <dt>Bileşen</dt>
+        <dd>{{ locked_plan.sub_part.stok_kodu }} — {{ locked_plan.sub_part.ad }}</dd>
+      </div>
+      <div>
+        <dt>Şablon</dt>
+        <dd>Rev. <strong>{{ locked_plan.revision_no }}</strong> · {{ locked_plan.steps.count }} adım</dd>
+      </div>
+    </dl>
+  </div>
+  {% endif %}
+
+  <form method="post" id="baslatForm">
+    {% csrf_token %}
+    {% if locked_plan %}
+    {{ form.control_plan }}
+
+    <section class="uk-section">
+      <div class="uk-section-head">Bağlantı</div>
+      <div class="uk-section-body">
+        <div class="uk-order-row">
+          <div class="uk-field" id="orderFieldWrap">
+            <label for="id_order">Sipariş</label>
+            {{ form.order }}
+            <p class="helptext">Ana ürün veya bileşen içeren siparişler listelenir.</p>
+          </div>
+          <label class="uk-check-row" style="margin-bottom:0;min-width:200px;">
+            {{ form.bagimsiz_kontrol }}
+            <span>
+              <span class="uk-check-label">{{ form.bagimsiz_kontrol.label }}</span>
+              <span class="uk-check-hint">{{ form.bagimsiz_kontrol.help_text }}</span>
+            </span>
+          </label>
+        </div>
+        <div class="uk-field" style="margin-top:16px;">
+          <label for="id_work_order">İş emri</label>
+          {{ form.work_order }}
+          <p class="helptext">Bu ürün için açılmış üretim emirleri (iptal hariç).</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="uk-section">
+      <div class="uk-section-head">Kontrol bilgileri</div>
+      <div class="uk-section-body uk-grid-2">
+        <div class="uk-field">{{ form.inspector.label_tag }}{{ form.inspector }}</div>
+        <div class="uk-field">{{ form.control_date.label_tag }}{{ form.control_date }}</div>
+        <div class="uk-field">{{ form.lot_no.label_tag }}{{ form.lot_no }}</div>
+        <div class="uk-field">{{ form.quantity.label_tag }}{{ form.quantity }}</div>
+        <div class="uk-field uk-field-full">{{ form.general_note.label_tag }}{{ form.general_note }}</div>
+      </div>
+    </section>
+    {% else %}
+    <section class="uk-section">
+      <div class="uk-section-body">
+        {{ form.as_p }}
+      </div>
+    </section>
+    {% endif %}
+
+    <div class="uk-form-actions">
+      <button type="submit" class="btn btn-primary">Kontrole Başla</button>
+      {% if locked_plan %}
+      <a href="{% url 'stokapp:uretim_kontrol_urun' locked_plan.product_id %}" class="btn btn-secondary">İptal</a>
+      {% else %}
+      <a href="{% url 'stokapp:uretim_kontrol_ana' %}" class="btn btn-secondary">İptal</a>
+      {% endif %}
+    </div>
+  </form>
+</div>
+
+{% if locked_plan %}
+<script>
+(function() {
+  const cb = document.getElementById('id_bagimsiz_kontrol');
+  const orderSelect = document.getElementById('id_order');
+  const orderWrap = document.getElementById('orderFieldWrap');
+  if (!cb || !orderSelect) return;
+
+  function syncOrderField() {
+    const off = cb.checked;
+    orderSelect.disabled = off;
+    if (off) {
+      orderSelect.value = '';
+      orderWrap.classList.add('uk-field-disabled');
+    } else {
+      orderWrap.classList.remove('uk-field-disabled');
+    }
+  }
+
+  cb.addEventListener('change', syncOrderField);
+  syncOrderField();
+})();
+</script>
+{% endif %}
+{% endblock %}

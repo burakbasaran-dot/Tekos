@@ -1,0 +1,249 @@
+{% extends "stokapp/base.html" %}
+{% load custom_filters %}
+{% block title %}Üretim Malzemesi Planla{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+        <div>
+            <h2 style="margin: 0;">📦 Üretim Malzemesi Planla</h2>
+            <p style="margin: 4px 0 0; font-size: 12px; color: #94a3b8;">Son güncelleme: {{ son_guncelleme|date:"d.m.Y H:i:s" }}</p>
+        </div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <a href="{{ pdf_url }}" class="btn btn-secondary" style="padding: 8px 16px;" target="_blank" rel="noopener">
+                📄 PDF Çıktı Al
+            </a>
+            <a href="{% url 'stokapp:uretim_malzemesi_planla' %}?yenile=1" class="btn btn-secondary" style="padding: 8px 16px;">
+                🔄 Listeyi Yenile
+            </a>
+            <button id="satinalmaOlusturBtn" class="btn btn-primary" style="padding: 8px 16px; display: none;" onclick="satinalmaOlustur()">
+                ➕ Satınalma Siparişi Oluştur
+            </button>
+            <button id="teklifTalebiOlusturBtn" class="btn btn-primary" style="padding: 8px 16px; display: none; background: #22c55e;" onclick="teklifTalebiOlustur()">
+                📨 Tedarikçi Teklif Talebi Oluştur
+            </button>
+        </div>
+    </div>
+    
+    <p style="color: #6b7280; margin-bottom: 16px;">
+        Açık üretim emirlerindeki reçete malzemeleri listelenir (çok seviyeli reçeteler yaprak malzemelere patlatılır).
+        <strong>Toplam ihtiyaç</strong> = reçete miktarı × emir miktarı.
+        Emir başlatıldıysa yapılmış stok düşümü <strong>Düşülen</strong> kolonunda görünür;
+        satınalma önerisi <strong>Kalan ihtiyaç</strong> üzerinden hesaplanır.
+    </p>
+
+    {% if malzemeler %}
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:14px; padding:12px 14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px;">
+        <label style="display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-size:14px; font-weight:600; color:#334155; user-select:none;">
+            <input type="checkbox" id="teklifIstenenleriGizle" style="width:16px; height:16px; cursor:pointer;">
+            Teklif İstenenleri gizle
+        </label>
+        <span id="malzemeFiltreOzet" style="font-size:12px; color:#64748b;"></span>
+    </div>
+    <table style="width: 100%; border-collapse: collapse; background: white;" id="malzemePlanTable">
+        <thead>
+            <tr style="background-color: #f9fafb; border-bottom: 2px solid #e5e7eb;">
+                <th style="padding: 12px; text-align: left; font-weight: 600; width: 50px;">
+                    <input type="checkbox" id="selectAllMalzeme" onchange="toggleAllMalzemeler(this.checked)">
+                </th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Stok Kodu</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Ürün Adı</th>
+                <th style="padding: 12px; text-align: right; font-weight: 600;" title="Reçete × emir miktarı">Toplam ihtiyaç</th>
+                <th style="padding: 12px; text-align: right; font-weight: 600;" title="Başlatmada düşülen URETİM çıkışı">Düşülen</th>
+                <th style="padding: 12px; text-align: right; font-weight: 600;" title="Toplam − düşülen">Kalan ihtiyaç</th>
+                <th style="padding: 12px; text-align: right; font-weight: 600;">Mevcut Stok</th>
+                <th style="padding: 12px; text-align: right; font-weight: 600;">Kalan Stok</th>
+                <th style="padding: 12px; text-align: right; font-weight: 600;">Min Stok</th>
+                <th style="padding: 12px; text-align: right; font-weight: 600;">Max Stok</th>
+                <th style="padding: 12px; text-align: right; font-weight: 600;">Önerilen Satınalma</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Birim</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Üretim Emirleri</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for malzeme in malzemeler %}
+            <tr class="malzeme-row" style="border-bottom: 1px solid #e5e7eb;"
+                data-teklif-istendi="{% if malzeme.rfq_acik_nolar %}1{% else %}0{% endif %}">
+                <td style="padding: 12px;">
+                    <input type="checkbox" class="malzeme-checkbox" 
+                           value="{{ malzeme.stok_item.id }}" 
+                           data-stok-kodu="{{ malzeme.stok_item.stok_kodu }}"
+                           data-stok-adi="{{ malzeme.stok_item.ad }}"
+                           data-eksik-miktar="{{ malzeme.eksik_miktar }}"
+                           data-birim="{{ malzeme.birim }}"
+                           onchange="updateSatinalmaButton()">
+                </td>
+                <td style="padding: 12px;">
+                    <a href="{% url 'stokapp:stok_ekle' malzeme.stok_item.id %}"
+                       style="color:#2563eb; text-decoration:none; font-weight:600;">
+                        {{ malzeme.stok_item.stok_kodu }}
+                    </a>
+                </td>
+                <td style="padding: 12px;">
+                    <a href="{% url 'stokapp:stok_ekle' malzeme.stok_item.id %}"
+                       style="vertical-align: middle; color:#2563eb; text-decoration:none; font-weight:600;">
+                        {{ malzeme.stok_item.ad }}
+                    </a>
+                    {% if malzeme.rfq_acik_nolar %}
+                    <span title="Bu malzeme için açık teklif talebi var: {{ malzeme.rfq_acik_nolar|join:', ' }}"
+                          style="display: inline-block; margin-left: 8px; padding: 2px 8px; font-size: 11px; font-weight: 600; color: #92400e; background: #fef3c7; border-radius: 999px; vertical-align: middle; white-space: nowrap;">
+                        Teklif istendi
+                    </span>
+                    {% endif %}
+                </td>
+                <td style="padding: 12px; text-align: right;">{{ malzeme.toplam_ihtiyac|default:malzeme.kullanilacak_miktar|format_miktar }}</td>
+                <td style="padding: 12px; text-align: right; color: #64748b;">{{ malzeme.dusulen_miktar|default:0|format_miktar }}</td>
+                <td style="padding: 12px; text-align: right; font-weight: 600; color: #b45309;">{{ malzeme.kullanilacak_miktar|format_miktar }}</td>
+                <td style="padding: 12px; text-align: right;">{{ malzeme.mevcut_miktar|format_miktar }}</td>
+                <td style="padding: 12px; text-align: right;">{{ malzeme.kalan_stok|format_miktar }}</td>
+                <td style="padding: 12px; text-align: right;">{{ malzeme.min_stok|format_miktar }}</td>
+                <td style="padding: 12px; text-align: right;">
+                    {% if malzeme.max_stok is not None %}
+                        {{ malzeme.max_stok|format_miktar }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td style="padding: 12px; text-align: right; color: #dc2626; font-weight: 600;">
+                    {{ malzeme.eksik_miktar|format_miktar }}
+                </td>
+                <td style="padding: 12px;">{{ malzeme.birim }}</td>
+                <td style="padding: 12px; font-size: 12px; color: #6b7280;">
+                    {% if malzeme.emir_link_list %}
+                        {% for emir in malzeme.emir_link_list %}
+                            <a href="{% url 'stokapp:uretim_emri_detay' emir.id %}" style="color:#2563eb; text-decoration:none; font-weight:600;">{{ emir.emir_no }}</a>{% if emir.miktar %} <span style="color:#94a3b8;">(×{{ emir.miktar|format_miktar }})</span>{% endif %}{% if not forloop.last %}, {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        {{ malzeme.emir_no_list|join:", " }}
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="padding: 40px; text-align: center; color: #6b7280;">
+        <p>Kalan stok minimum stok altına düşen malzeme bulunmamaktadır.</p>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+const MALZEME_FILTRE_KEY = 'uretimMalzemeTeklifGizle';
+
+function visibleMalzemeRows() {
+    return Array.from(document.querySelectorAll('.malzeme-row')).filter(row => row.style.display !== 'none');
+}
+
+function applyTeklifFiltre() {
+    const gizle = document.getElementById('teklifIstenenleriGizle');
+    const hide = !!(gizle && gizle.checked);
+    let gizli = 0;
+    let gorunen = 0;
+    document.querySelectorAll('.malzeme-row').forEach(row => {
+        const teklif = row.getAttribute('data-teklif-istendi') === '1';
+        if (hide && teklif) {
+            row.style.display = 'none';
+            const cb = row.querySelector('.malzeme-checkbox');
+            if (cb) cb.checked = false;
+            gizli += 1;
+        } else {
+            row.style.display = '';
+            gorunen += 1;
+        }
+    });
+    const ozet = document.getElementById('malzemeFiltreOzet');
+    if (ozet) {
+        ozet.textContent = hide
+            ? (gizli + ' teklif istenen satır gizli · ' + gorunen + ' satır görünüyor')
+            : (gorunen + ' satır');
+    }
+    const selectAll = document.getElementById('selectAllMalzeme');
+    if (selectAll) selectAll.checked = false;
+    updateSatinalmaButton();
+    try { localStorage.setItem(MALZEME_FILTRE_KEY, hide ? '1' : '0'); } catch (e) {}
+}
+
+function toggleAllMalzemeler(checked) {
+    visibleMalzemeRows().forEach(row => {
+        const checkbox = row.querySelector('.malzeme-checkbox');
+        if (checkbox) checkbox.checked = checked;
+    });
+    updateSatinalmaButton();
+}
+
+function updateSatinalmaButton() {
+    const checkedBoxes = visibleMalzemeRows()
+        .map(row => row.querySelector('.malzeme-checkbox'))
+        .filter(cb => cb && cb.checked);
+    const satinalmaBtn = document.getElementById('satinalmaOlusturBtn');
+    const teklifBtn = document.getElementById('teklifTalebiOlusturBtn');
+    
+    if (checkedBoxes.length > 0) {
+        satinalmaBtn.style.display = 'inline-block';
+        teklifBtn.style.display = 'inline-block';
+    } else {
+        satinalmaBtn.style.display = 'none';
+        teklifBtn.style.display = 'none';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const gizle = document.getElementById('teklifIstenenleriGizle');
+    if (!gizle) return;
+    try {
+        if (localStorage.getItem(MALZEME_FILTRE_KEY) === '1') gizle.checked = true;
+    } catch (e) {}
+    gizle.addEventListener('change', applyTeklifFiltre);
+    applyTeklifFiltre();
+});
+
+function satinalmaOlustur() {
+    const checkedBoxes = visibleMalzemeRows()
+        .map(row => row.querySelector('.malzeme-checkbox'))
+        .filter(cb => cb && cb.checked);
+    
+    if (checkedBoxes.length === 0) {
+        alert('Lütfen en az bir malzeme seçin.');
+        return;
+    }
+    
+    // Seçili malzemeleri URL parametreleri olarak hazırla
+    const params = new URLSearchParams();
+    checkedBoxes.forEach((checkbox, index) => {
+        params.append(`malzeme_${index}`, checkbox.value);
+        params.append(`miktar_${index}`, checkbox.getAttribute('data-eksik-miktar'));
+    });
+    
+    // Satınalma ekle sayfasına yönlendir
+    window.location.href = `{% url 'stokapp:satinalma_ekle' %}?${params.toString()}&planlama=1`;
+}
+
+function teklifTalebiOlustur() {
+    const checkedBoxes = visibleMalzemeRows()
+        .map(row => row.querySelector('.malzeme-checkbox'))
+        .filter(cb => cb && cb.checked);
+    
+    if (checkedBoxes.length === 0) {
+        alert('Lütfen en az bir malzeme seçin.');
+        return;
+    }
+
+    const params = new URLSearchParams();
+    checkedBoxes.forEach((checkbox, index) => {
+        params.append(`malzeme_${index}`, checkbox.value);
+        params.append(`miktar_${index}`, checkbox.getAttribute('data-eksik-miktar'));
+    });
+
+    window.location.href = `{% url 'stokapp:rfq_olustur' %}?${params.toString()}&planlama=1`;
+}
+
+// Tarayıcı geri/önbellekten dönünce eski liste kalmasın
+window.addEventListener('pageshow', function(event) {
+    if (event.persisted) {
+        window.location.reload();
+    }
+});
+</script>
+
+{% endblock %}
+

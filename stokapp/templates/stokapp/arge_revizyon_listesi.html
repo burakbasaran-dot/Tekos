@@ -1,0 +1,30 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Ar-Ge Revizyonlar{% endblock %}
+{% block content %}
+<div class="card">
+  <h2 style="margin-top:0;">📐 Ar-Ge — Revizyonlar</h2>
+  <p style="color:#6b7280;font-size:14px;">Tüm projelerdeki revizyonlar. Projeye göre süzmek için listeden projeyi açıp “Revizyonlar” sekmesini kullanın veya URL’ye <code>?proje=ID</code> ekleyin.</p>
+  <form method="get" style="margin-bottom:14px;">
+    <label>Proje ID: <input type="number" name="proje" value="{{ proje_id|default:'' }}" style="padding:6px 10px;border-radius:6px;border:1px solid #ddd;"></label>
+    <button type="submit" class="btn btn-secondary">Süz</button>
+    <a href="{% url 'stokapp:arge_revizyon_listesi' %}" class="btn btn-secondary">Temizle</a>
+  </form>
+  <table>
+    <thead><tr><th>Proje</th><th>No</th><th>Tarih</th><th>Neden</th><th>Karar</th><th></th></tr></thead>
+    <tbody>
+      {% for r in revizyonlar %}
+      <tr>
+        <td><a href="{% url 'stokapp:arge_proje_detay' r.proje.pk %}?tab=revizyonlar">{{ r.proje.proje_kodu }}</a></td>
+        <td><strong>{{ r.revizyon_no }}</strong></td>
+        <td>{{ r.tarih }}</td>
+        <td>{{ r.revizyon_nedeni|truncatechars:50 }}</td>
+        <td>{{ r.get_karar_display }}</td>
+        <td><a href="{% url 'stokapp:arge_proje_detay' r.proje.pk %}" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;">Proje</a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" style="text-align:center;color:#6b7280;">Kayıt yok.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

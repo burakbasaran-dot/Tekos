@@ -1,0 +1,157 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Stok Sil{% endblock %}
+{% block content %}
+<style>
+  .delete-card {
+    max-width: 800px;
+    margin: 30px auto;
+  }
+  
+  .warning-box {
+    background: #fef3c7;
+    border-left: 4px solid #f59e0b;
+    border-radius: 8px;
+    padding: 16px;
+    margin: 20px 0;
+  }
+  
+  .error-box {
+    background: #fee2e2;
+    border-left: 4px solid #dc2626;
+    border-radius: 8px;
+    padding: 16px;
+    margin: 20px 0;
+  }
+  
+  .info-box {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 20px 0;
+  }
+  
+  .engel-list {
+    margin-top: 15px;
+  }
+  
+  .engel-item {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+  
+  .engel-item strong {
+    color: #dc2626;
+    display: block;
+    margin-bottom: 8px;
+  }
+  
+  .kayit-list {
+    list-style: none;
+    padding: 0;
+    margin: 8px 0 0 0;
+  }
+  
+  .kayit-list li {
+    padding: 4px 0;
+    color: #6b7280;
+    font-size: 14px;
+  }
+</style>
+
+<div class="card delete-card">
+    <h2 style="margin-top: 0;">⚠️ Stok Sil</h2>
+    
+    {% if engeller %}
+    <div class="error-box">
+        <strong style="color: #dc2626; display: block; margin-bottom: 10px;">
+            ⚠️ Bu stok silinemiyor!
+        </strong>
+        <p style="margin: 0;">
+            Bu stok aşağıdaki kayıtlarda kullanıldığı için silinemez. 
+            Lütfen önce bu kayıtları silin veya düzenleyin.
+        </p>
+    </div>
+    
+    <div class="engel-list">
+        {% for engel in engeller %}
+        <div class="engel-item">
+            <strong>{{ engel.tip }} ({{ engel.sayi }} kayıt)</strong>
+            {% if engel.kayitlar %}
+            <ul class="kayit-list">
+                {% for kayit in engel.kayitlar %}
+                <li>
+                    {% if engel.tip == 'Sipariş Kalemleri' %}
+                        • Sipariş: {{ kayit.siparis.siparis_no|default:kayit.siparis.pk }}
+                    {% elif engel.tip == 'Satın Alma Kalemleri' %}
+                        • Satın Alma: {{ kayit.satinalma.satinalma_no|default:kayit.satinalma.pk }}
+                    {% elif engel.tip == 'Reçete/Üretim Emri' %}
+                        • Reçete: {{ kayit.urun.stok_kodu }} - v{{ kayit.versiyon }}
+                    {% else %}
+                        • {{ kayit }}
+                    {% endif %}
+                </li>
+                {% endfor %}
+                {% if engel.sayi > engel.kayitlar|length %}
+                <li style="font-style: italic; color: #9ca3af;">
+                    ... ve daha fazla kayıt
+                </li>
+                {% endif %}
+            </ul>
+            {% endif %}
+            {% if engel.uretim_emirleri %}
+            <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #e5e7eb;">
+                <strong style="color: #6b7280; font-size: 13px;">Üretim Emirleri:</strong>
+                <ul class="kayit-list">
+                    {% for emir in engel.uretim_emirleri %}
+                    <li>• {{ emir.emir_no }} - {{ emir.recete.urun.stok_kodu }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    
+    <div style="text-align: center; margin-top: 30px;">
+        <a href="{% url 'stokapp:stok_listesi' %}" class="btn" style="background: #6c757d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+            ← Geri Dön
+        </a>
+    </div>
+    
+    {% else %}
+    
+    <p>Bu stoğu silmek istediğinizden emin misiniz?</p>
+    
+    <div class="info-box">
+        <p style="margin: 8px 0;"><strong>Stok Kodu:</strong> {{ stok.stok_kodu }}</p>
+        <p style="margin: 8px 0;"><strong>Ürün Adı:</strong> {{ stok.ad }}</p>
+        <p style="margin: 8px 0;"><strong>Kategori:</strong> {{ stok.kategori.ad|default:"-" }}</p>
+        <p style="margin: 8px 0;"><strong>Mevcut Miktar:</strong> {{ stok.mevcut_miktar|floatformat:2 }} {{ stok.birim }}</p>
+    </div>
+    
+    <div class="warning-box">
+        <strong>⚠️ Uyarı:</strong> Bu işlem geri alınamaz! Stok silindiğinde, 
+        bu stok ile ilişkili tüm hareket kayıtları da silinecektir.
+    </div>
+    
+    <form method="post" style="text-align: center; margin-top: 30px;">
+        {% csrf_token %}
+        <button type="submit" 
+                class="btn" 
+                style="background: #dc3545; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin-right: 10px;"
+                onclick="return confirm('Bu stoğu silmek istediğinizden emin misiniz? Bu işlem geri alınamaz!');">
+            🗑️ Evet, Sil
+        </button>
+        <a href="{% url 'stokapp:stok_listesi' %}" 
+           class="btn" 
+           style="background: #6c757d; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;">
+            ❌ İptal
+        </a>
+    </form>
+    
+    {% endif %}
+</div>
+{% endblock %}

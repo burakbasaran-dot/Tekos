@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Ölçü Aletleri Listesi</title>
+</head>
+<body>
+    <h1>Ölçü Aletleri Listesi</h1>
+    <p style="text-align: right; color: #6b7280; font-size: 10pt;">Oluşturulma Tarihi: {{ olusturma_tarihi|date:"d.m.Y" }}</p>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Cihaz ID</th>
+                <th>Seri No</th>
+                <th>Cihaz Tipi</th>
+                <th>Alet Türü</th>
+                <th>Marka</th>
+                <th>Model</th>
+                <th>Satın Alma Tarihi</th>
+                <th>Durum</th>
+                <th>Kritiklik Seviyesi</th>
+                <th>Departman</th>
+                <th>Kullanım Yeri</th>
+                <th>Ölçüm Aralığı</th>
+                <th>Kalibrasyon Periyodu</th>
+                <th>Son Kalibrasyon</th>
+                <th>Sonraki Kalibrasyon</th>
+                <th>Kalibrasyon Durumu</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for alet in aletler %}
+            <tr>
+                <td>{{ alet.device_id|default:"-" }}</td>
+                <td>{{ alet.seri_no }}</td>
+                <td>{{ alet.get_device_type_display|default:"-" }}</td>
+                <td>{{ alet.alet_turu.ad|default:"-" }}</td>
+                <td>{{ alet.marka }}</td>
+                <td>{{ alet.model|default:"-" }}</td>
+                <td>
+                    {% if alet.satın_alma_tarihi %}
+                        {{ alet.satın_alma_tarihi|date:"d.m.Y" }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td class="status-{{ alet.status }}">
+                    {{ alet.get_status_display }}
+                </td>
+                <td>{{ alet.get_kritiklik_seviyesi_display|default:"-" }}</td>
+                <td>{{ alet.department|default:"-" }}</td>
+                <td>{{ alet.kullanim_yeri|default:"-" }}</td>
+                <td>{{ alet.olcum_araligi|default:"-" }}</td>
+                <td>
+                    {% if alet.calibration_period_months %}
+                        {{ alet.calibration_period_months }} Ay
+                    {% else %}
+                        {{ alet.kalibrasyon_periyot_sayisi }} {{ alet.get_kalibrasyon_periyot_tipi_display }}
+                    {% endif %}
+                </td>
+                <td>
+                    {% if alet.last_calibration_date %}
+                        {{ alet.last_calibration_date|date:"d.m.Y" }}
+                    {% elif alet.son_kalibrasyon_tarihi %}
+                        {{ alet.son_kalibrasyon_tarihi|date:"d.m.Y" }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>
+                    {% if alet.next_calibration_date %}
+                        {{ alet.next_calibration_date|date:"d.m.Y" }}
+                    {% elif alet.sonraki_kalibrasyon_tarihi %}
+                        {{ alet.sonraki_kalibrasyon_tarihi|date:"d.m.Y" }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td class="kalibrasyon-{{ alet.kalibrasyon_durumu_calculated|lower }}">
+                    {% if alet.kalibrasyon_durumu_calculated == 'SAGLIKLI' %}Sağlıklı
+                    {% elif alet.kalibrasyon_durumu_calculated == 'YAKLASIYOR' %}Yaklaşıyor
+                    {% elif alet.kalibrasyon_durumu_calculated == 'ACIL' %}Acil
+                    {% elif alet.kalibrasyon_durumu_calculated == 'GECMIS' %}Süresi Geçmiş
+                    {% else %}Bilinmiyor
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="16" style="text-align: center; padding: 20px;">Kayıt bulunamadı.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #d1d5db; text-align: center; font-size: 9pt; color: #6b7280;">
+        <p>Toplam Kayıt: {{ aletler|length }}</p>
+    </div>
+</body>
+</html>

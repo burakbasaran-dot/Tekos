@@ -1,0 +1,32 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Mail alıcıları seç{% endblock %}
+{% block content %}
+<div class="card" style="max-width: 720px; margin: 0 auto;">
+    <h2 style="margin-top: 0;">📧 E-posta alıcıları</h2>
+    <p style="color: #6b7280; font-size: 14px;">
+        {% if kind == 'teklif' %}Teklif talep formu{% else %}Sipariş formu{% endif %} için gönderilecek kişileri seçin.
+        Birden fazla seçebilirsiniz; son adımda özeti görüp gönderebilirsiniz.
+    </p>
+
+    <form method="post" style="margin-top: 20px;">
+        {% csrf_token %}
+        <input type="hidden" name="kind" value="{{ kind }}">
+        <input type="hidden" name="ids" value="{{ ids_param }}">
+        {% if rfq_param %}<input type="hidden" name="rfq" value="{{ rfq_param }}">{% endif %}
+
+        <div style="border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+            {% for c in choices %}
+            <label style="display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-bottom: 1px solid #f3f4f6; cursor: pointer; margin: 0;">
+                <input type="checkbox" name="recipient_key" value="{{ c.key }}" style="margin-top: 4px;">
+                <span style="font-size: 14px; line-height: 1.45;">{{ c.label }}</span>
+            </label>
+            {% endfor %}
+        </div>
+
+        <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px; flex-wrap: wrap;">
+            <a href="{{ geri_url }}" class="btn btn-secondary">İptal</a>
+            <button type="submit" class="btn btn-primary" style="background: #10b981; border-color: #10b981;">Devam — özet ve onay</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

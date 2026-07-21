@@ -1,0 +1,154 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Takım Detay{% endblock %}
+
+{% block content %}
+<div class="detail-wrap">
+  <div class="head">
+    <div>
+      <h1 style="margin:0;">{{ tool.tool_code }}</h1>
+      <div>{{ tool.tool_type_label }} - {{ tool.diameter }} mm</div>
+    </div>
+    <a class="btn btn-secondary" href="{% url 'stokapp:takim_listesi' %}">Listeye Dön</a>
+  </div>
+
+  <section class="card summary">
+    <div class="item"><strong>Aktif Ömür:</strong> {% if active_life %}#{{ active_life.life_no }}{% else %}-{% endif %}</div>
+    <div class="item"><strong>Aktif Ömür Kesme:</strong> {% if active_life %}{{ active_life.cutting_mm }} mm{% else %}0 mm{% endif %}</div>
+    <div class="item"><strong>Toplam Kesme:</strong> {{ tool.total_cutting_mm }} mm</div>
+    <div class="item"><strong>Maks Ömür:</strong> {{ tool.max_cutting_mm }} mm</div>
+    <div class="item"><strong>Kullanım:</strong> {{ tool.usage_percent }}%</div>
+    <div class="item"><strong>Durum:</strong> {{ tool.get_status_display }}</div>
+    <div class="item"><strong>Son Kullanım:</strong> {{ son_kullanim|date:"d.m.Y H:i"|default:"-" }}</div>
+  </section>
+
+  <section class="card">
+    <h3>Takım Değişim Kaydı</h3>
+    <form method="post" class="change-form">
+      {% csrf_token %}
+      <label>Tarih <input type="datetime-local" name="change_date"></label>
+      <label>Neden
+        <select name="change_reason" required>
+          <option value="">Seçiniz</option>
+          {% for key, label in change_reason_choices %}
+            <option value="{{ key }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Değişimdeki mm <input type="number" step="0.001" min="0" name="cutting_mm_at_change" value="{{ tool.total_cutting_mm }}"></label>
+      <label>Not <input type="text" name="note"></label>
+      <button type="submit" class="btn btn-secondary">Değişim Kaydı Ekle</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h3>Kullanılan İşler</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Tarih</th>
+            <th>Ömür No</th>
+            <th>İş Emri</th>
+            <th>Görev</th>
+            <th>Malzeme</th>
+            <th>Kesme mm</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in usage_logs %}
+            <tr>
+              <td>{{ log.created_at|date:"d.m.Y H:i" }}</td>
+              <td>{% if log.life_cycle %}#{{ log.life_cycle.life_no }}{% else %}-{% endif %}</td>
+              <td>{{ log.work_order.emir_no }}</td>
+              <td>{{ log.task.ad }}</td>
+              <td>{{ log.material.name|default:"-" }}</td>
+              <td>{{ log.cutting_mm }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="6">Kullanım kaydı bulunamadı.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h3>Ömür Geçmişi</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Ömür No</th>
+            <th>Durum</th>
+            <th>Kesme mm</th>
+            <th>Başlangıç</th>
+            <th>Bitiş</th>
+            <th>Değişim Sebebi</th>
+            <th>Not</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for life in life_cycles %}
+            <tr>
+              <td>#{{ life.life_no }}</td>
+              <td>{{ life.get_status_display }}</td>
+              <td>{{ life.cutting_mm }}</td>
+              <td>{{ life.start_date|date:"d.m.Y H:i" }}</td>
+              <td>{{ life.end_date|date:"d.m.Y H:i"|default:"-" }}</td>
+              <td>{{ life.get_change_reason_display|default:"-" }}</td>
+              <td>{{ life.note|default:"-" }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="7">Ömür geçmişi kaydı bulunamadı.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h3>Değişim Geçmişi</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Tarih</th>
+            <th>Neden</th>
+            <th>mm</th>
+            <th>Not</th>
+            <th>Kullanıcı</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ch in changes %}
+            <tr>
+              <td>{{ ch.change_date|date:"d.m.Y H:i" }}</td>
+              <td>{{ ch.get_change_reason_display }}</td>
+              <td>{{ ch.cutting_mm_at_change }}</td>
+              <td>{{ ch.note|default:"-" }}</td>
+              <td>{{ ch.created_by.username|default:"-" }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="5">Değişim geçmişi yok.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<style>
+.detail-wrap { max-width: 1200px; margin:0 auto; }
+.head { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+.card { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:12px; margin-bottom:12px; }
+.summary { display:grid; grid-template-columns:repeat(5,minmax(120px,1fr)); gap:8px; }
+.change-form { display:grid; grid-template-columns:repeat(5,minmax(150px,1fr)); gap:8px; align-items:end; }
+.table-wrap { overflow:auto; }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+th, td { border:1px solid #e5e7eb; padding:7px; text-align:left; }
+th { background:#f3f4f6; color:#000; }
+@media (max-width: 900px) {
+  .summary, .change-form { grid-template-columns:1fr; }
+}
+</style>
+{% endblock %}

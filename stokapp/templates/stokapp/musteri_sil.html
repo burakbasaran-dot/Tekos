@@ -1,0 +1,45 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Müşteri Sil{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>👥 Müşteri Sil</h2>
+        <a href="{% url 'stokapp:musteri_listesi' %}" class="btn btn-secondary">← Geri</a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 15px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background: #fff3cd; color: #856404; border-left: 4px solid #ffc107;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <div style="max-width: 600px;">
+        <div style="padding: 20px; background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; margin-bottom: 20px;">
+            <p style="margin: 0; color: #991b1b; font-weight: 600;">
+                ⚠️ Bu işlem geri alınamaz!
+            </p>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+            <p style="font-size: 16px; margin-bottom: 10px;">
+                <strong>{{ musteri.ad }}</strong> adlı müşteriyi silmek istediğinizden emin misiniz?
+            </p>
+        </div>
+        
+        <form method="post">
+            {% csrf_token %}
+            <div style="display: flex; gap: 10px;">
+                <button type="submit" class="btn" style="background-color: #ef4444; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                    🗑️ Evet, Sil
+                </button>
+                <a href="{% url 'stokapp:musteri_listesi' %}" class="btn btn-secondary" style="padding: 10px 20px;">İptal</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

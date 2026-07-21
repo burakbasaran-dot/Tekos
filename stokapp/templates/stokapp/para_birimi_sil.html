@@ -1,0 +1,30 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Para Birimi Sil{% endblock %}
+{% block content %}
+<div class="card">
+    <h2>🗑️ Para Birimi Sil: {{ para_birimi.ad }} ({{ para_birimi.sembol }})</h2>
+    
+    <div style="padding: 20px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107; margin-bottom: 20px;">
+        <strong>⚠️ Uyarı:</strong> Bu para birimini silmek istediğinizden emin misiniz?
+        <ul style="margin-top: 10px; margin-bottom: 0;">
+            <li>Bu para birimi <strong>{{ stok_sayisi }} ürün</strong> tarafından kullanılıyor.</li>
+            {% if stok_sayisi > 0 %}
+            <li>Bu para birimini kullanan ürünler olduğu için para birimi silinemez. Önce ürünleri başka bir para birimine taşıyın.</li>
+            {% else %}
+            <li>Para birimi silindiğinde, bu para birimine ait tüm bilgiler kalıcı olarak silinecek.</li>
+            {% endif %}
+        </ul>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+            <a href="{% url 'stokapp:para_birimi_duzenle' para_birimi.pk %}" class="btn btn-secondary">İptal</a>
+            {% if stok_sayisi == 0 %}
+            <button type="submit" class="btn btn-secondary" style="background: #dc3545; color: white;">🗑️ Evet, Sil</button>
+            {% endif %}
+        </div>
+    </form>
+</div>
+{% endblock %}
+

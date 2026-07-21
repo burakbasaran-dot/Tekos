@@ -1,0 +1,409 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Üretim Emri Ekle{% endblock %}
+{% block content %}
+<style>
+.ue-form-wrap { max-width: 100%; }
+.ue-table-scroll { overflow-x: auto; overflow-y: visible; margin-bottom: 16px; }
+.ue-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    font-size: 13px;
+    min-width: 980px;
+    overflow: visible;
+}
+.ue-table th {
+    text-align: left;
+    padding: 10px 8px;
+    background: #f8fafc;
+    border-bottom: 2px solid #e2e8f0;
+    color: #334155;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.ue-table td {
+    padding: 10px 8px;
+    border-bottom: 1px solid #e5e7eb;
+    vertical-align: top;
+    overflow: visible;
+}
+.ue-table input[type="text"],
+.ue-table input[type="number"],
+.ue-table input[type="datetime-local"],
+.ue-table select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 13px;
+    box-sizing: border-box;
+    background: #fff;
+}
+.ue-table input:focus,
+.ue-table select:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59,130,246,.15);
+}
+.ue-urun-cell { position: relative; min-width: 260px; overflow: visible; }
+.ue-selected {
+    margin-top: 6px;
+    padding: 6px 8px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #1e40af;
+    display: none;
+}
+.ue-selected.is-visible { display: block; }
+.ue-results {
+    display: none;
+    position: fixed;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    max-height: 260px;
+    overflow-y: auto;
+    z-index: 10050;
+    box-shadow: 0 12px 28px rgba(15,23,42,.18);
+}
+.ue-result-item {
+    padding: 10px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #f1f5f9;
+}
+.ue-result-item:hover { background: #f8fafc; }
+.ue-row-actions { white-space: nowrap; }
+.ue-hint { font-size: 12px; color: #64748b; margin: 0 0 14px; }
+.ue-ops-warn {
+    display: none;
+    margin-top: 4px;
+    font-size: 11px;
+    color: #c2410c;
+}
+</style>
+
+<div class="card ue-form-wrap">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+        <h2 style="margin:0;">➕ Üretim Emri Ekle</h2>
+        <a href="{% url 'stokapp:uretim_emri_listesi' %}" class="btn btn-secondary">← Geri</a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 12px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background: #fff3cd; color: #856404; border-left: 4px solid #ffc107;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <p class="ue-hint">
+        Satır ekleyerek birden fazla ürün için üretim emri oluşturabilirsiniz.
+        Her satır için aktif reçete otomatik kullanılır.
+    </p>
+
+    <form method="post" id="uretimEmriForm">
+        {% csrf_token %}
+
+        <div class="ue-table-scroll">
+            <table class="ue-table" id="ueTable">
+                <thead>
+                    <tr>
+                        <th style="width:42px;">#</th>
+                        <th>Ürün</th>
+                        <th style="width:110px;">Miktar</th>
+                        <th style="width:150px;">Üretim tipi</th>
+                        <th style="width:190px;">Planlanan başlama</th>
+                        <th style="width:190px;">Planlanan bitiş</th>
+                        <th style="width:70px;"></th>
+                    </tr>
+                </thead>
+                <tbody id="ueTbody">
+                    {% for sat in satirlar %}
+                    <tr class="ue-row">
+                        <td class="ue-row-no">{{ forloop.counter }}</td>
+                        <td>
+                            <div class="ue-urun-cell">
+                                <input type="text" class="ue-urun-search" placeholder="Ürün kodu veya adı ara…"
+                                       autocomplete="off"
+                                       value="{% if sat.urun_kod %}{{ sat.urun_kod }} — {{ sat.urun_ad }}{% endif %}">
+                                <div class="ue-results"></div>
+                                <input type="hidden" name="urun" class="ue-urun-id" value="{{ sat.urun|default:'' }}">
+                                <input type="hidden" name="urun_kod" class="ue-urun-kod" value="{{ sat.urun_kod|default:'' }}">
+                                <input type="hidden" name="urun_ad" class="ue-urun-ad" value="{{ sat.urun_ad|default:'' }}">
+                                <div class="ue-selected{% if sat.urun %} is-visible{% endif %}">
+                                    <strong class="ue-selected-text">{% if sat.urun_kod %}{{ sat.urun_kod }} — {{ sat.urun_ad }}{% endif %}</strong>
+                                </div>
+                                <div class="ue-ops-warn">Bu ürünün reçetesinde operasyon yok; emir yine de oluşturulabilir.</div>
+                            </div>
+                        </td>
+                        <td>
+                            <input type="number" name="miktar" step="0.001" min="0.001"
+                                   placeholder="Örn. 10" value="{{ sat.miktar|default:'' }}">
+                        </td>
+                        <td>
+                            <select name="production_type">
+                                {% for value, label in uretim_tipleri %}
+                                <option value="{{ value }}"
+                                    {% if sat.production_type == value or not sat.production_type and value == 'STOCK' %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                        <td>
+                            <input type="datetime-local" name="planlanan_baslama"
+                                   value="{{ sat.planlanan_baslama|default:default_baslama }}">
+                        </td>
+                        <td>
+                            <input type="datetime-local" name="planlanan_bitis"
+                                   value="{{ sat.planlanan_bitis|default:default_bitis }}">
+                        </td>
+                        <td class="ue-row-actions">
+                            <button type="button" class="btn btn-secondary ue-remove-row" style="padding:6px 10px; font-size:12px;" title="Satırı sil">✕</button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div style="margin-bottom: 18px;">
+            <button type="button" class="btn btn-secondary" id="ueAddRowBtn">➕ Satır Ekle</button>
+        </div>
+
+        <div style="margin-bottom: 20px; max-width: 720px;">
+            <label for="id_aciklama" style="display:block; font-weight:600; margin-bottom:8px; color:#111827;">
+                Ortak açıklama <span style="font-weight:400; color:#6b7280;">(isteğe bağlı, tüm satırlara yazılır)</span>
+            </label>
+            <textarea id="id_aciklama" name="aciklama" rows="2"
+                      placeholder="İsteğe bağlı not..."
+                      style="width:100%; padding:10px 12px; border-radius:8px; border:1px solid #d1d5db; font-size:14px; resize:vertical;">{{ aciklama|default:'' }}</textarea>
+        </div>
+
+        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+            <button type="submit" class="btn btn-primary">Üretim emirlerini oluştur</button>
+            <a href="{% url 'stokapp:uretim_emri_listesi' %}" class="btn btn-secondary">İptal</a>
+        </div>
+    </form>
+</div>
+
+<template id="ueRowTemplate">
+    <tr class="ue-row">
+        <td class="ue-row-no">1</td>
+        <td>
+            <div class="ue-urun-cell">
+                <input type="text" class="ue-urun-search" placeholder="Ürün kodu veya adı ara…" autocomplete="off">
+                <div class="ue-results"></div>
+                <input type="hidden" name="urun" class="ue-urun-id" value="">
+                <input type="hidden" name="urun_kod" class="ue-urun-kod" value="">
+                <input type="hidden" name="urun_ad" class="ue-urun-ad" value="">
+                <div class="ue-selected">
+                    <strong class="ue-selected-text"></strong>
+                </div>
+                <div class="ue-ops-warn">Bu ürünün reçetesinde operasyon yok; emir yine de oluşturulabilir.</div>
+            </div>
+        </td>
+        <td>
+            <input type="number" name="miktar" step="0.001" min="0.001" placeholder="Örn. 10" value="">
+        </td>
+        <td>
+            <select name="production_type">
+                {% for value, label in uretim_tipleri %}
+                <option value="{{ value }}" {% if value == 'STOCK' %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </td>
+        <td>
+            <input type="datetime-local" name="planlanan_baslama" value="{{ default_baslama }}">
+        </td>
+        <td>
+            <input type="datetime-local" name="planlanan_bitis" value="{{ default_bitis }}">
+        </td>
+        <td class="ue-row-actions">
+            <button type="button" class="btn btn-secondary ue-remove-row" style="padding:6px 10px; font-size:12px;" title="Satırı sil">✕</button>
+        </td>
+    </tr>
+</template>
+
+<script>
+(function() {
+    const searchUrl = '{% url "stokapp:api_uretim_emri_urun_ara" %}';
+    const tbody = document.getElementById('ueTbody');
+    const tpl = document.getElementById('ueRowTemplate');
+    let searchTimers = new WeakMap();
+
+    function renumberRows() {
+        Array.from(tbody.querySelectorAll('.ue-row')).forEach((row, i) => {
+            const cell = row.querySelector('.ue-row-no');
+            if (cell) cell.textContent = String(i + 1);
+        });
+    }
+
+    function hideAllResults() {
+        document.querySelectorAll('.ue-results').forEach(div => {
+            div.style.display = 'none';
+            div.innerHTML = '';
+            if (div._ueDetached) {
+                const cell = div._ueCell;
+                if (cell) cell.appendChild(div);
+                div._ueDetached = false;
+            }
+        });
+    }
+
+    function positionResults(resultsDiv, searchInput) {
+        const rect = searchInput.getBoundingClientRect();
+        const width = Math.max(rect.width, 280);
+        let top = rect.bottom + 4;
+        const maxH = 260;
+        // Altta yer yetmezse yukarı aç
+        if (top + Math.min(maxH, 200) > window.innerHeight && rect.top > maxH) {
+            top = Math.max(8, rect.top - maxH - 4);
+        }
+        resultsDiv.style.left = Math.min(rect.left, window.innerWidth - width - 8) + 'px';
+        resultsDiv.style.top = top + 'px';
+        resultsDiv.style.width = width + 'px';
+    }
+
+    function showResults(resultsDiv, searchInput, cell) {
+        if (!resultsDiv._ueDetached) {
+            resultsDiv._ueCell = cell;
+            document.body.appendChild(resultsDiv);
+            resultsDiv._ueDetached = true;
+        }
+        positionResults(resultsDiv, searchInput);
+        resultsDiv.style.display = 'block';
+    }
+
+    function bindRow(row) {
+        const searchInput = row.querySelector('.ue-urun-search');
+        const resultsDiv = row.querySelector('.ue-results');
+        const cell = row.querySelector('.ue-urun-cell');
+        const idInput = row.querySelector('.ue-urun-id');
+        const kodInput = row.querySelector('.ue-urun-kod');
+        const adInput = row.querySelector('.ue-urun-ad');
+        const selectedBox = row.querySelector('.ue-selected');
+        const selectedText = row.querySelector('.ue-selected-text');
+        const opsWarn = row.querySelector('.ue-ops-warn');
+        const removeBtn = row.querySelector('.ue-remove-row');
+
+        searchInput.addEventListener('input', function() {
+            const q = this.value.trim();
+            clearTimeout(searchTimers.get(row));
+            if (q.length < 2) {
+                hideAllResults();
+                return;
+            }
+            const timer = setTimeout(() => {
+                fetch(searchUrl + '?q=' + encodeURIComponent(q))
+                    .then(r => r.json())
+                    .then(data => {
+                        hideAllResults();
+                        resultsDiv.innerHTML = '';
+                        if (!data.results || !data.results.length) {
+                            resultsDiv.innerHTML = '<div style="padding:12px;color:#6b7280;">' +
+                                (data.empty_hint || 'Sonuç bulunamadı') + '</div>';
+                        } else {
+                            data.results.forEach(item => {
+                                const el = document.createElement('div');
+                                el.className = 'ue-result-item';
+                                let label = '<strong>' + item.stok_kodu + '</strong> — ' + item.ad;
+                                if (!item.has_operations) {
+                                    label += ' <span style="color:#c2410c;font-size:11px;">(operasyon yok)</span>';
+                                }
+                                el.innerHTML = label;
+                                el.addEventListener('mousedown', function(ev) {
+                                    ev.preventDefault();
+                                    idInput.value = item.id;
+                                    kodInput.value = item.stok_kodu;
+                                    adInput.value = item.ad;
+                                    selectedText.textContent = item.stok_kodu + ' — ' + item.ad;
+                                    selectedBox.classList.add('is-visible');
+                                    searchInput.value = '';
+                                    opsWarn.style.display = item.has_operations === false ? 'block' : 'none';
+                                    hideAllResults();
+                                });
+                                resultsDiv.appendChild(el);
+                            });
+                        }
+                        showResults(resultsDiv, searchInput, cell);
+                    });
+            }, 280);
+            searchTimers.set(row, timer);
+        });
+
+        removeBtn.addEventListener('click', () => {
+            hideAllResults();
+            if (tbody.querySelectorAll('.ue-row').length <= 1) {
+                idInput.value = '';
+                kodInput.value = '';
+                adInput.value = '';
+                selectedText.textContent = '';
+                selectedBox.classList.remove('is-visible');
+                opsWarn.style.display = 'none';
+                searchInput.value = '';
+                row.querySelector('input[name="miktar"]').value = '';
+                return;
+            }
+            row.remove();
+            renumberRows();
+        });
+    }
+
+    function addRow() {
+        const node = tpl.content.cloneNode(true);
+        const row = node.querySelector('.ue-row');
+        tbody.appendChild(row);
+        bindRow(row);
+        renumberRows();
+        row.querySelector('.ue-urun-search').focus();
+    }
+
+    document.getElementById('ueAddRowBtn').addEventListener('click', addRow);
+
+    Array.from(tbody.querySelectorAll('.ue-row')).forEach(bindRow);
+    if (!tbody.querySelector('.ue-row')) {
+        addRow();
+    }
+    renumberRows();
+
+    document.addEventListener('click', function(e) {
+        if (e.target.closest('.ue-results') || e.target.closest('.ue-urun-search')) return;
+        hideAllResults();
+    });
+    window.addEventListener('scroll', hideAllResults, true);
+    window.addEventListener('resize', hideAllResults);
+    document.getElementById('uretimEmriForm').addEventListener('submit', function(e) {
+        const rows = Array.from(tbody.querySelectorAll('.ue-row'));
+        const filled = rows.filter(r => r.querySelector('.ue-urun-id').value);
+        if (!filled.length) {
+            e.preventDefault();
+            alert('En az bir ürün seçin.');
+            return;
+        }
+        for (let i = 0; i < filled.length; i++) {
+            const row = filled[i];
+            const miktar = (row.querySelector('input[name="miktar"]').value || '').trim();
+            const baslama = (row.querySelector('input[name="planlanan_baslama"]').value || '').trim();
+            const bitis = (row.querySelector('input[name="planlanan_bitis"]').value || '').trim();
+            if (!miktar || parseFloat(miktar) <= 0) {
+                e.preventDefault();
+                alert((i + 1) + '. dolu satırda geçerli miktar girin.');
+                return;
+            }
+            if (!baslama || !bitis) {
+                e.preventDefault();
+                alert((i + 1) + '. dolu satırda planlanan tarihleri doldurun.');
+                return;
+            }
+        }
+    });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,210 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Kontrol Şablonu Yönetimi{% endblock %}
+{% block content %}
+<style>
+.uk-sablon-yonetim { max-width: 640px; margin: 0 auto; }
+.uk-urun-combo { position: relative; margin-bottom: 16px; }
+.uk-urun-combo input.uk-urun-input {
+  width: 100%; padding: 12px 40px 12px 14px; border: 2px solid #e2e8f0; border-radius: 10px;
+  font-size: 15px; box-sizing: border-box; transition: border-color .2s;
+}
+.uk-urun-combo input.uk-urun-input:focus {
+  outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.15);
+}
+.uk-urun-combo .uk-urun-toggle {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; font-size: 12px; color: #64748b; cursor: pointer; padding: 6px;
+}
+.uk-urun-dropdown {
+  display: none; position: absolute; left: 0; right: 0; top: calc(100% + 4px);
+  max-height: 280px; overflow-y: auto; background: #fff; border: 1px solid #e2e8f0;
+  border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,.12); z-index: 100;
+}
+.uk-urun-dropdown.open { display: block; }
+.uk-urun-item {
+  padding: 10px 14px; cursor: pointer; border-bottom: 1px solid #f1f5f9;
+  font-size: 14px; line-height: 1.35;
+}
+.uk-urun-item:last-child { border-bottom: none; }
+.uk-urun-item:hover, .uk-urun-item.active { background: #eff6ff; }
+.uk-urun-item .kod { font-weight: 600; color: #0f172a; }
+.uk-urun-item .ad { font-size: 12px; color: #64748b; margin-top: 2px; }
+.uk-urun-empty { padding: 16px; text-align: center; color: #94a3b8; font-size: 13px; }
+.uk-urun-hint { font-size: 12px; color: #64748b; margin: -8px 0 16px; }
+.uk-selected-pill {
+  display: none; align-items: center; gap: 8px; margin-bottom: 12px; padding: 8px 12px;
+  background: #eff6ff; border-radius: 8px; font-size: 13px; color: #1e40af;
+}
+.uk-selected-pill.visible { display: flex; }
+.uk-selected-pill button {
+  margin-left: auto; background: none; border: none; color: #64748b; cursor: pointer; font-size: 18px; line-height: 1;
+}
+</style>
+<div class="card uk-sablon-yonetim">
+  <p style="font-size:13px;margin-bottom:16px;"><a href="{% url 'stokapp:uretim_kontrol_ana' %}">← Üretim Kontrol</a></p>
+  <h2>⚙️ Kontrol Şablonu Tanımla</h2>
+  <p style="color:#64748b;">Ürün seçin; reçete bileşenleri için kontrol şablonu oluşturun veya düzenleyin.</p>
+
+  <label style="display:block;font-weight:600;margin-bottom:8px;">Ürün</label>
+  <div id="selectedPill" class="uk-selected-pill">
+    <span id="selectedLabel"></span>
+    <button type="button" id="clearSelection" title="Seçimi temizle" aria-label="Temizle">×</button>
+  </div>
+  <div class="uk-urun-combo" id="urunCombo">
+    <input type="text" id="urunInput" class="uk-urun-input" placeholder="Stok kodu veya ürün adı yazın…" autocomplete="off" aria-autocomplete="list" aria-expanded="false" aria-controls="urunDropdown">
+    <input type="hidden" id="urunId" value="">
+    <button type="button" class="uk-urun-toggle" id="urunToggle" aria-label="Listeyi aç">▼</button>
+    <div class="uk-urun-dropdown" id="urunDropdown" role="listbox"></div>
+  </div>
+  <p class="uk-urun-hint">Listeden seçebilir veya yazarak arayabilirsiniz (en az 1 karakter).</p>
+
+  <button type="button" class="btn btn-primary" id="btnDevam" style="padding:12px 24px;">Bileşenleri göster</button>
+</div>
+<script>
+(function() {
+  const searchUrl = '{{ urun_ara_url|escapejs }}';
+  const urunPageBase = '{{ urun_kontrol_base|escapejs }}';
+
+  const input = document.getElementById('urunInput');
+  const hidden = document.getElementById('urunId');
+  const dropdown = document.getElementById('urunDropdown');
+  const toggle = document.getElementById('urunToggle');
+  const pill = document.getElementById('selectedPill');
+  const selectedLabel = document.getElementById('selectedLabel');
+  const clearBtn = document.getElementById('clearSelection');
+  const btnDevam = document.getElementById('btnDevam');
+
+  let debounceTimer = null;
+  let activeIndex = -1;
+  let lastResults = [];
+
+  function openDropdown() {
+    dropdown.classList.add('open');
+    input.setAttribute('aria-expanded', 'true');
+  }
+  function closeDropdown() {
+    dropdown.classList.remove('open');
+    input.setAttribute('aria-expanded', 'false');
+    activeIndex = -1;
+  }
+
+  function renderResults(items) {
+    lastResults = items || [];
+    if (!lastResults.length) {
+      dropdown.innerHTML = '<div class="uk-urun-empty">Sonuç bulunamadı</div>';
+      openDropdown();
+      return;
+    }
+    dropdown.innerHTML = lastResults.map(function(it, i) {
+      return '<div class="uk-urun-item" role="option" data-id="' + it.id + '" data-index="' + i + '">' +
+        '<div class="kod">' + escapeHtml(it.kod) + '</div>' +
+        '<div class="ad">' + escapeHtml(it.ad) + '</div></div>';
+    }).join('');
+    openDropdown();
+  }
+
+  function escapeHtml(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  function fetchUrunler(q) {
+    const url = searchUrl + '?q=' + encodeURIComponent(q || '');
+    fetch(url, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+      .then(function(r) { return r.json(); })
+      .then(function(data) { renderResults(data.results || []); })
+      .catch(function() {
+        dropdown.innerHTML = '<div class="uk-urun-empty">Arama yapılamadı</div>';
+        openDropdown();
+      });
+  }
+
+  function selectItem(item) {
+    hidden.value = String(item.id);
+    input.value = item.label;
+    selectedLabel.textContent = item.label;
+    pill.classList.add('visible');
+    closeDropdown();
+  }
+
+  function clearSelection() {
+    hidden.value = '';
+    input.value = '';
+    pill.classList.remove('visible');
+    input.focus();
+  }
+
+  input.addEventListener('input', function() {
+    hidden.value = '';
+    pill.classList.remove('visible');
+    const q = input.value.trim();
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(function() { fetchUrunler(q); }, 220);
+  });
+
+  input.addEventListener('focus', function() {
+    if (!dropdown.classList.contains('open')) {
+      fetchUrunler(input.value.trim());
+    }
+  });
+
+  input.addEventListener('keydown', function(e) {
+    const items = dropdown.querySelectorAll('.uk-urun-item');
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (!dropdown.classList.contains('open')) fetchUrunler(input.value.trim());
+      activeIndex = Math.min(activeIndex + 1, items.length - 1);
+      items.forEach(function(el, i) { el.classList.toggle('active', i === activeIndex); });
+      if (items[activeIndex]) items[activeIndex].scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      activeIndex = Math.max(activeIndex - 1, 0);
+      items.forEach(function(el, i) { el.classList.toggle('active', i === activeIndex); });
+      if (items[activeIndex]) items[activeIndex].scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Enter') {
+      if (activeIndex >= 0 && lastResults[activeIndex]) {
+        e.preventDefault();
+        selectItem(lastResults[activeIndex]);
+      }
+    } else if (e.key === 'Escape') {
+      closeDropdown();
+    }
+  });
+
+  dropdown.addEventListener('click', function(e) {
+    const row = e.target.closest('.uk-urun-item');
+    if (!row) return;
+    const idx = parseInt(row.getAttribute('data-index'), 10);
+    if (lastResults[idx]) selectItem(lastResults[idx]);
+  });
+
+  toggle.addEventListener('click', function() {
+    if (dropdown.classList.contains('open')) {
+      closeDropdown();
+    } else {
+      input.focus();
+      fetchUrunler(input.value.trim());
+    }
+  });
+
+  clearBtn.addEventListener('click', clearSelection);
+
+  document.addEventListener('click', function(e) {
+    if (!document.getElementById('urunCombo').contains(e.target)) {
+      closeDropdown();
+    }
+  });
+
+  btnDevam.addEventListener('click', function() {
+    const v = hidden.value || '';
+    if (!v) {
+      alert('Lütfen listeden bir ürün seçin veya arama sonucuna tıklayın.');
+      input.focus();
+      return;
+    }
+    window.location.href = urunPageBase + v + '/';
+  });
+})();
+</script>
+{% endblock %}

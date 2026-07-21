@@ -1,0 +1,517 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Veri İçe Aktarma{% endblock %}
+{% block content %}
+
+<style>
+  .import-container {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #e5e7eb;
+  }
+  
+  .page-header h1 {
+    font-size: 32px;
+    font-weight: 700;
+    color: #111827;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  
+  .import-section {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  }
+  
+  .import-section-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .import-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .step-card {
+    background: #f9fafb;
+    border: 2px dashed #d1d5db;
+    border-radius: 12px;
+    padding: 24px;
+    transition: all 0.3s ease;
+  }
+  
+  .step-card:hover {
+    border-color: #2ecc71;
+    background: #f0fdf4;
+  }
+  
+  .step-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: #2ecc71;
+    color: white;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 16px;
+    margin-right: 12px;
+  }
+  
+  .step-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+  }
+  
+  .step-description {
+    color: #6b7280;
+    font-size: 14px;
+    margin-left: 44px;
+    margin-bottom: 16px;
+  }
+  
+  .btn-download {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: #3b82f6;
+    color: white;
+    border-radius: 10px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s;
+    margin-left: 44px;
+  }
+  
+  .btn-download:hover {
+    background: #2563eb;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  }
+  
+  .upload-area {
+    border: 2px dashed #d1d5db;
+    border-radius: 12px;
+    padding: 40px;
+    text-align: center;
+    background: #f9fafb;
+    transition: all 0.3s ease;
+    margin-top: 20px;
+  }
+  
+  .upload-area:hover {
+    border-color: #2ecc71;
+    background: #f0fdf4;
+  }
+  
+  .upload-area.dragover {
+    border-color: #2ecc71;
+    background: #f0fdf4;
+  }
+  
+  .upload-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+  }
+  
+  .upload-text {
+    font-size: 16px;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 8px;
+  }
+  
+  .upload-hint {
+    font-size: 14px;
+    color: #6b7280;
+    margin-bottom: 20px;
+  }
+  
+  .file-input-wrapper {
+    position: relative;
+    display: inline-block;
+  }
+  
+  .file-input {
+    position: absolute;
+    opacity: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+  }
+  
+  .btn-upload {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: #2ecc71;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .btn-upload:hover {
+    background: #27ae60;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
+  }
+  
+  .file-name {
+    margin-top: 12px;
+    font-size: 14px;
+    color: #2ecc71;
+    font-weight: 600;
+  }
+  
+  .alert {
+    padding: 14px 18px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+  }
+  
+  .alert-info {
+    background: #dbeafe;
+    color: #1e40af;
+    border-left: 4px solid #3b82f6;
+  }
+  
+  .alert-success {
+    background: #d1fae5;
+    color: #065f46;
+    border-left: 4px solid #22c55e;
+  }
+  
+  .alert-error {
+    background: #fee2e2;
+    color: #991b1b;
+    border-left: 4px solid #ef4444;
+  }
+  
+  .alert-warning {
+    background: #fef3c7;
+    color: #92400e;
+    border-left: 4px solid #f59e0b;
+  }
+</style>
+
+<div class="import-container">
+  <div class="page-header">
+    <h1>
+      <span>📥</span>
+      <span>Veri İçe Aktarma</span>
+    </h1>
+  </div>
+  
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }}">
+        <span>{{ message }}</span>
+      </div>
+    {% endfor %}
+  {% endif %}
+  
+  <div class="alert alert-info">
+    <span>ℹ️</span>
+    <span>
+      <strong>Önemli:</strong> Önce örnek şablonu indirip doldurun, sonra dosyanızı yükleyin. 
+      Şablon formatına uygun olmayan dosyalar işlenemez.
+    </span>
+  </div>
+  
+  <!-- Stok İçe Aktarma -->
+  <div class="import-section">
+    <div class="import-section-title">
+      <span>📦</span>
+      <span>Stok İçe Aktarma</span>
+    </div>
+    
+    <div class="import-steps">
+      <div class="step-card">
+        <div class="step-title">
+          <span class="step-number">1</span>
+          <span>Örnek Şablonu İndirin</span>
+        </div>
+        <div class="step-description">
+          Stok verilerinizi doldurmak için örnek Excel şablonunu indirin. 
+          Şablonda gerekli sütunlar ve örnek veriler bulunmaktadır.
+        </div>
+        <a href="{% url 'stokapp:download_stok_template' %}" class="btn-download">
+          <span>📥</span>
+          <span>Stok Şablonunu İndir</span>
+        </a>
+      </div>
+      
+      <div class="step-card">
+        <div class="step-title">
+          <span class="step-number">2</span>
+          <span>Dosyanızı Yükleyin</span>
+        </div>
+        <div class="step-description">
+          Doldurduğunuz Excel dosyasını seçin ve yükleyin. Sistem otomatik olarak 
+          stokları kontrol edip ekleyecektir.
+        </div>
+        
+        <form method="post" action="{% url 'stokapp:import_stok_excel' %}" enctype="multipart/form-data" id="stokUploadForm">
+          {% csrf_token %}
+          <div class="upload-area" id="stokUploadArea">
+            <div class="upload-icon">📄</div>
+            <div class="upload-text">Excel Dosyası Seçin</div>
+            <div class="upload-hint">XLSX veya XLS formatında dosya yükleyebilirsiniz</div>
+            <div class="file-input-wrapper">
+              <input type="file" 
+                     name="stok_file" 
+                     id="stokFileInput" 
+                     accept=".xlsx,.xls" 
+                     class="file-input"
+                     required>
+              <button type="button" class="btn-upload" onclick="document.getElementById('stokFileInput').click()">
+                <span>📁</span>
+                <span>Dosya Seç</span>
+              </button>
+            </div>
+            <div class="file-name" id="stokFileName" style="display: none;"></div>
+          </div>
+          <div style="margin-top: 20px; text-align: center;">
+            <button type="submit" class="btn-upload" id="stokSubmitBtn" style="display: none;">
+              <span>📤</span>
+              <span>Yükle ve İçe Aktar</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Tedarikçi İçe Aktarma -->
+  <div class="import-section">
+    <div class="import-section-title">
+      <span>🏢</span>
+      <span>Tedarikçi İçe Aktarma</span>
+    </div>
+    
+    <div class="import-steps">
+      <div class="step-card">
+        <div class="step-title">
+          <span class="step-number">1</span>
+          <span>Örnek Şablonu İndirin</span>
+        </div>
+        <div class="step-description">
+          Tedarikçi verilerinizi doldurmak için örnek Excel şablonunu indirin.
+        </div>
+        <a href="{% url 'stokapp:download_tedarikci_template' %}" class="btn-download">
+          <span>📥</span>
+          <span>Tedarikçi Şablonunu İndir</span>
+        </a>
+      </div>
+      
+      <div class="step-card">
+        <div class="step-title">
+          <span class="step-number">2</span>
+          <span>Dosyanızı Yükleyin</span>
+        </div>
+        <div class="step-description">
+          Doldurduğunuz Excel dosyasını seçin ve yükleyin.
+        </div>
+        
+        <form method="post" action="{% url 'stokapp:import_tedarikci_excel' %}" enctype="multipart/form-data" id="tedarikciUploadForm">
+          {% csrf_token %}
+          <div class="upload-area" id="tedarikciUploadArea">
+            <div class="upload-icon">📄</div>
+            <div class="upload-text">Excel Dosyası Seçin</div>
+            <div class="upload-hint">XLSX veya XLS formatında dosya yükleyebilirsiniz</div>
+            <div class="file-input-wrapper">
+              <input type="file" 
+                     name="tedarikci_file" 
+                     id="tedarikciFileInput" 
+                     accept=".xlsx,.xls" 
+                     class="file-input"
+                     required>
+              <button type="button" class="btn-upload" onclick="document.getElementById('tedarikciFileInput').click()">
+                <span>📁</span>
+                <span>Dosya Seç</span>
+              </button>
+            </div>
+            <div class="file-name" id="tedarikciFileName" style="display: none;"></div>
+          </div>
+          <div style="margin-top: 20px; text-align: center;">
+            <button type="submit" class="btn-upload" id="tedarikciSubmitBtn" style="display: none;">
+              <span>📤</span>
+              <span>Yükle ve İçe Aktar</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Müşteri İçe Aktarma -->
+  <div class="import-section">
+    <div class="import-section-title">
+      <span>👥</span>
+      <span>Müşteri İçe Aktarma</span>
+    </div>
+    
+    <div class="import-steps">
+      <div class="step-card">
+        <div class="step-title">
+          <span class="step-number">1</span>
+          <span>Örnek Şablonu İndirin</span>
+        </div>
+        <div class="step-description">
+          Müşteri verilerinizi doldurmak için örnek Excel şablonunu indirin.
+        </div>
+        <a href="{% url 'stokapp:download_musteri_template' %}" class="btn-download">
+          <span>📥</span>
+          <span>Müşteri Şablonunu İndir</span>
+        </a>
+      </div>
+      
+      <div class="step-card">
+        <div class="step-title">
+          <span class="step-number">2</span>
+          <span>Dosyanızı Yükleyin</span>
+        </div>
+        <div class="step-description">
+          Doldurduğunuz Excel dosyasını seçin ve yükleyin.
+        </div>
+        
+        <form method="post" action="{% url 'stokapp:import_musteri_excel' %}" enctype="multipart/form-data" id="musteriUploadForm">
+          {% csrf_token %}
+          <div class="upload-area" id="musteriUploadArea">
+            <div class="upload-icon">📄</div>
+            <div class="upload-text">Excel Dosyası Seçin</div>
+            <div class="upload-hint">XLSX veya XLS formatında dosya yükleyebilirsiniz</div>
+            <div class="file-input-wrapper">
+              <input type="file" 
+                     name="musteri_file" 
+                     id="musteriFileInput" 
+                     accept=".xlsx,.xls" 
+                     class="file-input"
+                     required>
+              <button type="button" class="btn-upload" onclick="document.getElementById('musteriFileInput').click()">
+                <span>📁</span>
+                <span>Dosya Seç</span>
+              </button>
+            </div>
+            <div class="file-name" id="musteriFileName" style="display: none;"></div>
+          </div>
+          <div style="margin-top: 20px; text-align: center;">
+            <button type="submit" class="btn-upload" id="musteriSubmitBtn" style="display: none;">
+              <span>📤</span>
+              <span>Yükle ve İçe Aktar</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Stok dosya yükleme
+document.getElementById('stokFileInput').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (file) {
+    document.getElementById('stokFileName').textContent = '✓ ' + file.name;
+    document.getElementById('stokFileName').style.display = 'block';
+    document.getElementById('stokSubmitBtn').style.display = 'inline-flex';
+  }
+});
+
+// Tedarikçi dosya yükleme
+document.getElementById('tedarikciFileInput').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (file) {
+    document.getElementById('tedarikciFileName').textContent = '✓ ' + file.name;
+    document.getElementById('tedarikciFileName').style.display = 'block';
+    document.getElementById('tedarikciSubmitBtn').style.display = 'inline-flex';
+  }
+});
+
+// Müşteri dosya yükleme
+document.getElementById('musteriFileInput').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (file) {
+    document.getElementById('musteriFileName').textContent = '✓ ' + file.name;
+    document.getElementById('musteriFileName').style.display = 'block';
+    document.getElementById('musteriSubmitBtn').style.display = 'inline-flex';
+  }
+});
+
+// Drag and drop için
+['stokUploadArea', 'tedarikciUploadArea', 'musteriUploadArea'].forEach(areaId => {
+  const area = document.getElementById(areaId);
+  const inputId = areaId.replace('UploadArea', 'FileInput');
+  const input = document.getElementById(inputId);
+  const fileNameId = areaId.replace('UploadArea', 'FileName');
+  const submitBtnId = areaId.replace('UploadArea', 'SubmitBtn');
+  
+  ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    area.addEventListener(eventName, preventDefaults, false);
+  });
+  
+  function preventDefaults(e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  
+  ['dragenter', 'dragover'].forEach(eventName => {
+    area.addEventListener(eventName, () => area.classList.add('dragover'), false);
+  });
+  
+  ['dragleave', 'drop'].forEach(eventName => {
+    area.addEventListener(eventName, () => area.classList.remove('dragover'), false);
+  });
+  
+  area.addEventListener('drop', function(e) {
+    const dt = e.dataTransfer;
+    const files = dt.files;
+    if (files.length > 0) {
+      input.files = files;
+      const file = files[0];
+      document.getElementById(fileNameId).textContent = '✓ ' + file.name;
+      document.getElementById(fileNameId).style.display = 'block';
+      document.getElementById(submitBtnId).style.display = 'inline-flex';
+    }
+  }, false);
+});
+</script>
+
+{% endblock %}
+

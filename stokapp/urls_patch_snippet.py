@@ -1,0 +1,1 @@
+urlpatterns içine api path ekleri

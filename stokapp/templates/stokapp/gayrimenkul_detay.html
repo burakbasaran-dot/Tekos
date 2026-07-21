@@ -1,0 +1,248 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Gayrimenkul — {{ gm.ad }}{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <a href="{% url 'stokapp:gayrimenkul_listesi' %}" class="btn" style="background-color: #6b7280; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px;">← Geri</a>
+            <h2 style="margin: 0;">🏢 {{ gm.ad }}</h2>
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <a href="{% url 'stokapp:gayrimenkul_islem_ekle' gm.pk %}" style="background-color: #22c55e; color: white; padding: 8px 14px; text-decoration: none; border-radius: 6px; font-size: 14px;">+ Yükümlülük</a>
+            <a href="{% url 'stokapp:gayrimenkul_dosya_ekle' gm.pk %}" style="background-color: #8b5cf6; color: white; padding: 8px 14px; text-decoration: none; border-radius: 6px; font-size: 14px;">+ Dosya</a>
+            <a href="{% url 'stokapp:gayrimenkul_duzenle' gm.pk %}" style="background-color: #3b82f6; color: white; padding: 8px 14px; text-decoration: none; border-radius: 6px; font-size: 14px;">✏️ Düzenle</a>
+            {% if not gm.arsivlendi %}
+            <a href="{% url 'stokapp:gayrimenkul_arsivle' gm.pk %}" style="background-color: #6b7280; color: white; padding: 8px 14px; text-decoration: none; border-radius: 6px; font-size: 14px;">📦 Arşivle</a>
+            {% else %}
+            <span style="background:#e5e7eb;color:#374151;padding:8px 14px;border-radius:6px;font-size:14px;">Arşivde</span>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if sigorta_uyari %}
+    <div style="margin-bottom: 16px; padding: 14px 16px; border-radius: 8px;
+        {% if sigorta_uyari == 'gecikti' %}background:#fef2f2;border-left:4px solid #ef4444;color:#991b1b;
+        {% else %}background:#fffbeb;border-left:4px solid #f59e0b;color:#92400e;{% endif %}">
+        {% if sigorta_uyari == 'gecikti' %}
+        <strong>Sigorta süresi doldu.</strong> Bitiş: {{ gm.sigorta_bitis_tarihi|date:"d.m.Y" }}
+        {% else %}
+        <strong>Sigorta bitişi yaklaşıyor ({{ uyari_gun }} gün).</strong> Bitiş: {{ gm.sigorta_bitis_tarihi|date:"d.m.Y" }}
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 12px; border-radius: 8px;{% if message.tags == 'error' %}background:#f8d7da{% else %}background:#d4edda{% endif %}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <div style="display: grid; grid-template-columns: 1fr 280px; gap: 24px; align-items: start;">
+        <div>
+            <div style="display: grid; grid-template-columns: 180px 1fr; gap: 20px; margin-bottom: 24px;">
+                <div style="min-height: 160px; background: linear-gradient(145deg, #0ea5e9 0%, #0369a1 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 56px;">
+                    🏢
+                </div>
+                <div>
+                    <h3 style="margin: 0 0 12px; color: #111827;">Temel bilgiler</h3>
+                    <div style="display: grid; grid-template-columns: 140px 1fr; gap: 8px 16px; font-size: 14px;">
+                        <div style="color: #6b7280; font-weight: 600;">Tip</div><div>{{ gm.get_tip_display }}</div>
+                        <div style="color: #6b7280; font-weight: 600;">Sahiplik</div><div>{{ gm.get_sahiplik_tipi_display }}</div>
+                        <div style="color: #6b7280; font-weight: 600;">İl / İlçe</div><div>{{ gm.il }} / {{ gm.ilce }}</div>
+                        <div style="color: #6b7280; font-weight: 600;">Kullanım</div><div>{{ gm.get_kullanim_durumu_display }}</div>
+                        <div style="color: #6b7280; font-weight: 600;">Sorumlu</div><div>{{ gm.sorumlu_kisi|default:"—" }}</div>
+                        <div style="color: #6b7280; font-weight: 600;">Ada / parsel</div><div>{{ gm.ada_parsel|default:"—" }}</div>
+                        <div style="color: #6b7280; font-weight: 600;">Tapu no</div><div>{{ gm.tapu_no|default:"—" }}</div>
+                        <div style="color: #6b7280; font-weight: 600;">Metrekare</div><div>{% if gm.metrekare %}{{ gm.metrekare }} m²{% else %}—{% endif %}</div>
+                    </div>
+                    {% if gm.adres %}
+                    <div style="margin-top: 14px; padding-top: 14px; border-top: 1px solid #e5e7eb;">
+                        <div style="font-weight: 600; color: #6b7280; margin-bottom: 6px;">Adres</div>
+                        <div style="color: #374151;">{{ gm.adres|linebreaks }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; border-bottom: 2px solid #e5e7eb; padding-bottom: 4px;">
+                <a href="?tab=genel" style="padding: 8px 14px; border-radius: 6px 6px 0 0; text-decoration: none; font-size: 14px; font-weight: 600;
+                    {% if tab == 'genel' %}background:#f3f4f6;color:#111827;border:1px solid #e5e7eb;border-bottom:none;{% else %}color:#6b7280;{% endif %}">Genel bilgiler</a>
+                <a href="?tab=takip" style="padding: 8px 14px; border-radius: 6px 6px 0 0; text-decoration: none; font-size: 14px; font-weight: 600;
+                    {% if tab == 'takip' %}background:#f3f4f6;color:#111827;border:1px solid #e5e7eb;border-bottom:none;{% else %}color:#6b7280;{% endif %}">Vergi / sigorta / aidat</a>
+                <a href="?tab=dosyalar" style="padding: 8px 14px; border-radius: 6px 6px 0 0; text-decoration: none; font-size: 14px; font-weight: 600;
+                    {% if tab == 'dosyalar' %}background:#f3f4f6;color:#111827;border:1px solid #e5e7eb;border-bottom:none;{% else %}color:#6b7280;{% endif %}">Dosyalar</a>
+                <a href="?tab=notlar" style="padding: 8px 14px; border-radius: 6px 6px 0 0; text-decoration: none; font-size: 14px; font-weight: 600;
+                    {% if tab == 'notlar' %}background:#f3f4f6;color:#111827;border:1px solid #e5e7eb;border-bottom:none;{% else %}color:#6b7280;{% endif %}">Notlar</a>
+                <a href="?tab=gecmis" style="padding: 8px 14px; border-radius: 6px 6px 0 0; text-decoration: none; font-size: 14px; font-weight: 600;
+                    {% if tab == 'gecmis' %}background:#f3f4f6;color:#111827;border:1px solid #e5e7eb;border-bottom:none;{% else %}color:#6b7280;{% endif %}">Geçmiş işlemler</a>
+            </div>
+
+            {% if tab == 'genel' %}
+            <div style="background:#fafafa;border-radius:8px;padding:18px;">
+                <h4 style="margin:0 0 12px;">Açıklama</h4>
+                <p style="margin:0;color:#374151;">{% if gm.aciklama %}{{ gm.aciklama|linebreaks }}{% else %}—{% endif %}</p>
+                <h4 style="margin:24px 0 12px;">Finansal özet</h4>
+                <div style="display:grid;grid-template-columns:200px 1fr;gap:8px;font-size:14px;">
+                    <div style="color:#6b7280;">Alış / kira bedeli</div>
+                    <div>{% if gm.alis_veya_kira_bedeli %}{{ gm.alis_veya_kira_bedeli }} {{ gm.para_birimi }}{% else %}—{% endif %}</div>
+                    <div style="color:#6b7280;">Kira dönemi</div>
+                    <div>
+                        {% if gm.kira_baslangic_tarihi %}{{ gm.kira_baslangic_tarihi|date:"d.m.Y" }}{% else %}—{% endif %}
+                        —
+                        {% if gm.kira_bitis_tarihi %}{{ gm.kira_bitis_tarihi|date:"d.m.Y" }}{% else %}—{% endif %}
+                    </div>
+                    <div style="color:#6b7280;">Yıllık emlak vergisi</div>
+                    <div>{% if gm.yillik_emlak_vergisi %}{{ gm.yillik_emlak_vergisi }} {{ gm.para_birimi }} ({{ gm.get_vergi_odeme_periyodu_display }}){% else %}—{% endif %}</div>
+                    <div style="color:#6b7280;">Sigorta</div>
+                    <div>
+                        {% if gm.sigorta_police_no %}{{ gm.sigorta_police_no }} — {% endif %}{{ gm.sigorta_firmasi|default:"" }}
+                        {% if gm.sigorta_bitis_tarihi %}<br><span style="color:#6b7280;">Bitiş: {{ gm.sigorta_bitis_tarihi|date:"d.m.Y" }}</span>{% endif %}
+                    </div>
+                    <div style="color:#6b7280;">Aidat / site</div>
+                    <div>{% if gm.aidat_site_gideri %}{{ gm.aidat_site_gideri }} {{ gm.para_birimi }}{% else %}—{% endif %}</div>
+                    <div style="color:#6b7280;">Bakım notu</div>
+                    <div>{% if gm.bakim_giderleri_notu %}{{ gm.bakim_giderleri_notu|linebreaks }}{% else %}—{% endif %}</div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if tab == 'takip' %}
+            <div style="margin-bottom: 16px; padding: 14px; background: #f9fafb; border-radius: 8px; font-size: 14px;">
+                <strong>Kayıtlı tutarlar:</strong>
+                Yıllık vergi {{ gm.yillik_emlak_vergisi|default:"—" }} {{ gm.para_birimi }};
+                Sigorta tutarı {{ gm.sigorta_tutari|default:"—" }} {{ gm.para_birimi }};
+                Aidat {{ gm.aidat_site_gideri|default:"—" }} {{ gm.para_birimi }}.
+                Ayrıntılı ödeme satırları için aşağıdaki tabloyu kullanın.
+            </div>
+            {% if takip_islemler %}
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                    <thead>
+                        <tr style="background: #f9fafb; border-bottom: 2px solid #e5e7eb;">
+                            <th style="padding: 10px; text-align: left;">İşlem</th>
+                            <th style="padding: 10px; text-align: left;">Vade</th>
+                            <th style="padding: 10px; text-align: left;">Tutar</th>
+                            <th style="padding: 10px; text-align: left;">Durum</th>
+                            <th style="padding: 10px; text-align: left;">Dosya</th>
+                            <th style="padding: 10px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for i in takip_islemler %}
+                        <tr style="border-bottom: 1px solid #e5e7eb;
+                            {% if i.durum == 'ODENDI' or i.durum == 'IPTAL' %}{% elif i.vade_tarihi < bugun or i.durum == 'GECIKTI' %}background:#fef2f2;
+                            {% elif i.vade_tarihi <= uyari_bitis_tarihi %}background:#fffbeb;{% endif %}">
+                            <td style="padding: 10px;">{{ i.get_islem_tipi_display }}<br><span style="color:#6b7280;font-size:12px;">{{ i.aciklama|truncatechars:40 }}</span></td>
+                            <td style="padding: 10px;">{{ i.vade_tarihi|date:"d.m.Y" }}</td>
+                            <td style="padding: 10px;">{% if i.tutar %}{{ i.tutar }} {{ i.para_birimi }}{% else %}—{% endif %}</td>
+                            <td style="padding: 10px;">{{ i.get_durum_display }}</td>
+                            <td style="padding: 10px;">{% if i.dosya %}<a href="{{ i.dosya.url }}" target="_blank" style="color:#3b82f6;">📎</a>{% else %}—{% endif %}</td>
+                            <td style="padding: 10px;">
+                                <a href="{% url 'stokapp:gayrimenkul_islem_duzenle' i.pk %}" style="background:#3b82f6;color:#fff;padding:4px 10px;border-radius:4px;text-decoration:none;font-size:12px;">Düzenle</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div style="text-align:center;padding:40px;background:#f9fafb;border-radius:8px;color:#6b7280;">Açık yükümlülük kaydı yok.</div>
+            {% endif %}
+            {% endif %}
+
+            {% if tab == 'dosyalar' %}
+            {% if dosyalar %}
+            <div style="overflow-x: auto;">
+                <table style="width:100%;border-collapse:collapse;font-size:14px;">
+                    <thead><tr style="background:#f9fafb;"><th style="padding:10px;text-align:left;">Başlık</th><th style="padding:10px;">Dosya</th><th style="padding:10px;">Tarih</th></tr></thead>
+                    <tbody>
+                        {% for d in dosyalar %}
+                        <tr style="border-bottom:1px solid #e5e7eb;">
+                            <td style="padding:10px;">{{ d.baslik }}</td>
+                            <td style="padding:10px;"><a href="{{ d.dosya.url }}" target="_blank" style="color:#3b82f6;">İndir / görüntüle</a></td>
+                            <td style="padding:10px;">{{ d.created_at|date:"d.m.Y H:i" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div style="text-align:center;padding:40px;background:#f9fafb;border-radius:8px;">Henüz dosya eklenmedi.</div>
+            {% endif %}
+            {% endif %}
+
+            {% if tab == 'notlar' %}
+            <div style="background:#fafafa;border-radius:8px;padding:18px;">
+                <h4 style="margin-top:0;">Yönetim notları</h4>
+                <div style="color:#374151;">{% if gm.yonetim_notlari %}{{ gm.yonetim_notlari|linebreaks }}{% else %}—{% endif %}</div>
+                <p style="margin-top:16px;font-size:13px;color:#6b7280;">Düzenlemek için üstteki <strong>Düzenle</strong> butonunu kullanın.</p>
+            </div>
+            {% endif %}
+
+            {% if tab == 'gecmis' %}
+            {% if gecmis_islemler %}
+            <div style="overflow-x: auto;">
+                <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                    <thead>
+                        <tr style="background:#f9fafb;">
+                            <th style="padding:10px;text-align:left;">İşlem</th>
+                            <th style="padding:10px;">Vade</th>
+                            <th style="padding:10px;">Ödeme</th>
+                            <th style="padding:10px;">Tutar</th>
+                            <th style="padding:10px;">Durum</th>
+                            <th style="padding:10px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for i in gecmis_islemler %}
+                        <tr style="border-bottom:1px solid #e5e7eb;{% if i.durum == 'IPTAL' %}opacity:0.7;{% endif %}">
+                            <td style="padding:10px;">{{ i.get_islem_tipi_display }}</td>
+                            <td style="padding:10px;">{{ i.vade_tarihi|date:"d.m.Y" }}</td>
+                            <td style="padding:10px;">{% if i.odeme_tarihi %}{{ i.odeme_tarihi|date:"d.m.Y" }}{% else %}—{% endif %}</td>
+                            <td style="padding:10px;">{% if i.tutar %}{{ i.tutar }} {{ i.para_birimi }}{% else %}—{% endif %}</td>
+                            <td style="padding:10px;">{{ i.get_durum_display }}</td>
+                            <td style="padding:10px;">
+                                <a href="{% url 'stokapp:gayrimenkul_islem_duzenle' i.pk %}" style="color:#3b82f6;font-size:13px;">Düzenle</a>
+                                {% if i.dosya %}<a href="{{ i.dosya.url }}" target="_blank" style="color:#3b82f6;margin-left:8px;">📎</a>{% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div style="text-align:center;padding:40px;background:#f9fafb;border-radius:8px;">Geçmiş kayıt yok.</div>
+            {% endif %}
+            {% endif %}
+        </div>
+
+        <aside style="background: #f9fafb; border-radius: 12px; padding: 18px; border: 1px solid #e5e7eb; position: sticky; top: 16px;">
+            <h4 style="margin: 0 0 14px; color: #111827;">Durum özeti</h4>
+            <div style="font-size: 14px; display: flex; flex-direction: column; gap: 12px;">
+                <div>
+                    <div style="color: #6b7280; font-size: 12px;">Yaklaşan ödeme ({{ uyari_gun }} gün)</div>
+                    <div style="font-size: 22px; font-weight: 700; color: #ca8a04;">{{ ozet.yakin_sayisi }}</div>
+                </div>
+                <div>
+                    <div style="color: #6b7280; font-size: 12px;">Geciken / riskli</div>
+                    <div style="font-size: 22px; font-weight: 700; color: {% if ozet.geciken_sayisi > 0 %}#dc2626{% else %}#111827{% endif %};">{{ ozet.geciken_sayisi }}</div>
+                </div>
+                <div>
+                    <div style="color: #6b7280; font-size: 12px;">Yıllık ödenen toplam ({{ bugun.year }})</div>
+                    <div style="font-size: 18px; font-weight: 600;">{{ ozet.yillik_odeme_toplam }} {{ gm.para_birimi }}</div>
+                </div>
+                <div>
+                    <div style="color: #6b7280; font-size: 12px;">Sigorta bitiş</div>
+                    <div style="font-weight: 600;">{% if gm.sigorta_bitis_tarihi %}{{ gm.sigorta_bitis_tarihi|date:"d.m.Y" }}{% else %}—{% endif %}</div>
+                </div>
+                <div style="padding-top: 10px; border-top: 1px solid #e5e7eb;">
+                    <div style="color: #6b7280; font-size: 12px;">Liste durumu</div>
+                    {% if ozet.etiket == 'NORMAL' %}<span style="display:inline-block;margin-top:4px;background:#dcfce7;color:#166534;padding:4px 10px;border-radius:6px;font-size:13px;">Normal</span>{% endif %}
+                    {% if ozet.etiket == 'YAKLASIYOR' %}<span style="display:inline-block;margin-top:4px;background:#fef3c7;color:#92400e;padding:4px 10px;border-radius:6px;font-size:13px;">Yaklaşıyor</span>{% endif %}
+                    {% if ozet.etiket == 'GECIKTI' %}<span style="display:inline-block;margin-top:4px;background:#fee2e2;color:#991b1b;padding:4px 10px;border-radius:6px;font-size:13px;">Gecikti</span>{% endif %}
+                </div>
+            </div>
+        </aside>
+    </div>
+</div>
+{% endblock %}

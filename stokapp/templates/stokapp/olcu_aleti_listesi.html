@@ -1,0 +1,294 @@
+{% extends "stokapp/base.html" %}
+{% load static %}
+{% block title %}Ölçü Aletleri{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>📏 Ölçü Aletleri</h2>
+        <div style="display: flex; gap: 10px;">
+            <a href="{% url 'stokapp:olcu_aleti_export_pdf' %}" class="btn" style="background-color: #6366f1; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px;">
+                📄 Verileri Dışa Aktar
+            </a>
+            <a href="{% url 'stokapp:olcu_aleti_dashboard' %}" class="btn" style="background-color: #3b82f6; color: white; padding: 10px 20px; text-decoration: none; border-radius: 6px;">
+                📊 Dashboard
+            </a>
+            <a href="{% url 'stokapp:olcu_aleti_ekle' %}" class="btn btn-primary" style="background-color: #22c55e; border-color: #22c55e; padding: 10px 20px;">
+                <span style="font-size: 18px;">+</span> Yeni
+            </a>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 15px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background: #fff3cd; color: #856404; border-left: 4px solid #ffc107;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Arama ve Filtreler -->
+    <div style="margin-bottom: 20px; padding: 15px; background: #f9fafb; border-radius: 8px;">
+        <form method="get" style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 10px; align-items: end;">
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 14px;">Ara (Seri No, Marka, Model, Alet Türü)</label>
+                <input type="text" 
+                       name="search" 
+                       value="{{ search_query }}" 
+                       placeholder="Arama yapın..."
+                       style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
+            </div>
+            
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 14px;">Durum</label>
+                <select name="durum" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
+                    <option value="">Tümü</option>
+                    <option value="AKTIF" {% if durum_filter == 'AKTIF' %}selected{% endif %}>Aktif</option>
+                    <option value="KARANTINADA" {% if durum_filter == 'KARANTINADA' %}selected{% endif %}>Karantinada</option>
+                    <option value="HURDA" {% if durum_filter == 'HURDA' %}selected{% endif %}>Hurda</option>
+                    <option value="KALIBRASYONDA" {% if durum_filter == 'KALIBRASYONDA' %}selected{% endif %}>Kalibrasyonda</option>
+                </select>
+            </div>
+            
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 14px;">Kritiklik</label>
+                <select name="kritiklik" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
+                    <option value="">Tümü</option>
+                    <option value="KRITIK" {% if kritiklik_filter == 'KRITIK' %}selected{% endif %}>Kritik</option>
+                    <option value="DESTEKLEYICI" {% if kritiklik_filter == 'DESTEKLEYICI' %}selected{% endif %}>Destekleyici</option>
+                </select>
+            </div>
+            
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600; font-size: 14px;">Kalibrasyon Durumu</label>
+                <select name="kalibrasyon_durum" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
+                    <option value="">Tümü</option>
+                    <option value="SAGLIKLI" {% if kalibrasyon_durum_filter == 'SAGLIKLI' %}selected{% endif %}>🟢 Sağlıklı</option>
+                    <option value="YAKLASIYOR" {% if kalibrasyon_durum_filter == 'YAKLASIYOR' %}selected{% endif %}>🟡 Yaklaşıyor</option>
+                    <option value="ACIL" {% if kalibrasyon_durum_filter == 'ACIL' %}selected{% endif %}>🟠 Acil</option>
+                    <option value="GECMIS" {% if kalibrasyon_durum_filter == 'GECMIS' %}selected{% endif %}>🔴 Süresi Geçmiş</option>
+                </select>
+            </div>
+            
+            <div>
+                <button type="submit" class="btn btn-secondary" style="padding: 10px 20px;">🔍 Ara</button>
+                <a href="{% url 'stokapp:olcu_aleti_listesi' %}" class="btn btn-secondary" style="padding: 10px 20px; display: block; margin-top: 5px; text-align: center;">Temizle</a>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Grid Görünümü (Fotoğraflı) -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; margin-top: 20px;">
+        {% for alet in aletler %}
+        <div style="border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: transform 0.2s, box-shadow 0.2s; {% if not alet.aktif %}opacity: 0.6;{% endif %}" 
+             onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.15)';"
+             onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)';">
+            <!-- Fotoğraf -->
+            <div style="width: 100%; height: 200px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; position: relative;">
+                {% if alet.fotograf %}
+                    <img src="{{ alet.fotograf.url }}" alt="{{ alet.seri_no }}" style="width: 100%; height: 100%; object-fit: cover;">
+                {% else %}
+                    <div style="text-align: center; color: white;">
+                        <div style="font-size: 64px;">📏</div>
+                        <div style="font-size: 14px; margin-top: 10px; opacity: 0.9;">Fotoğraf Yok</div>
+                    </div>
+                {% endif %}
+                <!-- Kalibrasyon Durumu Göstergesi -->
+                {% if alet.sonraki_kalibrasyon_tarihi %}
+                    {% with durum=alet.kalibrasyon_durumu %}
+                    <div style="position: absolute; top: 10px; right: 10px; width: 16px; height: 16px; border-radius: 50%; border: 2px solid white;
+                        {% if durum == 'SAGLIKLI' %}background-color: #22c55e;
+                        {% elif durum == 'YAKLASIYOR' %}background-color: #eab308;
+                        {% elif durum == 'ACIL' %}background-color: #f97316;
+                        {% elif durum == 'GECMIS' %}background-color: #ef4444;
+                        {% else %}background-color: #6b7280;{% endif %}"></div>
+                    {% endwith %}
+                {% endif %}
+            </div>
+            
+            <!-- Bilgiler -->
+            <div style="padding: 16px;">
+                <div style="margin-bottom: 12px;">
+                    <div style="font-size: 20px; font-weight: 700; color: #111827; margin-bottom: 4px;">
+                        {{ alet.seri_no }}
+                    </div>
+                    <div style="font-size: 16px; color: #6b7280; margin-bottom: 2px;">
+                        {{ alet.alet_turu.ad }}
+                    </div>
+                    <div style="font-size: 14px; color: #9ca3af;">
+                        {{ alet.marka }}{% if alet.model %} / {{ alet.model }}{% endif %}
+                    </div>
+                </div>
+                
+                <!-- Kısa Bilgiler -->
+                {% if alet.kullanim_yeri %}
+                <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">
+                    <strong>📍 Kullanım Yeri:</strong> {{ alet.kullanim_yeri }}
+                </div>
+                {% endif %}
+                {% if alet.sorumlu_kisi %}
+                <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px;">
+                    <strong>👤 Sorumlu:</strong> {{ alet.sorumlu_kisi }}
+                </div>
+                {% endif %}
+                
+                <!-- Kalibrasyon Bilgileri -->
+                {% if alet.sonraki_kalibrasyon_tarihi %}
+                    {% with durum=alet.kalibrasyon_durumu %}
+                    <div style="margin-bottom: 8px; padding: 8px; background-color: {% if durum == 'SAGLIKLI' %}#d1fae5{% elif durum == 'YAKLASIYOR' %}#fef9c3{% elif durum == 'ACIL' %}#ffedd5{% elif durum == 'GECMIS' %}#fee2e2{% else %}#f3f4f6{% endif %}; border-radius: 6px;">
+                        <div style="font-size: 12px; font-weight: 600; color: {% if durum == 'SAGLIKLI' %}#065f46{% elif durum == 'YAKLASIYOR' %}#854d0e{% elif durum == 'ACIL' %}#9a3412{% elif durum == 'GECMIS' %}#991b1b{% else %}#374151{% endif %};">
+                            {% if durum == 'SAGLIKLI' %}🟢 Sağlıklı
+                            {% elif durum == 'YAKLASIYOR' %}🟡 Yaklaşıyor
+                            {% elif durum == 'ACIL' %}🟠 Acil
+                            {% elif durum == 'GECMIS' %}🔴 Süresi Geçmiş
+                            {% else %}⚪ Bilinmiyor{% endif %}
+                        </div>
+                        <div style="font-size: 11px; color: #6b7280; margin-top: 4px;">
+                            Sonraki: {{ alet.sonraki_kalibrasyon_tarihi|date:"d.m.Y" }}
+                        </div>
+                    </div>
+                    {% endwith %}
+                {% endif %}
+                
+                <!-- Durum -->
+                <div style="margin-bottom: 12px;">
+                    <span style="padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 500;
+                        {% if alet.durum == 'AKTIF' %}background: #d1fae5; color: #065f46;
+                        {% elif alet.durum == 'KARANTINADA' %}background: #fef3c7; color: #92400e;
+                        {% elif alet.durum == 'HURDA' %}background: #fee2e2; color: #991b1b;
+                        {% else %}background: #dbeafe; color: #1e40af;{% endif %}">
+                        {{ alet.get_durum_display }}
+                    </span>
+                </div>
+                
+                <!-- İşlem Butonları -->
+                <div style="display: flex; gap: 8px; margin-top: 16px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
+                    <a href="{% url 'stokapp:olcu_aleti_duzenle' alet.pk %}" 
+                       style="flex: 1; background-color: #3b82f6; color: white; padding: 8px 12px; border-radius: 6px; text-decoration: none; text-align: center; font-size: 13px; font-weight: 600;">
+                        ✏️ Düzenle
+                    </a>
+                    <a href="{% url 'stokapp:kalibrasyon_ekle' alet.pk %}" 
+                       style="background-color: #10b981; color: white; padding: 8px 12px; border-radius: 6px; text-decoration: none; font-size: 13px;">
+                        📋
+                    </a>
+                    <a href="{% url 'stokapp:olcu_aleti_sil' alet.pk %}" 
+                       style="background-color: #ef4444; color: white; padding: 8px 12px; border-radius: 6px; text-decoration: none; font-size: 13px;">
+                        🗑️
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #6b7280;">
+            Henüz ölçü aleti bulunmuyor. <a href="{% url 'stokapp:olcu_aleti_ekle' %}">İlk ölçü aletini oluşturun</a>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Tablo Görünümü (Gizli - Gerekirse gösterilebilir) -->
+    <div style="display: none;">
+    <table style="width: 100%; border-collapse: collapse; background: white;">
+        <thead>
+            <tr style="background-color: #f9fafb; border-bottom: 2px solid #e5e7eb;">
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Seri No</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Alet Türü</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Marka / Model</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Kullanım Yeri</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Sorumlu</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Son Kalibrasyon</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Sonraki Kalibrasyon</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Durum</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Kalibrasyon Durumu</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">İşlemler</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for alet in aletler %}
+            <tr style="border-bottom: 1px solid #e5e7eb; {% if not alet.aktif %}opacity: 0.6;{% endif %}">
+                <td style="padding: 12px; font-weight: 600;">{{ alet.seri_no }}</td>
+                <td style="padding: 12px;">{{ alet.alet_turu.ad }}</td>
+                <td style="padding: 12px;">
+                    {{ alet.marka }}{% if alet.model %} / {{ alet.model }}{% endif %}
+                </td>
+                <td style="padding: 12px;">{{ alet.kullanim_yeri|default:"-" }}</td>
+                <td style="padding: 12px;">{{ alet.sorumlu_kisi|default:"-" }}</td>
+                <td style="padding: 12px;">
+                    {% if alet.son_kalibrasyon_tarihi %}
+                        {{ alet.son_kalibrasyon_tarihi|date:"d.m.Y" }}
+                    {% else %}
+                        <span style="color: #9ca3af;">-</span>
+                    {% endif %}
+                </td>
+                <td style="padding: 12px;">
+                    {% if alet.sonraki_kalibrasyon_tarihi %}
+                        {{ alet.sonraki_kalibrasyon_tarihi|date:"d.m.Y" }}
+                    {% else %}
+                        <span style="color: #9ca3af;">-</span>
+                    {% endif %}
+                </td>
+                <td style="padding: 12px;">
+                    <span style="padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 500;
+                        {% if alet.durum == 'AKTIF' %}background: #d1fae5; color: #065f46;
+                        {% elif alet.durum == 'KARANTINADA' %}background: #fef3c7; color: #92400e;
+                        {% elif alet.durum == 'HURDA' %}background: #fee2e2; color: #991b1b;
+                        {% else %}background: #dbeafe; color: #1e40af;{% endif %}">
+                        {{ alet.get_durum_display }}
+                    </span>
+                </td>
+                <td style="padding: 12px;">
+                    {% if alet.sonraki_kalibrasyon_tarihi %}
+                        {% with durum=alet.kalibrasyon_durumu %}
+                        <span style="display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 5px;
+                            {% if durum == 'SAGLIKLI' %}background-color: #22c55e;
+                            {% elif durum == 'YAKLASIYOR' %}background-color: #eab308;
+                            {% elif durum == 'ACIL' %}background-color: #f97316;
+                            {% elif durum == 'GECMIS' %}background-color: #ef4444;
+                            {% else %}background-color: #6b7280;{% endif %}"></span>
+                        <span style="font-size: 12px; font-weight: 500;
+                            {% if durum == 'SAGLIKLI' %}color: #22c55e;
+                            {% elif durum == 'YAKLASIYOR' %}color: #eab308;
+                            {% elif durum == 'ACIL' %}color: #f97316;
+                            {% elif durum == 'GECMIS' %}color: #ef4444;
+                            {% else %}color: #6b7280;{% endif %}">
+                            {% if durum == 'SAGLIKLI' %}Sağlıklı
+                            {% elif durum == 'YAKLASIYOR' %}Yaklaşıyor
+                            {% elif durum == 'ACIL' %}Acil
+                            {% elif durum == 'GECMIS' %}Süresi Geçmiş
+                            {% else %}Bilinmiyor{% endif %}
+                        </span>
+                        {% endwith %}
+                    {% else %}
+                        <span style="color: #9ca3af; font-size: 12px;">-</span>
+                    {% endif %}
+                </td>
+                <td style="padding: 12px;">
+                    <div style="display: flex; gap: 5px;">
+                        <a href="{% url 'stokapp:olcu_aleti_duzenle' alet.pk %}" 
+                           style="padding: 6px 12px; background: #3b82f6; color: white; border-radius: 4px; text-decoration: none; font-size: 12px;">
+                            ✏️
+                        </a>
+                        <a href="{% url 'stokapp:kalibrasyon_ekle' alet.pk %}" 
+                           style="padding: 6px 12px; background: #10b981; color: white; border-radius: 4px; text-decoration: none; font-size: 12px;">
+                            📋
+                        </a>
+                        <a href="{% url 'stokapp:olcu_aleti_sil' alet.pk %}" 
+                           style="padding: 6px 12px; background: #ef4444; color: white; border-radius: 4px; text-decoration: none; font-size: 12px;">
+                            🗑️
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="10" style="padding: 40px; text-align: center; color: #6b7280;">
+                    Henüz ölçü aleti bulunmuyor. <a href="{% url 'stokapp:olcu_aleti_ekle' %}">İlk ölçü aletini oluşturun</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
+

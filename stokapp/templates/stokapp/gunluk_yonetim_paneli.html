@@ -1,0 +1,216 @@
+{% extends "stokapp/base.html" %}
+{% load static %}
+{% block title %}Günlük Yönetim Paneli{% endblock %}
+{% block content %}
+<style>
+  .gmp-wrap { max-width: 1400px; margin: 0 auto; }
+  .gmp-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-bottom: 20px; }
+  .gmp-title { margin: 0; font-size: 1.35rem; color: #111827; }
+  .gmp-sub { margin: 6px 0 0; font-size: 13px; color: #64748b; }
+  .gmp-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; margin-bottom: 22px; }
+  .gmp-card {
+    background: linear-gradient(155deg, rgba(255,255,255,.97) 0%, rgba(248,250,252,.95) 100%);
+    border: 1px solid #e5e7eb; border-radius: 14px; padding: 14px 16px;
+    box-shadow: 0 8px 24px -8px rgba(15,23,42,.08);
+  }
+  .gmp-card.critical { border-color: rgba(244,63,94,.25); background: linear-gradient(160deg,#fff5f5,#ffe4e6); }
+  .gmp-card.warn { border-color: rgba(245,158,11,.3); background: linear-gradient(160deg,#fffbeb,#fef3c7); }
+  .gmp-card.ok { border-color: rgba(34,197,94,.22); background: linear-gradient(160deg,#f0fdf4,#dcfce7); }
+  .gmp-card.info { border-color: rgba(59,130,246,.22); background: linear-gradient(160deg,#eff6ff,#dbeafe); }
+  .gmp-card h3 { margin: 0 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: #64748b; font-weight: 700; }
+  .gmp-card .gmp-num { font-size: 28px; font-weight: 800; color: #0f172a; line-height: 1.1; }
+  .gmp-card .gmp-card-foot { margin-top: 12px; font-size: 12px; }
+  .gmp-card .gmp-card-foot a { color: #2563eb; font-weight: 600; text-decoration: none; }
+  .gmp-card .gmp-card-foot a:hover { text-decoration: underline; }
+  .gmp-badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+  .gmp-badge-normal { background: #f1f5f9; color: #475569; }
+  .gmp-badge-yaklasiyor { background: #fef9c3; color: #854d0e; }
+  .gmp-badge-gecikti, .gmp-badge-kritik { background: #fee2e2; color: #991b1b; }
+  .gmp-badge-tamamlandi { background: #dcfce7; color: #166534; }
+  .gmp-quick { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+  .gmp-quick .btn { font-size: 13px; padding: 8px 14px; }
+  .gmp-filters {
+    display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; margin-bottom: 22px;
+    padding: 14px 16px; background: #fff; border: 1px solid #e5e7eb; border-radius: 12px;
+  }
+  .gmp-filters label { font-size: 11px; font-weight: 600; color: #64748b; display: block; margin-bottom: 4px; }
+  .gmp-filters select, .gmp-filters button { padding: 8px 12px; border-radius: 8px; border: 1px solid #d1d5db; font-size: 13px; }
+  .gmp-section { margin-bottom: 28px; }
+  .gmp-section-head {
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
+    margin-bottom: 10px;
+  }
+  .gmp-section-head h2 { margin: 0; font-size: 16px; color: #1e293b; }
+  .gmp-section-head a { font-size: 13px; font-weight: 600; color: #2563eb; text-decoration: none; }
+  .gmp-section-head a:hover { text-decoration: underline; }
+  .gmp-subsec { margin-top: 18px; }
+  .gmp-subsec h3 { margin: 0 0 8px; font-size: 14px; color: #334155; }
+  table.gmp-table { width: 100%; border-collapse: collapse; font-size: 12px; background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; overflow: hidden; }
+  table.gmp-table th { background: #1e3a5f; color: #fff; padding: 10px 12px; text-align: left; font-weight: 600; }
+  table.gmp-table td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+  table.gmp-table tr:last-child td { border-bottom: none; }
+  .gmp-empty { text-align: center; color: #94a3b8; padding: 20px !important; }
+  #gmp-load-status { font-size: 13px; color: #64748b; min-height: 18px; }
+</style>
+
+<div class="gmp-wrap card" style="padding: 22px;">
+  <div class="gmp-header">
+    <div>
+      <h1 class="gmp-title">Günlük Yönetim Paneli</h1>
+      <p class="gmp-sub">Açık işler, onaylar, kritik stok ve gecikmeler — tek ekranda özet.</p>
+      <p id="gmp-load-status"></p>
+    </div>
+    <a href="{% url 'stokapp:dashboard' %}" class="btn btn-secondary">← Klasik Dashboard</a>
+  </div>
+
+  <div class="gmp-cards">
+    <div class="gmp-card info">
+      <h3>Bugünkü iş</h3>
+      <div class="gmp-num" id="gmp-sum-bugun">—</div>
+      <div class="gmp-card-foot"><span class="gmp-badge gmp-badge-normal">Plan</span> <a id="gmp-link-bugun" href="{% url 'stokapp:siparis_listesi' %}">Detaya git →</a></div>
+    </div>
+    <div class="gmp-card critical">
+      <h3>Geciken</h3>
+      <div class="gmp-num" id="gmp-sum-geciken">—</div>
+      <div class="gmp-card-foot"><span class="gmp-badge gmp-badge-gecikti">Gecikti</span> <a id="gmp-link-geciken" href="{% url 'stokapp:uretim_emri_listesi' %}">Detaya git →</a></div>
+    </div>
+    <div class="gmp-card warn">
+      <h3>Onay / açık işlem</h3>
+      <div class="gmp-num" id="gmp-sum-onay">—</div>
+      <div class="gmp-card-foot"><span class="gmp-badge gmp-badge-yaklasiyor">Bekliyor</span> <a id="gmp-link-onay" href="{% url 'stokapp:teklif_listesi' %}?tab=cevap_bekliyor">Detaya git →</a></div>
+    </div>
+    <div class="gmp-card critical">
+      <h3>Kritik stok</h3>
+      <div class="gmp-num" id="gmp-sum-kritik">—</div>
+      <div class="gmp-card-foot"><span class="gmp-badge gmp-badge-kritik">Kritik</span> <a id="gmp-link-kritik" href="{% url 'stokapp:stok_listesi' %}">Detaya git →</a></div>
+    </div>
+    <div class="gmp-card ok">
+      <h3>Yaklaşan ödeme (30 gün)</h3>
+      <div class="gmp-num" id="gmp-sum-odeme">—</div>
+      <div class="gmp-card-foot"><span class="gmp-badge gmp-badge-yaklasiyor">Ödeme</span> <a id="gmp-link-odeme" href="{% url 'stokapp:aylik_odemeler_listesi' %}">Detaya git →</a></div>
+    </div>
+  </div>
+
+  <div class="gmp-quick">
+    <a class="btn btn-primary" href="{% url 'stokapp:teklif_ekle' %}">Yeni Teklif</a>
+    <a class="btn btn-primary" href="{% url 'stokapp:siparis_ekle' %}">Yeni Sipariş</a>
+    <a class="btn btn-primary" href="{% url 'stokapp:talep_ekle' %}">Yeni Satınalma Talebi</a>
+    <a class="btn btn-secondary" href="{% url 'stokapp:stok_ekle' %}">Yeni Stok Kartı</a>
+    <a class="btn btn-secondary" href="{% url 'stokapp:stok_giris' %}">Stok Girişi</a>
+    <a class="btn btn-secondary" href="{% url 'stokapp:stok_cikis' %}">Stok Çıkışı</a>
+  </div>
+
+  <form class="gmp-filters" method="get" action="">
+    <div>
+      <label for="id_period">Dönem</label>
+      <select name="period" id="id_period">
+        <option value="open" {% if request.GET.period == 'open' or not request.GET.period %}selected{% endif %}>Tüm açık işler</option>
+        <option value="today" {% if request.GET.period == 'today' %}selected{% endif %}>Bugün</option>
+        <option value="week" {% if request.GET.period == 'week' %}selected{% endif %}>Bu hafta</option>
+        <option value="month" {% if request.GET.period == 'month' %}selected{% endif %}>Bu ay</option>
+      </select>
+    </div>
+    <div>
+      <label for="id_departman">Departman (talep)</label>
+      <select name="departman" id="id_departman">
+        <option value="">— Tümü —</option>
+        {% for d in departman_secenekleri %}
+        <option value="{{ d }}" {% if request.GET.departman == d %}selected{% endif %}>{{ d }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="id_sorumlu">Sorumlu (teklif / talep)</label>
+      <select name="sorumlu" id="id_sorumlu">
+        <option value="">— Tümü —</option>
+        {% for u in kullanicilar %}
+        <option value="{{ u.pk }}" {% if request.GET.sorumlu == u.pk|stringformat:"s" %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <button type="submit" class="btn btn-primary" style="border:none;">Uygula</button>
+  </form>
+
+  <div class="gmp-section">
+    <div class="gmp-section-head">
+      <h2>Onay bekleyenler ve açık talepler</h2>
+    </div>
+    <div class="gmp-subsec">
+      <h3>Onay bekleyen teklifler <a class="gmp-list-link" data-list-key="teklif_listesi" href="{% url 'stokapp:teklif_listesi' %}?tab=cevap_bekliyor">Liste →</a></h3>
+      <table class="gmp-table">
+        <thead><tr><th>Kayıt no</th><th>Açıklama</th><th>Müşteri / sorumlu</th><th>Tarih / termin</th><th>Durum</th><th>İşlem</th></tr></thead>
+        <tbody id="gmp-tbody-teklif"><tr><td colspan="6" class="gmp-empty">Kayıt yok.</td></tr></tbody>
+      </table>
+    </div>
+    <div class="gmp-subsec">
+      <h3>Onay bekleyen siparişler <a class="gmp-list-link" data-list-key="siparis_listesi" href="{% url 'stokapp:siparis_listesi' %}">Liste →</a></h3>
+      <table class="gmp-table">
+        <thead><tr><th>Kayıt no</th><th>Açıklama</th><th>Müşteri</th><th>Tarih / termin</th><th>Durum</th><th>İşlem</th></tr></thead>
+        <tbody id="gmp-tbody-siparis"><tr><td colspan="6" class="gmp-empty">Kayıt yok.</td></tr></tbody>
+      </table>
+    </div>
+    <div class="gmp-subsec">
+      <h3>Açık satınalma talepleri <a class="gmp-list-link" data-list-key="talep_listesi" href="{% url 'stokapp:talep_listesi' %}">Liste →</a></h3>
+      <table class="gmp-table">
+        <thead><tr><th>Kayıt no</th><th>Başlık</th><th>Talep eden / departman</th><th>Tarih / termin</th><th>Durum</th><th>İşlem</th></tr></thead>
+        <tbody id="gmp-tbody-talep"><tr><td colspan="6" class="gmp-empty">Kayıt yok.</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="gmp-section">
+    <div class="gmp-section-head">
+      <h2>Kritik stoklar</h2>
+      <a class="gmp-list-link" data-list-key="stok_listesi" href="{% url 'stokapp:stok_listesi' %}">Stok listesi →</a>
+    </div>
+    <table class="gmp-table">
+      <thead><tr><th>Stok kodu</th><th>Ürün</th><th>Kategori</th><th>Miktar bilgisi</th><th>Durum</th><th>İşlem</th></tr></thead>
+      <tbody id="gmp-tbody-kritik"><tr><td colspan="6" class="gmp-empty">Kayıt yok.</td></tr></tbody>
+    </table>
+  </div>
+
+  <div class="gmp-section" id="gmp-geciken">
+    <div class="gmp-section-head">
+      <h2>Geciken işler</h2>
+    </div>
+    <div class="gmp-subsec">
+      <h3>Siparişler <a class="gmp-list-link" data-list-key="siparis_listesi" href="{% url 'stokapp:siparis_listesi' %}">Liste →</a></h3>
+      <table class="gmp-table">
+        <thead><tr><th>Kayıt no</th><th>Açıklama</th><th>Müşteri</th><th>Tarih / termin</th><th>Durum</th><th>İşlem</th></tr></thead>
+        <tbody id="gmp-tbody-gec-siparis"><tr><td colspan="6" class="gmp-empty">Kayıt yok.</td></tr></tbody>
+      </table>
+    </div>
+    <div class="gmp-subsec">
+      <h3>Satın alma <a class="gmp-list-link" data-list-key="satinalma_listesi" href="{% url 'stokapp:satinalma_listesi' %}">Liste →</a></h3>
+      <table class="gmp-table">
+        <thead><tr><th>Kayıt no</th><th>Not</th><th>Tedarikçi</th><th>Tarih / termin</th><th>Durum</th><th>İşlem</th></tr></thead>
+        <tbody id="gmp-tbody-gec-sat"><tr><td colspan="6" class="gmp-empty">Kayıt yok.</td></tr></tbody>
+      </table>
+    </div>
+    <div class="gmp-subsec">
+      <h3>Talepler <a class="gmp-list-link" data-list-key="talep_listesi" href="{% url 'stokapp:talep_listesi' %}">Liste →</a></h3>
+      <table class="gmp-table">
+        <thead><tr><th>Kayıt no</th><th>Başlık</th><th>Talep eden</th><th>Tarih / termin</th><th>Durum</th><th>İşlem</th></tr></thead>
+        <tbody id="gmp-tbody-gec-talep"><tr><td colspan="6" class="gmp-empty">Kayıt yok.</td></tr></tbody>
+      </table>
+    </div>
+    <div class="gmp-subsec">
+      <h3>Üretim emirleri <a class="gmp-list-link" data-list-key="uretim_emirleri" href="{% url 'stokapp:uretim_emri_listesi' %}">Liste →</a></h3>
+      <table class="gmp-table">
+        <thead><tr><th>Emir no</th><th>Ürün</th><th>Taraf</th><th>Plan</th><th>Durum</th><th>İşlem</th></tr></thead>
+        <tbody id="gmp-tbody-gec-emir"><tr><td colspan="6" class="gmp-empty">Kayıt yok.</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <p style="font-size:12px;color:#94a3b8;margin-top:24px;">
+    Renkler: gri/mavi normal, sarı yaklaşıyor, kırmızı gecikti veya kritik, yeşil tamamlandı (liste bazlı).
+    Yaklaşan araç / gayrimenkul / kalibrasyon blokları sonraki fazda genişletilebilir.
+  </p>
+</div>
+
+<script src="{% static 'stokapp/js/gunluk_yonetim.js' %}"></script>
+<script>
+  gmpLoadPanel('{{ api_url|escapejs }}');
+</script>
+{% endblock %}

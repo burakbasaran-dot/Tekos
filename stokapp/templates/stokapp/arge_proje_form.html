@@ -1,0 +1,36 @@
+{% extends "stokapp/base.html" %}
+{% block title %}{{ baslik }}{% endblock %}
+{% block content %}
+<div class="card" style="max-width:920px;">
+  <h2 style="margin-top:0;">{{ baslik }}</h2>
+  {% if proje %}
+  <p><a href="{% url 'stokapp:arge_proje_detay' proje.pk %}" class="btn btn-secondary">← Projeye dön</a></p>
+  {% else %}
+  <p><a href="{% url 'stokapp:arge_proje_listesi' %}" class="btn btn-secondary">← Liste</a></p>
+  {% endif %}
+  {% if form.non_field_errors %}
+  <div style="background:#fee2e2;color:#991b1b;padding:12px;border-radius:8px;margin-bottom:12px;">{{ form.non_field_errors }}</div>
+  {% endif %}
+  <form method="post" novalidate>
+    {% csrf_token %}
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;">
+      {% for field in form %}
+      <div style="{% if field.name == 'aciklama' %}grid-column:1/-1;{% endif %}">
+        <label style="display:block;font-weight:600;margin-bottom:4px;font-size:13px;color:#374151;">{{ field.label }}</label>
+        {{ field }}
+        {% if field.help_text %}<small style="color:#6b7280;">{{ field.help_text }}</small>{% endif %}
+        {% if field.errors %}<div style="color:#b91c1c;font-size:13px;">{{ field.errors }}</div>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    <div style="margin-top:20px;display:flex;gap:10px;">
+      <button type="submit" class="btn btn-primary">Kaydet</button>
+    </div>
+  </form>
+</div>
+<style>
+  .card input[type="text"], .card input[type="number"], .card input[type="date"], .card select, .card textarea {
+    width: 100%; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;
+  }
+</style>
+{% endblock %}

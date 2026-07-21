@@ -1,0 +1,270 @@
+{% extends "stokapp/base.html" %}
+{% block title %}CNC Programlar{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>CNC Programlar</h2>
+        <a href="{% url 'stokapp:cnc_program_ekle' %}" class="btn btn-primary" style="background-color: #22c55e; border-color: #22c55e; padding: 8px 16px;">
+            <span style="font-size: 18px;">+</span> Yeni Program
+        </a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 15px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background: #fff3cd; color: #856404; border-left: 4px solid #ffc107;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Arama ve Filtre Bölümü -->
+    <div style="margin-bottom: 20px; padding: 16px; background-color: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
+        <form method="get" style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+            <!-- Arama Kutusu -->
+            <div style="flex: 1; min-width: 250px;">
+                <input type="text" 
+                       name="search" 
+                       value="{{ search_query }}" 
+                       placeholder="🔍 Program adı, numara, makine veya ürün kodunda ara..." 
+                       style="width: 100%; padding: 10px 15px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
+            </div>
+            
+            <!-- Makine Tipi Filtresi -->
+            <div>
+                <select name="machine_type" style="padding: 10px 15px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
+                    <option value="">Tüm Makineler</option>
+                    <option value="cnc_lathe" {% if machine_type == 'cnc_lathe' %}selected{% endif %}>CNC Torna</option>
+                    <option value="cnc_mill" {% if machine_type == 'cnc_mill' %}selected{% endif %}>CNC Freze</option>
+                </select>
+            </div>
+            
+            <!-- Hepsini Göster Checkbox -->
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" 
+                           name="hepsini_goster"
+                           value="true"
+                           {% if hepsini_goster %}checked{% endif %}
+                           style="width: 18px; height: 18px; cursor: pointer;">
+                    <span style="font-weight: 500; font-size: 14px;">Hepsini Göster</span>
+                </label>
+            </div>
+            
+            <!-- Butonlar -->
+            <div style="display: flex; gap: 10px;">
+                <button type="submit" 
+                        style="padding: 10px 20px; background-color: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer;">
+                    🔍 Ara
+                </button>
+                {% if search_query or hepsini_goster or machine_type %}
+                <a href="{% url 'stokapp:cnc_program_listesi' %}" 
+                   style="padding: 10px 20px; background-color: #6b7280; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; text-decoration: none; display: inline-block;">
+                    🔄 Temizle
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <!-- Program Listesi -->
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background-color: #3b82f6; color: white;">
+                    <th style="padding: 12px; text-align: left;">Program Adı</th>
+                    <th style="padding: 12px; text-align: left;">Ürün</th>
+                    <th style="padding: 12px; text-align: left;">Ürün Parçası</th>
+                    <th style="padding: 12px; text-align: left;">Makine Tipi</th>
+                    <th style="padding: 12px; text-align: left;">Makine Adı</th>
+                    <th style="padding: 12px; text-align: left;">Dosya Konumu</th>
+                    <th style="padding: 12px; text-align: left;">Aktif Revizyon</th>
+                    <th style="padding: 12px; text-align: left;">Durum</th>
+                    <th style="padding: 12px; text-align: left;">Revizyon Sayısı</th>
+                    <th style="padding: 12px; text-align: left;">İşlemler</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in grouped_programlar %}
+                    {% if entry.is_group %}
+                    <tr style="border-bottom: 1px solid #d1d5db; background: #f8fafc;">
+                        <td style="padding: 12px;" colspan="10">
+                            <button type="button"
+                                    onclick="toggleGroup('group-{{ forloop.counter }}', this)"
+                                    style="border: none; background: none; font-size: 16px; font-weight: 700; cursor: pointer; color: #1d4ed8; margin-right: 8px;">
+                                +
+                            </button>
+                            <a href="{% url 'stokapp:stok_detay' entry.product.pk %}" style="color: #1e40af; text-decoration: none; font-weight: 700;">
+                                {{ entry.group_key }}
+                            </a>
+                            <small style="color: #6b7280; margin-left: 10px;">{{ entry.product.ad|truncatewords:6 }} - {{ entry.count }} program</small>
+                        </td>
+                    </tr>
+                        {% for program in entry.items %}
+                        <tr class="group-{{ forloop.parentloop.counter }}" style="border-bottom: 1px solid #e5e7eb; display: none;">
+                            <td style="padding: 12px 12px 12px 28px;">
+                                <strong>{{ program.program_name }}</strong>
+                                {% if program.program_number %}
+                                <br><small style="color: #6b7280;">{{ program.program_number }}</small>
+                                {% endif %}
+                            </td>
+                            <td style="padding: 12px;">
+                                <a href="{% url 'stokapp:stok_detay' program.product.pk %}" style="color: #3b82f6; text-decoration: none;">
+                                    {{ program.product.stok_kodu }}
+                                </a>
+                                <br><small style="color: #6b7280;">{{ program.product.ad|truncatewords:3 }}</small>
+                            </td>
+                            <td style="padding: 12px;">
+                                {% if program.urun_parcasi %}
+                                <span style="background-color: #f3f4f6; color: #111827; padding: 4px 10px; border-radius: 4px; font-size: 12px;">
+                                    {{ program.urun_parcasi }}
+                                </span>
+                                {% else %}
+                                <span style="color: #9ca3af;">—</span>
+                                {% endif %}
+                            </td>
+                            <td style="padding: 12px;">{{ program.get_machine_type_display }}</td>
+                            <td style="padding: 12px;">{{ program.machine_name|default:"-" }}</td>
+                            <td style="padding: 12px;">
+                                {% if program.dosya_konumu %}
+                                <span style="background-color: #eff6ff; color: #1e40af; padding: 4px 8px; border-radius: 4px; font-family: monospace; font-size: 11px;">
+                                    📂 {{ program.dosya_konumu }}
+                                </span>
+                                {% else %}
+                                <span style="color: #9ca3af;">—</span>
+                                {% endif %}
+                            </td>
+                            <td style="padding: 12px;">
+                                {% if program.current_revision %}
+                                <span style="background-color: #22c55e; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">
+                                    {{ program.current_revision }}
+                                </span>
+                                {% else %}
+                                <span style="color: #6b7280;">-</span>
+                                {% endif %}
+                            </td>
+                            <td style="padding: 12px;">
+                                {% if program.status == 'active' %}
+                                <span style="background-color: #22c55e; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Aktif</span>
+                                {% else %}
+                                <span style="background-color: #6b7280; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Arşivlenmiş</span>
+                                {% endif %}
+                            </td>
+                            <td style="padding: 12px; text-align: center;">
+                                <span style="background-color: #eff6ff; color: #1e40af; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">
+                                    {{ program.get_revision_count }}
+                                </span>
+                            </td>
+                            <td style="padding: 12px;">
+                                <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                                    <a href="{% url 'stokapp:cnc_program_detay' program.program_id %}" 
+                                       style="padding: 6px 12px; background-color: #3b82f6; color: white; border-radius: 4px; text-decoration: none; font-size: 12px;">
+                                        👁️
+                                    </a>
+                                    <a href="{% url 'stokapp:cnc_program_duzenle' program.program_id %}" 
+                                       style="padding: 6px 12px; background-color: #f59e0b; color: white; border-radius: 4px; text-decoration: none; font-size: 12px;">
+                                        ✏️
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                    {% with program=entry.program %}
+                    <tr style="border-bottom: 1px solid #e5e7eb;">
+                        <td style="padding: 12px;">
+                            <strong>{{ program.program_name }}</strong>
+                            {% if program.program_number %}
+                            <br><small style="color: #6b7280;">{{ program.program_number }}</small>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 12px;">
+                            <a href="{% url 'stokapp:stok_detay' program.product.pk %}" style="color: #3b82f6; text-decoration: none;">
+                                {{ program.product.stok_kodu }}
+                            </a>
+                            <br><small style="color: #6b7280;">{{ program.product.ad|truncatewords:3 }}</small>
+                        </td>
+                        <td style="padding: 12px;">
+                            {% if program.urun_parcasi %}
+                            <span style="background-color: #f3f4f6; color: #111827; padding: 4px 10px; border-radius: 4px; font-size: 12px;">
+                                {{ program.urun_parcasi }}
+                            </span>
+                            {% else %}
+                            <span style="color: #9ca3af;">—</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 12px;">{{ program.get_machine_type_display }}</td>
+                        <td style="padding: 12px;">{{ program.machine_name|default:"-" }}</td>
+                        <td style="padding: 12px;">
+                            {% if program.dosya_konumu %}
+                            <span style="background-color: #eff6ff; color: #1e40af; padding: 4px 8px; border-radius: 4px; font-family: monospace; font-size: 11px;">
+                                📂 {{ program.dosya_konumu }}
+                            </span>
+                            {% else %}
+                            <span style="color: #9ca3af;">—</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 12px;">
+                            {% if program.current_revision %}
+                            <span style="background-color: #22c55e; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">
+                                {{ program.current_revision }}
+                            </span>
+                            {% else %}
+                            <span style="color: #6b7280;">-</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 12px;">
+                            {% if program.status == 'active' %}
+                            <span style="background-color: #22c55e; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Aktif</span>
+                            {% else %}
+                            <span style="background-color: #6b7280; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Arşivlenmiş</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 12px; text-align: center;">
+                            <span style="background-color: #eff6ff; color: #1e40af; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;">
+                                {{ program.get_revision_count }}
+                            </span>
+                        </td>
+                        <td style="padding: 12px;">
+                            <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                                <a href="{% url 'stokapp:cnc_program_detay' program.program_id %}" 
+                                   style="padding: 6px 12px; background-color: #3b82f6; color: white; border-radius: 4px; text-decoration: none; font-size: 12px;">
+                                    👁️
+                                </a>
+                                <a href="{% url 'stokapp:cnc_program_duzenle' program.program_id %}" 
+                                   style="padding: 6px 12px; background-color: #f59e0b; color: white; border-radius: 4px; text-decoration: none; font-size: 12px;">
+                                    ✏️
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endwith %}
+                    {% endif %}
+                {% empty %}
+                <tr>
+                    <td colspan="10" style="padding: 40px; text-align: center; color: #6b7280;">
+                        {% if search_query %}
+                            "{{ search_query }}" için sonuç bulunamadı.
+                        {% else %}
+                            Henüz CNC programı bulunmuyor. <a href="{% url 'stokapp:cnc_program_ekle' %}">İlk programı oluşturun</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+<script>
+function toggleGroup(groupClass, button) {
+    const rows = document.querySelectorAll('.' + groupClass);
+    const shouldOpen = button.textContent.trim() === '+';
+    rows.forEach((row) => {
+        row.style.display = shouldOpen ? 'table-row' : 'none';
+    });
+    button.textContent = shouldOpen ? '−' : '+';
+}
+</script>
+{% endblock %}

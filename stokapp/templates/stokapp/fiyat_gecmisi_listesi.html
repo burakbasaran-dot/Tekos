@@ -1,0 +1,106 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Fiyat Geçmişi Listesi{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>📊 Fiyat Değişiklik Geçmişi</h2>
+        <a href="{% url 'stokapp:stok_listesi' %}" class="btn btn-secondary">← Stok Listesi</a>
+    </div>
+
+    <!-- Filtreler -->
+    <div style="margin-bottom: 20px; padding: 15px; background: #f9fafb; border-radius: 8px;">
+        <form method="get" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <div>
+                <label>Stok Kodu:</label>
+                <input type="text" name="stok_kodu" value="{{ stok_kodu }}" placeholder="Stok kodu ara..." 
+                       style="padding: 8px; border-radius: 6px; border: 1px solid #ddd;">
+            </div>
+            <div>
+                <label>Alan:</label>
+                <select name="alan" style="padding: 8px; border-radius: 6px; border: 1px solid #ddd;">
+                    <option value="">Tümü</option>
+                    <option value="alis_fiyati" {% if alan == 'alis_fiyati' %}selected{% endif %}>Alış Fiyatı</option>
+                    <option value="satis_fiyati" {% if alan == 'satis_fiyati' %}selected{% endif %}>Satış Fiyatı</option>
+                    <option value="satin_alma_fiyati" {% if alan == 'satin_alma_fiyati' %}selected{% endif %}>Satın Alma Fiyatı</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-secondary">🔍 Filtrele</button>
+            <a href="{% url 'stokapp:fiyat_gecmisi_listesi' %}" class="btn btn-secondary">Temizle</a>
+        </form>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Tarih</th>
+                <th>Stok Kodu</th>
+                <th>Ürün Adı</th>
+                <th>Değişen Alan</th>
+                <th>Eski Fiyat</th>
+                <th>Yeni Fiyat</th>
+                <th>Fark</th>
+                <th>Kullanıcı</th>
+                <th>İşlem</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for gecmis in gecmisler %}
+            <tr>
+                <td>{{ gecmis.tarih|date:"d.m.Y H:i" }}</td>
+                <td><strong>{{ gecmis.stok_item.stok_kodu }}</strong></td>
+                <td>{{ gecmis.stok_item.ad|truncatewords:5 }}</td>
+                <td>
+                    <span style="padding: 4px 8px; background: #d1ecf1; color: #0c5460; border-radius: 6px; font-size: 12px;">
+                        {% if gecmis.degisen_alan == 'alis_fiyati' %}Alış
+                        {% elif gecmis.degisen_alan == 'satis_fiyati' %}Satış
+                        {% elif gecmis.degisen_alan == 'satin_alma_fiyati' %}Satın Alma
+                        {% else %}{{ gecmis.degisen_alan }}{% endif %}
+                    </span>
+                </td>
+                <td>
+                    {% if gecmis.eski_alis_fiyati %}{{ gecmis.eski_alis_fiyati }}
+                    {% elif gecmis.eski_satis_fiyati %}{{ gecmis.eski_satis_fiyati }}
+                    {% elif gecmis.eski_satin_alma_fiyati %}{{ gecmis.eski_satin_alma_fiyati }}
+                    {% else %}-{% endif %} {{ gecmis.para_birimi }}
+                </td>
+                <td>
+                    {% if gecmis.yeni_alis_fiyati %}{{ gecmis.yeni_alis_fiyati }}
+                    {% elif gecmis.yeni_satis_fiyati %}{{ gecmis.yeni_satis_fiyati }}
+                    {% elif gecmis.yeni_satin_alma_fiyati %}{{ gecmis.yeni_satin_alma_fiyati }}
+                    {% else %}-{% endif %} {{ gecmis.para_birimi }}
+                </td>
+                <td>
+                    {% if gecmis.eski_alis_fiyati and gecmis.yeni_alis_fiyati %}
+                        {% with diff=gecmis.yeni_alis_fiyati|add:0|sub:gecmis.eski_alis_fiyati|add:0 %}
+                            {% if diff > 0 %}
+                                <span style="color: #28a745;">+{{ diff|floatformat:2 }}</span>
+                            {% else %}
+                                <span style="color: #dc3545;">{{ diff|floatformat:2 }}</span>
+                            {% endif %}
+                        {% endwith %}
+                    {% elif gecmis.eski_satis_fiyati and gecmis.yeni_satis_fiyati %}
+                        {% with diff=gecmis.yeni_satis_fiyati|add:0|sub:gecmis.eski_satis_fiyati|add:0 %}
+                            {% if diff > 0 %}
+                                <span style="color: #28a745;">+{{ diff|floatformat:2 }}</span>
+                            {% else %}
+                                <span style="color: #dc3545;">{{ diff|floatformat:2 }}</span>
+                            {% endif %}
+                        {% endwith %}
+                    {% else %}-{% endif %}
+                </td>
+                <td>{{ gecmis.user }}</td>
+                <td>
+                    <a href="{% url 'stokapp:fiyat_gecmisi' gecmis.stok_item.pk %}" class="btn btn-secondary" style="padding: 6px 12px; font-size: 13px;">Detay</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="9" style="text-align: center; padding: 40px; color: #6b7280;">
+                    Henüz fiyat değişikliği kaydı bulunmuyor.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

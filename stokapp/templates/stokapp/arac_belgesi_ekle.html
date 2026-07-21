@@ -1,0 +1,478 @@
+{% extends "stokapp/base.html" %}
+{% block title %}{% if is_guncelle %}Belgeleri Güncelle{% elif is_edit %}Belge Düzenle{% else %}Yeni Belge Ekle{% endif %} - {{ arac.plaka }}{% endblock %}
+{% block content %}
+<style>
+    .select-with-add {
+        display: flex;
+        gap: 8px;
+        align-items: stretch;
+    }
+    .select-with-add select {
+        flex: 1;
+        padding: 10px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 14px;
+        background: white;
+    }
+    .add-btn {
+        width: 44px;
+        min-width: 44px;
+        padding: 0;
+        background: #22c55e;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 22px;
+        font-weight: 600;
+        cursor: pointer;
+        line-height: 1;
+        transition: background 0.2s;
+    }
+    .add-btn:hover {
+        background: #16a34a;
+    }
+    .add-modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+    }
+    .add-modal.show {
+        display: flex;
+    }
+    .add-modal-content {
+        background: white;
+        padding: 24px;
+        border-radius: 12px;
+        min-width: 360px;
+        max-width: 90%;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    }
+    .add-modal-title {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 16px;
+        color: #111827;
+    }
+    .add-modal-input {
+        width: 100%;
+        padding: 12px 14px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        font-size: 14px;
+        margin-bottom: 12px;
+        box-sizing: border-box;
+    }
+    .add-modal-input:focus {
+        outline: none;
+        border-color: #22c55e;
+        box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+    }
+    .add-modal-error {
+        color: #e74c3c;
+        font-size: 13px;
+        margin-bottom: 12px;
+        display: none;
+    }
+    .add-modal-buttons {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+    }
+    .add-modal-btn {
+        padding: 10px 18px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        border: none;
+    }
+    .add-modal-btn-cancel {
+        background: #f3f4f6;
+        color: #374151;
+    }
+    .add-modal-btn-save {
+        background: #22c55e;
+        color: white;
+    }
+    .belge-dosya-input {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 14px;
+        background: white;
+        box-sizing: border-box;
+    }
+    .belge-dosya-hint {
+        display: block;
+        margin-top: 6px;
+        color: #6b7280;
+        font-size: 13px;
+    }
+    .mevcut-dosya-listesi {
+        margin-top: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .mevcut-dosya-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 12px;
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+    }
+    .mevcut-dosya-item label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: #ef4444;
+        font-size: 13px;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+    #secilenDosyaListesi {
+        margin-top: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+    .secilen-dosya-item {
+        font-size: 13px;
+        color: #374151;
+        padding: 6px 10px;
+        background: #eff6ff;
+        border-radius: 6px;
+    }
+    .guncelle-info {
+        background: #f5f3ff;
+        border: 1px solid #ddd6fe;
+        border-radius: 8px;
+        padding: 14px 16px;
+        margin-bottom: 20px;
+        color: #5b21b6;
+        font-size: 14px;
+        line-height: 1.5;
+    }
+    .belge-turu-readonly {
+        padding: 10px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        background: #f9fafb;
+        color: #374151;
+        font-size: 14px;
+        font-weight: 600;
+    }
+    .field-disabled {
+        opacity: 0.6;
+    }
+    .field-disabled input {
+        background: #f3f4f6;
+        cursor: not-allowed;
+    }
+</style>
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <a href="{% url 'stokapp:arac_detay' arac.pk %}" class="btn" style="background-color: #6b7280; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px;">
+                ← Geri
+            </a>
+            <h2 style="margin: 0;">{% if is_guncelle %}🔄 Belgeleri Güncelle{% elif is_edit %}✏️ Belge Düzenle{% else %}📋 Yeni Belge Ekle{% endif %} - {{ arac.plaka }}</h2>
+        </div>
+        {% if is_edit and not is_guncelle %}
+        <a href="{% url 'stokapp:arac_belgesi_guncelle' belge.pk %}" class="btn" style="background-color: #8b5cf6; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+            🔄 Belgeleri Güncelle
+        </a>
+        {% endif %}
+    </div>
+
+    {% if is_guncelle %}
+    <div class="guncelle-info">
+        Yeni dosyaları yükleyip kaydettiğinizde mevcut <strong>{{ belge.get_belge_turu_display }}</strong> belgesi arşive alınır ve bu kayıt güncel belge olarak görünür.
+    </div>
+    {% endif %}
+
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 15px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background: #fff3cd; color: #856404; border-left: 4px solid #ffc107;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" style="max-width: 800px;">
+        {% csrf_token %}
+        
+        {{ form.arac }}
+        
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: 600;">Belge Türü *</label>
+            {% if is_guncelle %}
+                <div class="belge-turu-readonly">{{ belge.get_belge_turu_display }}</div>
+                <input type="hidden" name="belge_turu" value="{{ belge.belge_turu }}">
+            {% else %}
+                <div class="select-with-add">
+                    {{ form.belge_turu }}
+                    <button type="button" class="add-btn" id="belgeTuruAddBtn" title="Yeni belge türü ekle">+</button>
+                </div>
+                {% if form.belge_turu.errors %}
+                    <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.belge_turu.errors }}</div>
+                {% endif %}
+            {% endif %}
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+            <div>
+                <label for="{{ form.gecerlilik_baslangic.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.gecerlilik_baslangic.label }}</label>
+                {{ form.gecerlilik_baslangic }}
+                {% if form.gecerlilik_baslangic.errors %}
+                    <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.gecerlilik_baslangic.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div id="gecerlilik_bitis_div">
+                <label id="gecerlilik_bitis_label" for="{{ form.gecerlilik_bitis.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">
+                    {{ form.gecerlilik_bitis.label }} <span id="gecerlilik_bitis_required">*</span>
+                </label>
+                {{ form.gecerlilik_bitis }}
+                <span id="gecerlilik_bitis_hint" class="belge-dosya-hint" style="display: none;">Bu belge türünde geçerlilik bitişi uygulanmaz.</span>
+                {% if form.gecerlilik_bitis.errors %}
+                    <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.gecerlilik_bitis.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label for="{{ form.belge_no.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.belge_no.label }}</label>
+            {{ form.belge_no }}
+            {% if form.belge_no.errors %}
+                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.belge_no.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+            <div>
+                <label for="belge_dosyalari" style="display: block; margin-bottom: 5px; font-weight: 600;">Belge Dosyaları</label>
+                <input type="file" name="belge_dosyalari" id="belge_dosyalari" class="belge-dosya-input" multiple accept=".pdf,application/pdf">
+                <span class="belge-dosya-hint">
+                    {% if is_guncelle %}
+                        Yeni belge dosyalarını seçin. Kaydettiğinizde eski dosyalar arşivde kalır.
+                    {% else %}
+                        Birden fazla PDF seçebilirsiniz (Ctrl veya Cmd tuşu ile).
+                    {% endif %}
+                </span>
+                <div id="secilenDosyaListesi"></div>
+                {% if is_edit and belge.dosyalar.exists and not is_guncelle %}
+                    <div class="mevcut-dosya-listesi">
+                        {% for dosya in belge.dosyalar.all %}
+                        <div class="mevcut-dosya-item">
+                            <a href="{{ dosya.dosya.url }}" target="_blank" style="color: #3b82f6; text-decoration: none; font-size: 14px;">
+                                📄 {{ dosya.dosya_adi }}
+                            </a>
+                            <label>
+                                <input type="checkbox" name="silinen_dosya" value="{{ dosya.pk }}">
+                                Sil
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div id="hasar_foto_div">
+                <label for="{{ form.hasar_foto.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.hasar_foto.label }}</label>
+                {{ form.hasar_foto }}
+                {% if is_edit and belge.hasar_foto %}
+                    <div style="margin-top: 10px;">
+                        <img src="{{ belge.hasar_foto.url }}" alt="Hasar Fotoğrafı" style="max-width: 200px; max-height: 150px; border-radius: 8px; border: 1px solid #e5e7eb;">
+                    </div>
+                {% endif %}
+                {% if form.hasar_foto.errors %}
+                    <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.hasar_foto.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label for="{{ form.aciklama.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.aciklama.label }}</label>
+            {{ form.aciklama }}
+            {% if form.aciklama.errors %}
+                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.aciklama.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 30px;">
+            <button type="submit" style="background-color: {% if is_guncelle %}#8b5cf6{% else %}#22c55e{% endif %}; color: white; padding: 12px 24px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer;">
+                {% if is_guncelle %}🔄 Belgeleri Güncelle{% else %}💾 Kaydet{% endif %}
+            </button>
+            <a href="{% url 'stokapp:arac_detay' arac.pk %}" style="background-color: #6b7280; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-size: 16px; font-weight: 600; display: inline-block;">
+                ❌ İptal
+            </a>
+        </div>
+    </form>
+</div>
+
+<div class="add-modal" id="belgeTuruModal">
+    <div class="add-modal-content">
+        <div class="add-modal-title">Yeni Belge Türü Ekle</div>
+        <input type="text" class="add-modal-input" id="belgeTuruModalInput" placeholder="Örn: Yeşil Kart">
+        <div class="add-modal-error" id="belgeTuruModalError"></div>
+        <div class="add-modal-buttons">
+            <button type="button" class="add-modal-btn add-modal-btn-cancel" id="belgeTuruModalCancel">İptal</button>
+            <button type="button" class="add-modal-btn add-modal-btn-save" id="belgeTuruModalSave">Kaydet</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Hasar fotoğrafı alanını sadece HASAR belge türü seçildiğinde göster
+    document.addEventListener('DOMContentLoaded', function() {
+        const belgeTuruSelect = document.getElementById('{{ form.belge_turu.id_for_label }}');
+        const hasarFotoDiv = document.getElementById('hasar_foto_div');
+        const bitisDiv = document.getElementById('gecerlilik_bitis_div');
+        const bitisInput = document.getElementById('{{ form.gecerlilik_bitis.id_for_label }}');
+        const bitisRequired = document.getElementById('gecerlilik_bitis_required');
+        const bitisHint = document.getElementById('gecerlilik_bitis_hint');
+        const guncelleBelgeTuru = '{{ belge.belge_turu|default:"" }}';
+        const bitisTarihiGerekmezKodlar = new Set({{ bitis_tarihi_gerekmez_kodlar_json|safe }});
+
+        function isHasarTuru() {
+            const kod = belgeTuruSelect ? belgeTuruSelect.value : guncelleBelgeTuru;
+            return kod === 'HASAR';
+        }
+
+        function bitisTarihiGerekmezMi() {
+            const kod = belgeTuruSelect ? belgeTuruSelect.value : guncelleBelgeTuru;
+            return bitisTarihiGerekmezKodlar.has(kod);
+        }
+
+        function toggleBelgeTuruAlanlari() {
+            const isHasar = isHasarTuru();
+            const bitisGerekmez = bitisTarihiGerekmezMi();
+
+            if (hasarFotoDiv) {
+                hasarFotoDiv.style.display = isHasar ? 'block' : 'none';
+            }
+
+            if (bitisInput && bitisDiv) {
+                bitisInput.disabled = bitisGerekmez;
+                bitisDiv.classList.toggle('field-disabled', bitisGerekmez);
+                if (bitisRequired) {
+                    bitisRequired.style.display = bitisGerekmez ? 'none' : 'inline';
+                }
+                if (bitisHint) {
+                    bitisHint.style.display = bitisGerekmez ? 'block' : 'none';
+                }
+                if (bitisGerekmez) {
+                    bitisInput.value = '';
+                }
+            }
+        }
+
+        if (belgeTuruSelect) {
+            belgeTuruSelect.addEventListener('change', toggleBelgeTuruAlanlari);
+        }
+        toggleBelgeTuruAlanlari();
+
+        {% if not is_guncelle %}
+        const modal = document.getElementById('belgeTuruModal');
+        const modalInput = document.getElementById('belgeTuruModalInput');
+        const modalError = document.getElementById('belgeTuruModalError');
+        const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+
+        function openBelgeTuruModal() {
+            modalError.style.display = 'none';
+            modalError.textContent = '';
+            modalInput.value = '';
+            modal.classList.add('show');
+            modalInput.focus();
+        }
+
+        function closeBelgeTuruModal() {
+            modal.classList.remove('show');
+        }
+
+        async function saveBelgeTuru() {
+            const ad = modalInput.value.trim();
+            if (!ad) {
+                modalError.textContent = 'Belge türü adı giriniz.';
+                modalError.style.display = 'block';
+                return;
+            }
+
+            try {
+                const res = await fetch("{% url 'stokapp:api_arac_belge_turu_ekle' %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken,
+                    },
+                    body: JSON.stringify({ ad }),
+                });
+                const data = await res.json();
+                if (!data.ok) {
+                    modalError.textContent = data.error || 'Kayıt eklenemedi.';
+                    modalError.style.display = 'block';
+                    return;
+                }
+
+                let option = Array.from(belgeTuruSelect.options).find(o => o.value === data.kod);
+                if (!option) {
+                    option = document.createElement('option');
+                    option.value = data.kod;
+                    option.textContent = data.ad;
+                    belgeTuruSelect.appendChild(option);
+                } else {
+                    option.textContent = data.ad;
+                }
+                belgeTuruSelect.value = data.kod;
+                toggleBelgeTuruAlanlari();
+                closeBelgeTuruModal();
+            } catch (err) {
+                modalError.textContent = 'Bağlantı hatası oluştu.';
+                modalError.style.display = 'block';
+            }
+        }
+
+        document.getElementById('belgeTuruAddBtn').addEventListener('click', openBelgeTuruModal);
+        document.getElementById('belgeTuruModalCancel').addEventListener('click', closeBelgeTuruModal);
+        document.getElementById('belgeTuruModalSave').addEventListener('click', saveBelgeTuru);
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) closeBelgeTuruModal();
+        });
+        modalInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                saveBelgeTuru();
+            }
+        });
+        {% endif %}
+
+        const belgeDosyaInput = document.getElementById('belge_dosyalari');
+        const secilenDosyaListesi = document.getElementById('secilenDosyaListesi');
+        if (belgeDosyaInput && secilenDosyaListesi) {
+            belgeDosyaInput.addEventListener('change', function() {
+                secilenDosyaListesi.innerHTML = '';
+                Array.from(belgeDosyaInput.files).forEach(function(file, index) {
+                    const item = document.createElement('div');
+                    item.className = 'secilen-dosya-item';
+                    item.textContent = (index + 1) + '. ' + file.name;
+                    secilenDosyaListesi.appendChild(item);
+                });
+            });
+        }
+    });
+</script>
+{% endblock %}
+

@@ -1,0 +1,107 @@
+{# Tamamlanan veya arşivlenen kontrol listesi — list_tab: gecmis | arsiv #}
+<section class="uk-gecmis-panel">
+  {% if list_tab == 'arsiv' %}
+  <p style="color:#64748b;font-size:14px;margin:0 0 20px;">
+    Arşive taşınmış kontroller burada saklanır. Rapor ve PDF erişimi devam eder; listeyi sadeleştirmek için tamamlananlardan arşive alabilirsiniz.
+  </p>
+  {% else %}
+  <p style="color:#64748b;font-size:14px;margin:0 0 20px;">
+    Tamamlanan ölçüm kontrolleri ve sonuç formları. İşiniz bittiğinde kaydı <strong>Arşivle</strong> ile arşiv sekmesine taşıyabilirsiniz.
+  </p>
+  {% endif %}
+
+  <form method="get" class="uk-gecmis-toolbar">
+    <input type="hidden" name="tab" value="{{ list_tab }}">
+    <input type="search" name="q" value="{{ gecmis_q }}" placeholder="Ürün, sipariş, iş emri, lot…" class="uk-gecmis-search">
+    <select name="sonuc" class="uk-gecmis-select" onchange="this.form.submit()">
+      <option value="">Tüm sonuçlar</option>
+      <option value="KABUL" {% if sonuc_filter == 'KABUL' %}selected{% endif %}>Kabul</option>
+      <option value="SARTLI" {% if sonuc_filter == 'SARTLI' %}selected{% endif %}>Şartlı kabul</option>
+      <option value="RED" {% if sonuc_filter == 'RED' %}selected{% endif %}>Red</option>
+    </select>
+    <button type="submit" class="btn btn-primary">Filtrele</button>
+    {% if gecmis_q or sonuc_filter %}
+    <a href="{% url 'stokapp:uretim_kontrol_ana' %}?tab={{ list_tab }}" class="btn btn-secondary">Temizle</a>
+    {% endif %}
+  </form>
+
+  {% if oturumlar %}
+  <div class="uk-gecmis-table-wrap">
+    <table class="uk-gecmis-table">
+      <thead>
+        <tr>
+          <th>Tarih</th>
+          <th>Ürün / Bileşen</th>
+          <th>Sipariş / İş emri</th>
+          <th>Kontrolcü</th>
+          <th>Lot</th>
+          <th>Sonuç</th>
+          {% if list_tab == 'arsiv' %}<th>Arşiv</th>{% endif %}
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in oturumlar %}
+        <tr>
+          <td>
+            <strong>{{ s.control_date|date:"d.m.Y" }}</strong>
+            {% if s.finished_at %}<br><span class="uk-meta">{{ s.finished_at|date:"H:i" }}</span>{% endif %}
+          </td>
+          <td>
+            <strong>{{ s.product.stok_kodu }}</strong>
+            {% if s.sub_part %}<br><span class="uk-meta">↳ {{ s.sub_part.stok_kodu }}</span>{% endif %}
+            <br><span class="uk-meta">Rev. {{ s.control_plan_revision_no }}</span>
+          </td>
+          <td>
+            {% if s.order %}{{ s.order.siparis_numarasi }}{% else %}<span class="uk-meta">Bağımsız</span>{% endif %}
+            {% if s.work_order %}<br><span class="uk-meta">İE: {{ s.work_order.emir_no }}</span>{% endif %}
+          </td>
+          <td>{{ s.inspector.get_full_name|default:s.inspector.username }}</td>
+          <td>{{ s.lot_no|default:"—" }}</td>
+          <td>
+            {% if s.final_result %}
+            <span class="uk-sonuc-badge {{ s.final_result }}">{{ s.get_final_result_display }}</span>
+            {% else %}—{% endif %}
+          </td>
+          {% if list_tab == 'arsiv' %}
+          <td>
+            {% if s.archived_at %}
+            <span class="uk-meta">{{ s.archived_at|date:"d.m.Y H:i" }}</span>
+            {% if s.archived_by %}<br><span class="uk-meta">{{ s.archived_by.get_full_name|default:s.archived_by.username }}</span>{% endif %}
+            {% else %}—{% endif %}
+          </td>
+          {% endif %}
+          <td class="uk-actions">
+            <a href="{% url 'stokapp:uretim_kontrol_sonuc' s.pk %}" class="btn btn-sm btn-primary">Rapor</a>
+            <a href="{% url 'stokapp:uretim_kontrol_pdf' s.pk %}" class="btn btn-sm btn-secondary" target="_blank">PDF</a>
+            {% if list_tab == 'gecmis' %}
+            <form method="post" action="{% url 'stokapp:uretim_kontrol_oturum_arsivle' s.pk %}" class="uk-inline-form" onsubmit="return confirm('Bu kontrol arşive taşınsın mı?');">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <button type="submit" class="btn btn-sm btn-outline-secondary">Arşivle</button>
+            </form>
+            {% else %}
+            <form method="post" action="{% url 'stokapp:uretim_kontrol_oturum_arsivden_cikar' s.pk %}" class="uk-inline-form" onsubmit="return confirm('Bu kontrol tamamlananlar listesine geri alınsın mı?');">
+              {% csrf_token %}
+              <input type="hidden" name="next" value="{{ request.get_full_path }}">
+              <button type="submit" class="btn btn-sm btn-outline-secondary">Geri al</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="uk-empty">
+    {% if gecmis_q or sonuc_filter %}
+    <p>Filtreye uygun kayıt bulunamadı.</p>
+    {% elif list_tab == 'arsiv' %}
+    <p>Arşivlenmiş kontrol yok. Tamamlanan kontroller sekmesinden kayıt arşivleyebilirsiniz.</p>
+    {% else %}
+    <p>Henüz tamamlanmış üretim kontrolü yok.</p>
+    {% endif %}
+  </div>
+  {% endif %}
+</section>

@@ -1,0 +1,36 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Üretim Emri İptal{% endblock %}
+{% block content %}
+<div class="card">
+    <h2>❌ Üretim Emri İptal</h2>
+    
+    <div style="margin-bottom: 20px; padding: 15px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107;">
+        <strong>Emir No:</strong> {{ emir.emir_no }}<br>
+        <strong>Ürün:</strong> {{ emir.recete.urun.stok_kodu }} - {{ emir.recete.urun.ad }}<br>
+        <strong>Miktar:</strong> {{ emir.miktar }} {{ emir.recete.urun.birim }}
+    </div>
+    
+    <form method="post">
+        {% csrf_token %}
+        <div style="margin-bottom: 15px;">
+            <label><strong>İptal Nedeni (Opsiyonel):</strong></label>
+            <textarea name="aciklama" rows="4" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ddd; margin-top: 8px;"></textarea>
+        </div>
+        
+        {% if emir.durum == 'BASLADI' %}
+        <div style="margin-bottom: 15px; padding: 15px; background: #d1ecf1; border-radius: 8px;">
+            <strong>⚠️ Uyarı:</strong> Bu emir başlatılmış durumda. İptal edildiğinde çıkarılan hammadde stokları geri alınacak.
+        </div>
+        {% endif %}
+        
+        <div style="display: flex; gap: 10px;">
+            <button type="submit" class="btn btn-secondary" style="background: #dc3545; color: white;">
+                ❌ İptal Et
+            </button>
+            <a href="{% url 'stokapp:uretim_emri_detay' emir.pk %}" class="btn btn-secondary">
+                İptal Etme
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

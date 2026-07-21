@@ -1,0 +1,820 @@
+{% extends "stokapp/base.html" %}
+{% block title %}CNC Dosya Ağacı{% endblock %}
+{% block content %}
+
+<form style="display:none;">{% csrf_token %}</form>
+
+<style>
+.tree-page {
+    --accent: #3b82f6;
+    --accent-soft: #eff6ff;
+    --danger: #dc3545;
+    --warn: #f59e0b;
+    --success: #22c55e;
+    --bg-soft: #f8fafc;
+    --border: #e5e7eb;
+    --text-muted: #6b7280;
+}
+.tree-page .header-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 18px;
+}
+.tree-page h2 { margin: 0; }
+
+.tree-page .tabs {
+    display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px; padding-bottom: 4px;
+    border-bottom: none;
+}
+
+.tree-page .toolbar {
+    display: flex; gap: 10px; align-items: center; margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+.tree-page .toolbar .btn-primary {
+    background: var(--accent); color: white; border: none;
+    padding: 8px 16px; border-radius: 8px; cursor: pointer;
+    font-weight: 600; font-size: 13px;
+}
+.tree-page .toolbar .btn-primary:hover { filter: brightness(1.05); }
+.tree-page .toolbar .btn-ghost {
+    background: white; color: #111827; border: 1px solid var(--border);
+    padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 13px;
+}
+.tree-page .toolbar .btn-ghost:hover { background: var(--bg-soft); }
+.tree-page .toolbar .search {
+    flex: 1; min-width: 220px;
+    padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px;
+    font-size: 14px;
+}
+
+.tree-page .tree-card {
+    background: white; border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px; min-height: 360px;
+}
+
+.tree-page .tree-empty {
+    text-align: center; padding: 60px 20px; color: var(--text-muted);
+}
+.tree-page .tree-empty .icon { font-size: 48px; opacity: 0.4; margin-bottom: 14px; }
+
+.tree-node {
+    margin: 1px 0;
+    border-radius: 6px;
+    transition: background 0.12s ease;
+}
+.tree-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: default;
+    user-select: none;
+}
+.tree-row:hover {
+    background: var(--bg-soft);
+}
+.tree-row.hidden-by-search { display: none; }
+
+.tree-toggle {
+    width: 18px; flex: 0 0 18px;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 11px;
+    transition: transform 0.18s ease;
+}
+.tree-toggle.empty { visibility: hidden; }
+.tree-toggle.expanded { transform: rotate(90deg); }
+
+.tree-icon { font-size: 16px; }
+
+.tree-name {
+    flex: 1;
+    font-weight: 500;
+    color: #111827;
+    font-size: 14px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tree-meta {
+    color: var(--text-muted);
+    font-size: 11px;
+    margin-left: 6px;
+}
+
+.tree-actions {
+    display: flex; gap: 4px;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+.tree-row:hover .tree-actions { opacity: 1; }
+.tree-actions button {
+    background: white; border: 1px solid var(--border);
+    padding: 3px 8px; border-radius: 5px; cursor: pointer;
+    font-size: 12px; color: #374151;
+    transition: all 0.12s ease;
+}
+.tree-actions button:hover { background: var(--accent-soft); border-color: var(--accent); }
+.tree-actions button.danger:hover { background: #fee2e2; border-color: var(--danger); color: var(--danger); }
+
+.tree-children {
+    margin-left: 18px;
+    border-left: 1px dashed #d1d5db;
+    padding-left: 6px;
+    overflow: hidden;
+    max-height: 99999px;
+    transition: max-height 0.25s ease;
+}
+.tree-children.collapsed { display: none; }
+
+/* Program (dosya) yaprakları */
+.tree-row.program-row {
+    background: linear-gradient(0deg, transparent, transparent);
+}
+.tree-row.program-row:hover { background: #f0f9ff; }
+.tree-row.program-row .tree-name {
+    font-weight: 500;
+    color: #0f172a;
+}
+.tree-row.program-row .tree-name a {
+    color: #1e40af;
+    text-decoration: none;
+}
+.tree-row.program-row .tree-name a:hover { text-decoration: underline; }
+.tree-row.program-row .program-badge {
+    font-size: 10px; font-weight: 700;
+    color: white; background: #22c55e;
+    padding: 2px 6px; border-radius: 4px;
+    margin-left: 4px;
+}
+.tree-row.program-row .program-badge.archived { background: #6b7280; }
+.tree-row.program-row .program-rev {
+    font-size: 10px; font-weight: 700;
+    color: #1e40af; background: #dbeafe;
+    padding: 2px 6px; border-radius: 4px;
+    margin-left: 4px;
+    font-family: monospace;
+}
+.tree-row.program-row .program-meta {
+    color: #64748b; font-size: 11px; margin-left: 6px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.tree-page .full-path {
+    display: inline-block;
+    background: var(--accent-soft); color: #1e40af;
+    padding: 2px 8px; border-radius: 4px;
+    font-size: 11px; font-family: monospace;
+}
+
+/* Modal */
+.tree-modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.4);
+    display: none; align-items: center; justify-content: center;
+    z-index: 9999;
+}
+.tree-modal-backdrop.open { display: flex; }
+.tree-modal {
+    background: white; border-radius: 12px;
+    padding: 24px; min-width: 420px; max-width: 560px; width: 92%;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+}
+.tree-modal h3 { margin: 0 0 14px 0; font-size: 18px; }
+.tree-modal .form-row { margin-bottom: 14px; }
+.tree-modal label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; color: #111827; }
+.tree-modal input[type="text"], .tree-modal textarea, .tree-modal input[type="number"] {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--border);
+    border-radius: 8px; font-size: 14px;
+}
+.tree-modal textarea { resize: vertical; min-height: 70px; }
+.tree-modal .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+.tree-modal .modal-actions button {
+    padding: 9px 18px; border-radius: 8px; border: none;
+    cursor: pointer; font-weight: 600; font-size: 14px;
+}
+.tree-modal .modal-actions .save { background: var(--success); color: white; }
+.tree-modal .modal-actions .cancel { background: #6b7280; color: white; }
+.tree-modal .modal-error {
+    background: #fee2e2; color: #991b1b; padding: 10px 12px;
+    border-radius: 8px; font-size: 13px; margin-bottom: 12px; display: none;
+}
+.tree-modal .parent-info {
+    background: var(--bg-soft); padding: 10px 12px; border-radius: 8px;
+    font-size: 13px; color: #374151; margin-bottom: 12px;
+}
+</style>
+
+<div class="tree-page">
+    <div class="card">
+        <div class="header-bar">
+            <h2>📂 CNC Dosya Ağacı</h2>
+            <a href="{% url 'stokapp:cnc_program_listesi' %}" class="btn"
+               style="background: #6b7280; color: white; padding: 8px 16px; text-decoration: none; border-radius: 8px; font-size: 13px;">
+                ← CNC Programlar
+            </a>
+        </div>
+
+        <p style="color: #6b7280; margin: 0 0 18px 0; font-size: 13px;">
+            Hafıza kartı ya da makine hafızasındaki klasör yapısını burada oluşturun.
+            Sekmeler aktif makina tanımlarından dinamik gelir.
+            CNC programlarına "Dosya Konumu" verirken bu ağaçtan seçim yapılır.
+        </p>
+
+        <!-- Tabs: makina -->
+        <div class="tabs tekos-tab-buttons">
+            {% for makina in makineler %}
+            <button
+                type="button"
+                class="tab tekos-tab-btn tab-blue {% if makina.id == aktif_makina_id %}active is-active{% endif %}"
+                data-machine="{{ makina.id }}"
+                onclick="window.cncTree.setMakina('{{ makina.id }}')"
+            >
+                <span class="tab-icon" aria-hidden="true">⚙️</span>
+                <span>{{ makina.istasyon.ad }}</span>
+            </button>
+            {% empty %}
+            <div style="padding: 10px 0; color: #9ca3af; font-size: 13px;">
+                Henüz makina tanımı yok.
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="toolbar">
+            <button type="button" class="btn-primary" onclick="window.cncTree.openCreateModal(null)" {% if not makineler %}disabled style="opacity:.6;cursor:not-allowed;"{% endif %}>
+                ➕ Yeni Kök Klasör
+            </button>
+            <button type="button" class="btn-primary" style="background:#2563eb;" onclick="window.cncTree.openMakinaModal()">
+                🏭 Makina Ekle
+            </button>
+            <a href="{% url 'stokapp:cnc_dosya_agaci_makina_listesi' %}" class="btn-ghost" style="text-decoration:none;">
+                ⚙️ Makina Tanımları
+            </a>
+            <button type="button" class="btn-ghost" onclick="window.cncTree.expandAll()">⤵️ Tümünü Aç</button>
+            <button type="button" class="btn-ghost" onclick="window.cncTree.collapseAll()">⤴️ Tümünü Kapat</button>
+            <input type="text" class="search" id="treeSearch" placeholder="🔍 Klasör adı ara...">
+        </div>
+
+        <div class="tree-card" id="treeContainer">
+            <div class="tree-empty">
+                <div class="icon">⏳</div>
+                <div>Yükleniyor...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Klasör ekle / yeniden adlandır -->
+<div class="tree-modal-backdrop" id="treeModal">
+    <div class="tree-modal">
+        <h3 id="modalTitle">Yeni Klasör</h3>
+        <div class="modal-error" id="modalError"></div>
+        <div class="parent-info" id="modalParentInfo" style="display: none;"></div>
+        <div class="form-row">
+            <label for="modalName">Klasör Adı *</label>
+            <input type="text" id="modalName" placeholder="Örn: 100_TORNALAMA, OP10, Hafıza Kartı 1" autofocus>
+        </div>
+        <div class="form-row">
+            <label for="modalAciklama">Açıklama (opsiyonel)</label>
+            <textarea id="modalAciklama" placeholder="Bu klasörün amacı, içeriği vb."></textarea>
+        </div>
+        <div class="form-row">
+            <label for="modalSira">Sıra (opsiyonel)</label>
+            <input type="number" id="modalSira" value="0">
+        </div>
+        <div class="modal-actions">
+            <button type="button" class="cancel" onclick="window.cncTree.closeModal()">İptal</button>
+            <button type="button" class="save" id="modalSaveBtn" onclick="window.cncTree.saveModal()">💾 Kaydet</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Makina ekle -->
+<div class="tree-modal-backdrop" id="makinaModal">
+    <div class="tree-modal">
+        <h3>🏭 Makina Ekle</h3>
+        <div class="modal-error" id="makinaModalError"></div>
+        <div class="form-row">
+            <label for="makinaIstasyonSelect">İstasyon *</label>
+            <select id="makinaIstasyonSelect" style="width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:8px;"></select>
+        </div>
+        <div class="form-row">
+            <label for="makinaSiraInput">Sıra (opsiyonel)</label>
+            <input type="number" id="makinaSiraInput" value="0">
+        </div>
+        <div class="modal-actions">
+            <button type="button" class="cancel" onclick="window.cncTree.closeMakinaModal()">İptal</button>
+            <button type="button" class="save" id="makinaSaveBtn" onclick="window.cncTree.saveMakinaModal()">💾 Kaydet</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    const STATE = {
+        makinaId: {% if aktif_makina_id %}{{ aktif_makina_id }}{% else %}null{% endif %},
+        tree: [],
+        flatById: {},
+        expanded: new Set(JSON.parse(localStorage.getItem('cncTreeExpanded') || '[]')),
+        searchQuery: '',
+        modalMode: 'create',          // 'create' | 'rename'
+        modalParentId: null,
+        modalEditingId: null,
+    };
+
+    const URLS = {
+        tree:   "{% url 'stokapp:cnc_dosya_agaci_api_tree' %}",
+        create: "{% url 'stokapp:cnc_dosya_agaci_api_create' %}",
+        update: "{% url 'stokapp:cnc_dosya_agaci_api_update' 0 %}",
+        del:    "{% url 'stokapp:cnc_dosya_agaci_api_delete' 0 %}",
+        makinaEkle: "{% url 'stokapp:cnc_dosya_agaci_makina_ekle' %}",
+        makinaAdayIstasyonlar: "{% url 'stokapp:cnc_dosya_agaci_makina_api_istasyonlar' %}",
+    };
+
+    function csrfToken() {
+        const inp = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (inp) return inp.value;
+        const m = document.cookie.match(/csrftoken=([^;]+)/);
+        return m ? m[1] : '';
+    }
+
+    function postForm(url, data) {
+        const fd = new FormData();
+        Object.entries(data || {}).forEach(([k, v]) => {
+            if (v !== null && v !== undefined) fd.append(k, v);
+        });
+        return fetch(url, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrfToken() },
+            body: fd,
+            credentials: 'same-origin',
+        }).then(r => r.json());
+    }
+
+    function loadTree() {
+        const container = document.getElementById('treeContainer');
+        if (!STATE.makinaId) {
+            container.innerHTML = `
+                <div class="tree-empty">
+                    <div class="icon">🏭</div>
+                    <div style="font-size: 16px; margin-bottom: 6px;">Henüz makina tanımı yok</div>
+                    <div style="font-size: 13px;">Önce <strong>Makina Ekle</strong> ile CNC istasyonu ekleyin.</div>
+                </div>`;
+            return;
+        }
+        container.innerHTML = '<div class="tree-empty"><div class="icon">⏳</div><div>Yükleniyor...</div></div>';
+        fetch(URLS.tree + '?makina_id=' + encodeURIComponent(STATE.makinaId))
+            .then(r => r.json())
+            .then(data => {
+                STATE.tree = data.tree || [];
+                STATE.flatById = {};
+                flattenTree(STATE.tree, STATE.flatById);
+                renderTree();
+            })
+            .catch(err => {
+                console.error(err);
+                container.innerHTML = '<div class="tree-empty"><div class="icon">⚠️</div><div>Yükleme hatası.</div></div>';
+            });
+    }
+
+    function flattenTree(nodes, acc) {
+        nodes.forEach(n => {
+            acc[n.id] = n;
+            if (n.children && n.children.length) flattenTree(n.children, acc);
+        });
+    }
+
+    function renderTree() {
+        const container = document.getElementById('treeContainer');
+        if (!STATE.tree || STATE.tree.length === 0) {
+            container.innerHTML = `
+                <div class="tree-empty">
+                    <div class="icon">📁</div>
+                    <div style="font-size: 16px; margin-bottom: 6px;">Henüz klasör yok</div>
+                    <div style="font-size: 13px;">Yukarıdaki <strong>Yeni Kök Klasör</strong> butonuyla ilk klasörü oluşturabilirsiniz.</div>
+                </div>`;
+            return;
+        }
+        container.innerHTML = '';
+        const ul = document.createElement('div');
+        STATE.tree.forEach(n => ul.appendChild(renderNode(n)));
+        container.appendChild(ul);
+        applySearchFilter();
+    }
+
+    function renderNode(node) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'tree-node';
+        wrapper.dataset.id = node.id;
+
+        const row = document.createElement('div');
+        row.className = 'tree-row';
+        row.dataset.name = (node.name || '').toLowerCase();
+
+        const hasFolderChildren = node.children && node.children.length > 0;
+        const hasPrograms = node.programs && node.programs.length > 0;
+        const hasAnyContent = hasFolderChildren || hasPrograms;
+        const expanded = STATE.expanded.has(node.id);
+
+        const toggle = document.createElement('span');
+        toggle.className = 'tree-toggle ' + (hasAnyContent ? '' : 'empty') + (expanded ? ' expanded' : '');
+        toggle.textContent = '▶';
+        toggle.title = 'Aç/Kapat';
+        toggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleExpand(node.id);
+        });
+        row.appendChild(toggle);
+
+        const icon = document.createElement('span');
+        icon.className = 'tree-icon';
+        icon.textContent = hasAnyContent ? (expanded ? '📂' : '📁') : '📁';
+        row.appendChild(icon);
+
+        const name = document.createElement('span');
+        name.className = 'tree-name';
+        name.textContent = node.name;
+        name.title = node.full_path;
+        if (node.aciklama) name.title += '  •  ' + node.aciklama;
+        row.appendChild(name);
+
+        if (node.program_count > 0) {
+            const meta = document.createElement('span');
+            meta.className = 'tree-meta';
+            meta.textContent = '(' + node.program_count + ' program)';
+            row.appendChild(meta);
+        }
+
+        const actions = document.createElement('div');
+        actions.className = 'tree-actions';
+        actions.innerHTML = `
+            <button title="Alt klasör ekle" onclick="event.stopPropagation(); window.cncTree.openCreateModal(${node.id});">➕</button>
+            <button title="Yeniden adlandır" onclick="event.stopPropagation(); window.cncTree.openRenameModal(${node.id});">✏️</button>
+            <button class="danger" title="Sil" onclick="event.stopPropagation(); window.cncTree.deleteNode(${node.id});">🗑️</button>
+        `;
+        row.appendChild(actions);
+
+        row.addEventListener('click', () => {
+            if (hasAnyContent) toggleExpand(node.id);
+        });
+
+        wrapper.appendChild(row);
+
+        if (hasAnyContent) {
+            const childrenDiv = document.createElement('div');
+            childrenDiv.className = 'tree-children' + (expanded ? '' : ' collapsed');
+            // Önce alt klasörler
+            if (hasFolderChildren) {
+                node.children.forEach(c => childrenDiv.appendChild(renderNode(c)));
+            }
+            // Sonra dosyalar (programlar)
+            if (hasPrograms) {
+                node.programs.forEach(p => childrenDiv.appendChild(renderProgramNode(p)));
+            }
+            wrapper.appendChild(childrenDiv);
+        }
+        return wrapper;
+    }
+
+    function renderProgramNode(prog) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'tree-node';
+        wrapper.dataset.programId = prog.id;
+
+        const row = document.createElement('div');
+        row.className = 'tree-row program-row';
+        row.dataset.name = (prog.program_name || '').toLowerCase();
+
+        // Toggle yerine boş yer (yapraklarda toggle yok)
+        const spacer = document.createElement('span');
+        spacer.className = 'tree-toggle empty';
+        spacer.textContent = '·';
+        row.appendChild(spacer);
+
+        // Dosya ikonu (formatına göre)
+        const icon = document.createElement('span');
+        icon.className = 'tree-icon';
+        icon.textContent = prog.file_format === 'txt' ? '📄' : '⚙️';
+        row.appendChild(icon);
+
+        // Program adı (link)
+        const name = document.createElement('span');
+        name.className = 'tree-name';
+        const link = document.createElement('a');
+        link.href = prog.detay_url;
+        link.textContent = prog.program_name + (prog.program_number ? '  (' + prog.program_number + ')' : '');
+        link.title = (prog.product_kodu ? prog.product_kodu + ' — ' + prog.product_ad : '') +
+                     (prog.urun_parcasi ? '\nParça: ' + prog.urun_parcasi : '');
+        name.appendChild(link);
+        row.appendChild(name);
+
+        // Aktif revizyon rozeti
+        if (prog.current_revision) {
+            const rev = document.createElement('span');
+            rev.className = 'program-rev';
+            rev.textContent = prog.current_revision;
+            row.appendChild(rev);
+        }
+
+        // Durum rozeti
+        const badge = document.createElement('span');
+        badge.className = 'program-badge' + (prog.status === 'archived' ? ' archived' : '');
+        badge.textContent = prog.status === 'archived' ? 'Arşiv' : 'Aktif';
+        row.appendChild(badge);
+
+        // Meta: ürün kodu / parça
+        const meta = document.createElement('span');
+        meta.className = 'program-meta';
+        const metaParts = [];
+        if (prog.product_kodu) metaParts.push(prog.product_kodu);
+        if (prog.urun_parcasi) metaParts.push(prog.urun_parcasi);
+        meta.textContent = metaParts.join(' • ');
+        row.appendChild(meta);
+
+        // Aksiyonlar: detay link
+        const actions = document.createElement('div');
+        actions.className = 'tree-actions';
+        actions.innerHTML = `
+            <a href="${prog.detay_url}" title="Programı aç" style="text-decoration: none;">
+                <button onclick="event.stopPropagation();">👁️</button>
+            </a>
+        `;
+        row.appendChild(actions);
+
+        wrapper.appendChild(row);
+        return wrapper;
+    }
+
+    function toggleExpand(id) {
+        if (STATE.expanded.has(id)) STATE.expanded.delete(id);
+        else STATE.expanded.add(id);
+        localStorage.setItem('cncTreeExpanded', JSON.stringify([...STATE.expanded]));
+        renderTree();
+    }
+
+    function expandAll() {
+        Object.keys(STATE.flatById).forEach(id => STATE.expanded.add(parseInt(id, 10)));
+        localStorage.setItem('cncTreeExpanded', JSON.stringify([...STATE.expanded]));
+        renderTree();
+    }
+
+    function collapseAll() {
+        STATE.expanded.clear();
+        localStorage.setItem('cncTreeExpanded', JSON.stringify([]));
+        renderTree();
+    }
+
+    function setMakina(makinaId) {
+        STATE.makinaId = parseInt(makinaId, 10);
+        document.querySelectorAll('.tree-page .tab').forEach(t => {
+            const on = t.dataset.machine === String(STATE.makinaId);
+            t.classList.toggle('active', on);
+            t.classList.toggle('is-active', on);
+        });
+        const url = new URL(window.location.href);
+        url.searchParams.set('makina_id', STATE.makinaId);
+        window.history.replaceState({}, '', url.toString());
+        loadTree();
+    }
+
+    function applySearchFilter() {
+        const q = STATE.searchQuery.toLowerCase().trim();
+        document.querySelectorAll('.tree-row').forEach(row => {
+            if (!q) {
+                row.classList.remove('hidden-by-search');
+                return;
+            }
+            const matches = row.dataset.name && row.dataset.name.indexOf(q) >= 0;
+            row.classList.toggle('hidden-by-search', !matches);
+        });
+        // Eşleşen düğümlerin atalarını otomatik aç
+        if (q) {
+            document.querySelectorAll('.tree-children').forEach(c => c.classList.remove('collapsed'));
+        }
+    }
+
+    document.getElementById('treeSearch').addEventListener('input', e => {
+        STATE.searchQuery = e.target.value;
+        applySearchFilter();
+    });
+
+    function openCreateModal(parentId) {
+        STATE.modalMode = 'create';
+        STATE.modalParentId = parentId;
+        STATE.modalEditingId = null;
+        document.getElementById('modalTitle').textContent =
+            parentId ? 'Yeni Alt Klasör' : 'Yeni Kök Klasör';
+        const info = document.getElementById('modalParentInfo');
+        if (parentId && STATE.flatById[parentId]) {
+            info.style.display = 'block';
+            info.innerHTML = '📂 Üst klasör: <strong>' + STATE.flatById[parentId].full_path + '</strong>';
+        } else {
+            info.style.display = 'none';
+        }
+        document.getElementById('modalName').value = '';
+        document.getElementById('modalAciklama').value = '';
+        document.getElementById('modalSira').value = '0';
+        document.getElementById('modalError').style.display = 'none';
+        document.getElementById('treeModal').classList.add('open');
+        setTimeout(() => document.getElementById('modalName').focus(), 50);
+    }
+
+    function openRenameModal(id) {
+        const node = STATE.flatById[id];
+        if (!node) return;
+        STATE.modalMode = 'rename';
+        STATE.modalParentId = node.parent_id;
+        STATE.modalEditingId = id;
+        document.getElementById('modalTitle').textContent = 'Klasörü Düzenle';
+        const info = document.getElementById('modalParentInfo');
+        info.style.display = 'block';
+        info.innerHTML = '📂 Yol: <strong>' + node.full_path + '</strong>';
+        document.getElementById('modalName').value = node.name;
+        document.getElementById('modalAciklama').value = node.aciklama || '';
+        document.getElementById('modalSira').value = node.sira || 0;
+        document.getElementById('modalError').style.display = 'none';
+        document.getElementById('treeModal').classList.add('open');
+        setTimeout(() => document.getElementById('modalName').select(), 50);
+    }
+
+    function closeModal() {
+        document.getElementById('treeModal').classList.remove('open');
+    }
+
+    function showModalError(msg) {
+        const el = document.getElementById('modalError');
+        el.textContent = msg || 'Bir hata oluştu.';
+        el.style.display = 'block';
+    }
+
+    function saveModal() {
+        const name = document.getElementById('modalName').value.trim();
+        const aciklama = document.getElementById('modalAciklama').value.trim();
+        const sira = document.getElementById('modalSira').value || '0';
+        if (!name) { showModalError('Klasör adı boş olamaz.'); return; }
+
+        const btn = document.getElementById('modalSaveBtn');
+        btn.disabled = true; btn.textContent = '⏳ Kaydediliyor...';
+
+        let promise;
+        if (STATE.modalMode === 'create') {
+            if (!STATE.makinaId) {
+                showModalError('Önce makina seçilmelidir.');
+                btn.disabled = false; btn.textContent = '💾 Kaydet';
+                return;
+            }
+            promise = postForm(URLS.create, {
+                name,
+                makina_id: STATE.makinaId,
+                parent_id: STATE.modalParentId || '',
+                aciklama,
+                sira,
+            });
+        } else {
+            const url = URLS.update.replace('/0/', '/' + STATE.modalEditingId + '/');
+            promise = postForm(url, { name, aciklama, sira });
+        }
+
+        promise.then(data => {
+            if (data && data.success) {
+                if (STATE.modalMode === 'create' && STATE.modalParentId) {
+                    STATE.expanded.add(STATE.modalParentId);
+                    localStorage.setItem('cncTreeExpanded', JSON.stringify([...STATE.expanded]));
+                }
+                closeModal();
+                loadTree();
+            } else {
+                showModalError((data && data.error) || 'Kaydedilemedi.');
+            }
+        }).catch(err => {
+            console.error(err);
+            showModalError('Sunucuya ulaşılamadı.');
+        }).finally(() => {
+            btn.disabled = false; btn.textContent = '💾 Kaydet';
+        });
+    }
+
+    function deleteNode(id) {
+        const node = STATE.flatById[id];
+        if (!node) return;
+        const childWarn = (node.children && node.children.length)
+            ? '\n\n⚠️ Bu klasörün altında alt klasörler de var. Hepsi silinecek!'
+            : '';
+        const progWarn = (node.program_count && node.program_count > 0)
+            ? `\n\n⚠️ Bu klasöre ${node.program_count} CNC programı bağlı. Programlar silinmez ama "Dosya Konumu" alanları boşaltılır.`
+            : '';
+        if (!confirm(`"${node.full_path}" klasörünü silmek istediğinizden emin misiniz?` + childWarn + progWarn)) return;
+
+        const url = URLS.del.replace('/0/', '/' + id + '/');
+        postForm(url, {})
+            .then(data => {
+                if (data && data.success) loadTree();
+                else alert((data && data.error) || 'Silinemedi.');
+            })
+            .catch(err => { console.error(err); alert('Sunucuya ulaşılamadı.'); });
+    }
+
+    function showMakinaModalError(msg) {
+        const el = document.getElementById('makinaModalError');
+        el.textContent = msg || 'Bir hata oluştu.';
+        el.style.display = 'block';
+    }
+
+    function openMakinaModal() {
+        const modal = document.getElementById('makinaModal');
+        const sel = document.getElementById('makinaIstasyonSelect');
+        document.getElementById('makinaModalError').style.display = 'none';
+        sel.innerHTML = '<option value="">Yükleniyor...</option>';
+        document.getElementById('makinaSiraInput').value = '0';
+        modal.classList.add('open');
+
+        fetch(URLS.makinaAdayIstasyonlar, { credentials: 'same-origin' })
+            .then(r => r.json())
+            .then(data => {
+                const rows = (data && data.istasyonlar) || [];
+                sel.innerHTML = '';
+                if (!rows.length) {
+                    sel.innerHTML = '<option value="">Eklenebilir CNC istasyonu bulunamadı</option>';
+                    return;
+                }
+                const first = document.createElement('option');
+                first.value = '';
+                first.textContent = '— İstasyon seçiniz —';
+                sel.appendChild(first);
+                rows.forEach(item => {
+                    const opt = document.createElement('option');
+                    opt.value = item.id;
+                    opt.textContent = item.ad + ' (' + item.machine_type_display + ')';
+                    sel.appendChild(opt);
+                });
+            })
+            .catch(err => {
+                console.error(err);
+                showMakinaModalError('İstasyon listesi alınamadı.');
+            });
+    }
+
+    function closeMakinaModal() {
+        document.getElementById('makinaModal').classList.remove('open');
+    }
+
+    function saveMakinaModal() {
+        const istasyonId = document.getElementById('makinaIstasyonSelect').value;
+        const sira = document.getElementById('makinaSiraInput').value || '0';
+        if (!istasyonId) {
+            showMakinaModalError('İstasyon seçilmelidir.');
+            return;
+        }
+        const btn = document.getElementById('makinaSaveBtn');
+        btn.disabled = true;
+        btn.textContent = '⏳ Kaydediliyor...';
+        postForm(URLS.makinaEkle, { istasyon_id: istasyonId, sira })
+            .then(data => {
+                if (data && data.success && data.makina) {
+                    closeMakinaModal();
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('makina_id', data.makina.id);
+                    window.location.href = url.toString();
+                } else {
+                    showMakinaModalError((data && data.error) || 'Makina eklenemedi.');
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                showMakinaModalError('Sunucuya ulaşılamadı.');
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.textContent = '💾 Kaydet';
+            });
+    }
+
+    // Modal'ı escape ile kapat
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') closeModal();
+        if (e.key === 'Escape') closeMakinaModal();
+        if (e.key === 'Enter' && document.getElementById('treeModal').classList.contains('open')) {
+            // Textarea içindeysek normal davran
+            if (e.target && e.target.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+                saveModal();
+            }
+        }
+    });
+    // Backdrop'a tıklamayla kapat
+    document.getElementById('treeModal').addEventListener('click', e => {
+        if (e.target.id === 'treeModal') closeModal();
+    });
+    document.getElementById('makinaModal').addEventListener('click', e => {
+        if (e.target.id === 'makinaModal') closeMakinaModal();
+    });
+
+    window.cncTree = {
+        setMakina, openCreateModal, openRenameModal, closeModal,
+        saveModal, deleteNode, expandAll, collapseAll,
+        openMakinaModal, closeMakinaModal, saveMakinaModal,
+    };
+
+    // İlk yükleme
+    loadTree();
+})();
+</script>
+{% endblock %}

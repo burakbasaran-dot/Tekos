@@ -1,0 +1,139 @@
+{% extends "stokapp/base.html" %}
+{% load currency_filters %}
+{% block title %}Gayrimenkuller{% endblock %}
+{% block content %}
+<div class="card">
+  <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:14px; margin-bottom:18px;">
+    <div style="display:flex; align-items:center; gap:12px;">
+      <a href="{% url 'stokapp:dashboard' %}" class="btn" style="background:#6b7280;color:#fff;padding:8px 16px;text-decoration:none;border-radius:6px;">← Geri</a>
+      <h2 style="margin:0;">🏢 Gayrimenkuller</h2>
+    </div>
+    <a href="{% url 'stokapp:gayrimenkul_ekle' %}" class="btn btn-primary" style="background:#22c55e;border-color:#22c55e;padding:8px 16px;">+ Yeni gayrimenkul</a>
+  </div>
+
+  <form method="get" style="background:#f9fafb;padding:16px;border-radius:10px;margin-bottom:18px;">
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;align-items:end;">
+      <div>
+        <label style="font-size:12px;color:#6b7280;">Arşiv</label>
+        <select name="arsiv" class="form-select" style="width:100%;padding:8px;border-radius:6px;border:1px solid #d1d5db;">
+          <option value="0" {% if arsiv != '1' %}selected{% endif %}>Aktif kayıtlar</option>
+          <option value="1" {% if arsiv == '1' %}selected{% endif %}>Arşiv</option>
+        </select>
+      </div>
+      <div>
+        <label style="font-size:12px;color:#6b7280;">Ara</label>
+        <input type="text" name="search" value="{{ search }}" placeholder="Ad, il, adres…" class="form-control" style="padding:8px;border-radius:6px;border:1px solid #d1d5db;width:100%;">
+      </div>
+      <div>
+        <label style="font-size:12px;color:#6b7280;">Tip</label>
+        <select name="tip" class="form-select" style="width:100%;padding:8px;border-radius:6px;">
+          <option value="">— Tümü —</option>
+          {% for val,label in gm_tipleri %}<option value="{{ val }}" {% if filtre_tip == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label style="font-size:12px;color:#6b7280;">Sahiplik</label>
+        <select name="sahiplik" style="width:100%;padding:8px;border-radius:6px;border:1px solid #d1d5db;">
+          <option value="">— Tümü —</option>
+          {% for val,label in sahiplik_tipleri %}<option value="{{ val }}" {% if filtre_sahiplik == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+      <div>
+        <label style="font-size:12px;color:#6b7280;">İl</label>
+        <input type="text" name="il" value="{{ filtre_il }}" class="form-control" style="padding:8px;border-radius:6px;width:100%;">
+      </div>
+      <div>
+        <label style="font-size:12px;color:#6b7280;">İlçe</label>
+        <input type="text" name="ilce" value="{{ filtre_ilce }}" class="form-control" style="padding:8px;border-radius:6px;width:100%;">
+      </div>
+      <div>
+        <label style="font-size:12px;color:#6b7280;">Kullanım</label>
+        <select name="kullanim" style="width:100%;padding:8px;border-radius:6px;">
+          <option value="">— Tümü —</option>
+          {% for val,label in kullanim_secenekleri %}<option value="{{ val }}" {% if filtre_kullanim == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+        </select>
+      </div>
+    </div>
+    <div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;"><input type="checkbox" name="yakin_odeme" value="1" {% if filtre_yakin_odeme %}checked{% endif %}> Yaklaşan ödeme ({{ uyari_gun|default:30 }} gün)</label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;"><input type="checkbox" name="geciken" value="1" {% if filtre_geciken %}checked{% endif %}> Geciken ödeme</label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;"><input type="checkbox" name="sigorta_yakin" value="1" {% if filtre_sigorta_yakin %}checked{% endif %}> Sigorta bitişi yaklaşan</label>
+      <button type="submit" style="background:#3b82f6;color:#fff;padding:8px 16px;border:none;border-radius:6px;cursor:pointer;">Filtrele</button>
+    </div>
+  </form>
+
+  {% if messages %}{% for message in messages %}
+  <div style="padding:12px;margin-bottom:12px;border-radius:8px;{% if message.tags == 'error' %}background:#f8d7da{% else %}background:#d4edda{% endif %}">{{ message }}</div>
+  {% endfor %}{% endif %}
+
+  {% if satirlar %}
+  <div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead>
+        <tr style="background:#f9fafb;border-bottom:2px solid #e5e7eb;text-align:left;">
+          <th style="padding:10px;">Ad</th>
+          <th style="padding:10px;">Tip</th>
+          <th style="padding:10px;">Sahiplik</th>
+          <th style="padding:10px;">İl/İlçe</th>
+          <th style="padding:10px;">Adres</th>
+          <th style="padding:10px;">Tapu/Parsel</th>
+          <th style="padding:10px;">Kullanım</th>
+          <th style="padding:10px;">Sorumlu</th>
+          <th style="padding:10px;">Sonraki ödeme</th>
+          <th style="padding:10px;">Yükümlülük</th>
+          <th style="padding:10px;">Durum</th>
+          <th style="padding:10px;">İşlem</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in satirlar %}
+        {% with gm=row.gm %}
+        <tr style="border-bottom:1px solid #e5e7eb;{% if row.etiket == 'GECIKTI' %}background:#fef2f2;{% elif row.etiket == 'YAKLASIYOR' %}background:#fffbeb;{% endif %}">
+          <td style="padding:10px;font-weight:600;">{{ gm.ad }}</td>
+          <td style="padding:10px;">{{ gm.get_tip_display }}</td>
+          <td style="padding:10px;">{{ gm.get_sahiplik_tipi_display }}</td>
+          <td style="padding:10px;">{{ gm.il }} / {{ gm.ilce }}</td>
+          <td style="padding:10px;max-width:200px;">{{ gm.adres|truncatechars:50 }}</td>
+          <td style="padding:10px;">{% if gm.tapu_no %}{{ gm.tapu_no }}<br>{% endif %}{{ gm.ada_parsel|default:"—"|truncatechars:24 }}</td>
+          <td style="padding:10px;">{{ gm.get_kullanim_durumu_display }}</td>
+          <td style="padding:10px;">{{ gm.sorumlu_kisi|default:"—" }}</td>
+          <td style="padding:10px;">{% if row.sonraki_odeme %}{{ row.sonraki_odeme|date:"d.m.Y" }}{% else %}—{% endif %}</td>
+          <td style="padding:10px;">{% if row.yaklasan_yukumluluk %}Evet{% else %}Hayır{% endif %}</td>
+          <td style="padding:10px;">
+            {% if row.etiket == 'NORMAL' %}<span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:6px;font-size:12px;">Normal</span>{% endif %}
+            {% if row.etiket == 'YAKLASIYOR' %}<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:6px;font-size:12px;">Yaklaşıyor</span>{% endif %}
+            {% if row.etiket == 'GECIKTI' %}<span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:6px;font-size:12px;">Gecikti</span>{% endif %}
+          </td>
+          <td style="padding:10px;white-space:nowrap;">
+            <a href="{% url 'stokapp:gayrimenkul_detay' gm.pk %}" style="background:#3b82f6;color:#fff;padding:6px 10px;border-radius:6px;text-decoration:none;font-size:12px;">Detay</a>
+            <a href="{% url 'stokapp:gayrimenkul_duzenle' gm.pk %}" style="background:#f59e0b;color:#fff;padding:6px 10px;border-radius:6px;text-decoration:none;font-size:12px;">Düzenle</a>
+            {% if not gm.arsivlendi %}
+            <a href="{% url 'stokapp:gayrimenkul_arsivle' gm.pk %}" style="background:#6b7280;color:#fff;padding:6px 10px;border-radius:6px;text-decoration:none;font-size:12px;">Arşivle</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endwith %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if satirlar.has_other_pages %}
+  <div style="margin-top:20px;display:flex;justify-content:center;gap:10px;">
+    {% if satirlar.has_previous %}
+    <a href="?page={{ satirlar.previous_page_number }}&arsiv={{ arsiv }}&search={{ search|urlencode }}&tip={{ filtre_tip }}&sahiplik={{ filtre_sahiplik }}&il={{ filtre_il|urlencode }}&ilce={{ filtre_ilce|urlencode }}&kullanim={{ filtre_kullanim }}{% if filtre_yakin_odeme %}&yakin_odeme=1{% endif %}{% if filtre_geciken %}&geciken=1{% endif %}{% if filtre_sigorta_yakin %}&sigorta_yakin=1{% endif %}" style="padding:8px 16px;background:#3b82f6;color:#fff;border-radius:6px;text-decoration:none;">← Önceki</a>
+    {% endif %}
+    <span style="padding:8px 16px;background:#f3f4f6;border-radius:6px;">{{ satirlar.number }} / {{ satirlar.paginator.num_pages }}</span>
+    {% if satirlar.has_next %}
+    <a href="?page={{ satirlar.next_page_number }}&arsiv={{ arsiv }}&search={{ search|urlencode }}&tip={{ filtre_tip }}&sahiplik={{ filtre_sahiplik }}&il={{ filtre_il|urlencode }}&ilce={{ filtre_ilce|urlencode }}&kullanim={{ filtre_kullanim }}{% if filtre_yakin_odeme %}&yakin_odeme=1{% endif %}{% if filtre_geciken %}&geciken=1{% endif %}{% if filtre_sigorta_yakin %}&sigorta_yakin=1{% endif %}" style="padding:8px 16px;background:#3b82f6;color:#fff;border-radius:6px;text-decoration:none;">Sonraki →</a>
+    {% endif %}
+  </div>
+  {% endif %}
+  {% else %}
+  <div style="text-align:center;padding:48px;color:#6b7280;">
+    <div style="font-size:48px;margin-bottom:12px;">🏢</div>
+    <p>Kayıt bulunamadı.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

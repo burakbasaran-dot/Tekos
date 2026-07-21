@@ -1,0 +1,33 @@
+{% extends 'stokapp/base.html' %}
+{% load static %}
+
+{% block title %}CAPA Aksiyonu Sil{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h1 style="margin: 0;">🔧 CAPA Aksiyonu Sil</h1>
+        <a href="{% url 'stokapp:complaint_detay' capa.complaint.pk %}" class="btn btn-secondary">← Geri</a>
+    </div>
+    
+    <div style="padding: 20px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 8px; margin-bottom: 20px;">
+        <strong>⚠️ Uyarı:</strong> Bu CAPA aksiyonunu silmek istediğinizden emin misiniz?
+    </div>
+    
+    <div style="padding: 20px; background: #f9fafb; border-radius: 8px; margin-bottom: 20px;">
+        <strong>Tip:</strong> {{ capa.get_action_type_display }}<br>
+        <strong>Sorumlu:</strong> {{ capa.owner.username }}<br>
+        <strong>Durum:</strong> {{ capa.get_status_display }}<br>
+        <strong>Bitiş Tarihi:</strong> {{ capa.due_date|date:"d.m.Y" }}<br>
+    </div>
+    
+    <form method="post">
+        {% csrf_token %}
+        <div style="display: flex; gap: 10px;">
+            <button type="submit" class="btn btn-primary" style="background: #dc3545; border-color: #dc3545;">Evet, Sil</button>
+            <a href="{% url 'stokapp:complaint_detay' capa.complaint.pk %}" class="btn btn-secondary">İptal</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

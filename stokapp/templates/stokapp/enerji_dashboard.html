@@ -1,0 +1,365 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Enerji Dashboard — TEKOS{% endblock %}
+
+{% block content %}
+<style>
+  .enerji-page-head { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; }
+  .enerji-page-head h1 { margin:0; font-size:1.35rem; font-weight:800; color:var(--ink); }
+  .enerji-sub { color:var(--muted); font-size:0.9rem; max-width:520px; }
+  .enerji-meta { font-size:12px; color:var(--muted); }
+  .enerji-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:16px; margin-bottom:16px; }
+  .enerji-card { background:var(--card); border:1px solid var(--border); border-radius:14px; box-shadow:0 10px 30px rgba(17,24,39,.06); padding:18px; }
+  .enerji-card h2 { margin:0 0 12px; font-size:0.95rem; font-weight:700; color:#111827; display:flex; align-items:center; gap:8px; }
+  .enerji-kv { display:grid; gap:8px; }
+  .enerji-kv div { display:flex; justify-content:space-between; gap:12px; font-size:0.9rem; border-bottom:1px solid #f3f4f6; padding-bottom:6px; }
+  .enerji-kv div:last-child { border-bottom:0; padding-bottom:0; }
+  .enerji-kv span:first-child { color:var(--muted); }
+  .enerji-kv span:last-child { font-weight:600; text-align:right; }
+  .enerji-badge { display:inline-flex; align-items:center; padding:4px 10px; border-radius:999px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+  .enerji-badge-ok { background:#dcfce7; color:#166534; }
+  .enerji-badge-warn { background:#fef3c7; color:#92400e; }
+  .enerji-badge-danger { background:#fee2e2; color:#991b1b; }
+  .enerji-flow-wrap { display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:10px; }
+  .enerji-flow-box { background:linear-gradient(145deg,#f8fafc,#eef2ff); border:1px solid #e0e7ff; border-radius:12px; padding:12px; text-align:center; }
+  .enerji-flow-box .lbl { font-size:11px; color:#64748b; font-weight:600; margin-bottom:6px; line-height:1.3; }
+  .enerji-flow-box .val { font-size:1.15rem; font-weight:800; color:#3730a3; }
+  .enerji-alerts ul { margin:0; padding-left:18px; color:#374151; font-size:0.9rem; line-height:1.5; }
+  .enerji-banner-err { background:#fef2f2; border:1px solid #fecaca; color:#991b1b; padding:10px 14px; border-radius:10px; margin-bottom:14px; font-size:0.9rem; display:none; }
+  .enerji-banner-err.show { display:block; }
+  .enerji-full { grid-column:1 / -1; }
+  .enerji-switch-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:14px; }
+  .enerji-switch-card { border:1px solid var(--border); border-radius:12px; padding:14px; background:#fafbfc; }
+  .enerji-switch-card h3 { margin:0 0 10px; font-size:1rem; font-weight:700; color:#111827; }
+  .enerji-switch-btns { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+  .enerji-switch-btns .btn { font-size:12px; padding:8px 10px; border-radius:8px; cursor:pointer; border:1px solid var(--border); background:#f3f4f6; color:#111827; font-weight:600; font-family:inherit; }
+  .enerji-switch-btns .btn:hover:not(:disabled) { background:#e5e7eb; }
+  .enerji-switch-btns .btn:disabled { opacity:0.5; cursor:not-allowed; }
+  .enerji-switch-note { font-size:12px; color:var(--muted); margin:0 0 14px; line-height:1.45; }
+  .enerji-table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:10px; border:1px solid var(--border); }
+  table.enerji-table { width:100%; border-collapse:collapse; font-size:13px; background:#fff; min-width:720px; }
+  table.enerji-table th { text-align:left; padding:10px 12px; background:#1f2937; color:#f9fafb; font-weight:700; white-space:nowrap; }
+  table.enerji-table td { padding:10px 12px; border-bottom:1px solid #e5e7eb; vertical-align:top; color:#374151; }
+  table.enerji-table tr:last-child td { border-bottom:0; }
+  table.enerji-table .enerji-td-note { max-width:280px; line-height:1.45; font-size:12px; }
+  table.enerji-table .enerji-td-oneri { max-width:320px; line-height:1.45; font-size:12px; }
+  .enerji-badge-muted { background:#f3f4f6; color:#4b5563; }
+  @media (max-width:640px) {
+    .enerji-page-head h1 { font-size:1.15rem; }
+  }
+</style>
+
+<div class="enerji-page-head">
+  <div>
+    <h1>Enerji Dashboard</h1>
+    <p class="enerji-sub">Anlık enerji kartları demo veriyle her 10 saniyede yenilenir. Haftalık plan özeti yalnızca sayfa açılışında bir kez yüklenir; detaylar için Haftalık Enerji Planı sayfasına gidin.</p>
+  </div>
+  <div class="enerji-meta" id="enerjiUpdated">Son güncelleme: —</div>
+</div>
+
+<div id="enerjiFetchError" class="enerji-banner-err" role="alert"></div>
+
+<form id="enerji-csrf-store" style="display:none">{% csrf_token %}</form>
+
+<div class="enerji-grid">
+  <section class="enerji-card" aria-labelledby="card-grid">
+    <h2 id="card-grid"><span>⚡</span> Anlık Şebeke Durumu</h2>
+    <div class="enerji-kv" id="kvGrid"></div>
+  </section>
+  <section class="enerji-card" aria-labelledby="card-solar">
+    <h2 id="card-solar"><span>☀️</span> Solar Üretim</h2>
+    <div class="enerji-kv" id="kvSolar"></div>
+  </section>
+  <section class="enerji-card" aria-labelledby="card-bat">
+    <h2 id="card-bat"><span>🔋</span> Batarya Durumu</h2>
+    <div class="enerji-kv" id="kvBattery"></div>
+  </section>
+  <section class="enerji-card" aria-labelledby="card-cons">
+    <h2 id="card-cons"><span>🏭</span> Tüketim Durumu</h2>
+    <div class="enerji-kv" id="kvConsumption"></div>
+  </section>
+  <section class="enerji-card enerji-full" aria-labelledby="card-flow">
+    <h2 id="card-flow"><span>↔️</span> Enerji Akış Özeti</h2>
+    <div class="enerji-flow-wrap" id="flowBoxes"></div>
+  </section>
+  <section class="enerji-card enerji-full" aria-labelledby="card-planozet">
+    <h2 id="card-planozet"><span>📆</span> Haftalık planlama özeti</h2>
+    <p class="enerji-switch-note">Özet, sayfa açılışında bir kez yüklenir (10 sn yenilemesi yok). Ayrıntılı tablolar için planlama sayfasına gidin.</p>
+    <div class="enerji-kv" id="planlamaOzetBody"></div>
+    <p style="margin:12px 0 0; font-size:13px;"><a href="{{ planlama_page_url }}" style="font-weight:700; color:#2563eb; text-decoration:none;">Haftalık Enerji Planı →</a></p>
+  </section>
+  <section class="enerji-card enerji-full" aria-labelledby="card-transfer">
+    <h2 id="card-transfer"><span>🔀</span> Enerji Transfer Switch Durumları</h2>
+    <p class="enerji-switch-note">Hat başına aktif kaynak ve anlık güç (demo). Manuel butonlar yalnızca simülasyon içindir; gerçek ATS / transfer switch cihazına komut gönderilmez.</p>
+    <div class="enerji-switch-grid" id="transferSwitchGrid"></div>
+  </section>
+  <section class="enerji-card enerji-full" aria-labelledby="card-alerts">
+    <h2 id="card-alerts"><span>🔔</span> Uyarılar</h2>
+    <ul id="alertList"></ul>
+  </section>
+</div>
+
+<script>
+(function () {
+  const API_URL = "{{ api_url|escapejs }}";
+  const SWITCH_DEMO_URL = "{{ switch_demo_url|escapejs }}";
+  const PLAN_OZET_URL = "{{ planlama_ozet_url|escapejs }}";
+  const errEl = document.getElementById('enerjiFetchError');
+  const updatedEl = document.getElementById('enerjiUpdated');
+
+  function getCookie(name) {
+    var cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      var cookies = document.cookie.split(';');
+      for (var i = 0; i < cookies.length; i++) {
+        var cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  function getCsrfToken() {
+    var inp = document.querySelector('#enerji-csrf-store input[name=csrfmiddlewaretoken]');
+    return inp ? inp.value : getCookie('csrftoken');
+  }
+
+  function esc(s) {
+    var d = document.createElement('div');
+    d.textContent = s == null ? '' : String(s);
+    return d.innerHTML;
+  }
+
+  function row(label, valueHtml) {
+    return '<div><span>' + esc(label) + '</span><span>' + valueHtml + '</span></div>';
+  }
+
+  function gridStatusBadge(status) {
+    var s = (status || '').toLowerCase();
+    if (s === 'var') return '<span class="enerji-badge enerji-badge-ok">Şebeke var</span>';
+    if (s === 'yok') return '<span class="enerji-badge enerji-badge-danger">Şebeke yok</span>';
+    return '<span class="enerji-badge enerji-badge-warn">' + esc(status) + '</span>';
+  }
+
+  function kaynakLabel(code) {
+    var m = { sebeke: 'Şebeke', batarya: 'Batarya', kapali: 'Kapalı' };
+    return m[code] || esc(code);
+  }
+
+  function durumLabel(code) {
+    var m = { normal: 'Normal', uyari: 'Uyarı', devre_disi: 'Devre dışı' };
+    return m[code] || esc(code);
+  }
+
+  function durumBadgeClass(code) {
+    if (code === 'normal') return 'enerji-badge-ok';
+    if (code === 'uyari') return 'enerji-badge-warn';
+    return 'enerji-badge-danger';
+  }
+
+  function renderTransferSwitches(list) {
+    var grid = document.getElementById('transferSwitchGrid');
+    if (!grid) return;
+    if (!Array.isArray(list) || list.length === 0) {
+      grid.innerHTML = '<p class="enerji-switch-note">Switch verisi yok.</p>';
+      return;
+    }
+    grid.innerHTML = list.map(function (sw) {
+      var id = sw.id;
+      var durum = sw.durum || 'normal';
+      var badge = '<span class="enerji-badge ' + durumBadgeClass(durum) + '">' + durumLabel(durum) + '</span>';
+      return (
+        '<article class="enerji-switch-card" data-switch-id="' + esc(id) + '">' +
+        '<h3>' + esc(sw.hat_adi || id) + '</h3>' +
+        '<div class="enerji-kv">' +
+        row('Aktif kaynak', esc(kaynakLabel(sw.aktif_kaynak))) +
+        row('Anlık güç tüketimi', esc(sw.guc_kw) + ' kW') +
+        row('Durum', badge) +
+        '</div>' +
+        '<div class="enerji-switch-btns">' +
+        '<button type="button" class="btn" data-switch="' + esc(id) + '" data-action="sebeke">Şebekeye Al</button>' +
+        '<button type="button" class="btn" data-switch="' + esc(id) + '" data-action="batarya">Bataryaya Al</button>' +
+        '<button type="button" class="btn" data-switch="' + esc(id) + '" data-action="kapat">Kapat</button>' +
+        '</div></article>'
+      );
+    }).join('');
+  }
+
+  function setSwitchButtonsDisabled(dis) {
+    document.querySelectorAll('#transferSwitchGrid button[data-action]').forEach(function (b) {
+      b.disabled = dis;
+    });
+  }
+
+  function renderPlanlamaOzet(data) {
+    var el = document.getElementById('planlamaOzetBody');
+    if (!el) return;
+    if (!data || data.en_gunesli_gun == null) {
+      el.innerHTML = row('Özet', '—');
+      return;
+    }
+    el.innerHTML =
+      row('Bu hafta en güneşli gün', esc(data.en_gunesli_gun)) +
+      row('En uygun araç şarj günü', esc(data.en_uygun_arac_sarj_gunu)) +
+      row('CNC için önerilen yoğun çalışma günü', esc(data.cnc_yogun_onerilen_gun)) +
+      row('Batarya koruma uyarısı', esc(data.batarya_koruma_uyarisi));
+  }
+
+  function loadPlanlamaOzetOnce() {
+    fetch(PLAN_OZET_URL, { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+      .then(function (r) {
+        if (!r.ok) throw new Error('ozet');
+        return r.json();
+      })
+      .then(renderPlanlamaOzet)
+      .catch(function () {
+        var el = document.getElementById('planlamaOzetBody');
+        if (el) el.innerHTML = row('Özet', 'Yüklenemedi');
+      });
+  }
+
+  function render(data) {
+    errEl.classList.remove('show');
+    errEl.textContent = '';
+
+    var g = data.grid || {};
+    document.getElementById('kvGrid').innerHTML =
+      row('Durum', gridStatusBadge(g.status)) +
+      row('Gerilim', esc(g.voltage) + ' V') +
+      row('Frekans', esc(g.frequency) + ' Hz') +
+      row('Anlık çekilen güç', esc(g.power_kw) + ' kW');
+
+    var s = data.solar || {};
+    document.getElementById('kvSolar').innerHTML =
+      row('Fronius (27 kW)', esc(s.fronius_kw) + ' kW') +
+      row('DEYE (20 kW)', esc(s.deye_kw) + ' kW') +
+      row('Toplam solar', esc(s.total_kw) + ' kW');
+
+    var b = data.battery || {};
+    var p = Number(b.power_kw);
+    var pLabel = esc(b.power_kw) + ' kW';
+    if (!isNaN(p)) {
+      if (p < 0) pLabel += ' <span style="color:#059669;font-size:12px;">(şarj)</span>';
+      else if (p > 0) pLabel += ' <span style="color:#b45309;font-size:12px;">(deşarj)</span>';
+    }
+    document.getElementById('kvBattery').innerHTML =
+      row('Şarj (SOC)', esc(b.soc) + ' %') +
+      row('Batarya gerilimi', esc(b.voltage) + ' V') +
+      row('Şarj / deşarj gücü', pLabel) +
+      row('Mod', esc(b.mode)) +
+      row('Tahmini kalan süre', esc(b.estimated_hours) + ' saat');
+
+    var c = data.consumption || {};
+    var comp = c.compressor_active ? '<span class="enerji-badge enerji-badge-warn">Aktif</span>' : '<span class="enerji-badge enerji-badge-ok">Kapalı</span>';
+    document.getElementById('kvConsumption').innerHTML =
+      row('Toplam tesis', esc(c.total_kw) + ' kW') +
+      row('Kritik yük', esc(c.critical_load_kw) + ' kW') +
+      row('Araç şarj', esc(c.ev_charger_kw) + ' kW') +
+      row('Kompresör', comp);
+
+    var f = data.flows || {};
+    var flowDefs = [
+      ['solar_to_site_kw', 'Solar → Tesis'],
+      ['solar_to_battery_kw', 'Solar → Batarya'],
+      ['battery_to_site_kw', 'Batarya → Tesis'],
+      ['grid_to_site_kw', 'Şebeke → Tesis'],
+      ['battery_to_ev_kw', 'Batarya → Araç şarj'],
+    ];
+    document.getElementById('flowBoxes').innerHTML = flowDefs.map(function (pair) {
+      var kw = f[pair[0]];
+      var v = kw != null ? esc(kw) + ' kW' : '—';
+      return '<div class="enerji-flow-box"><div class="lbl">' + esc(pair[1]) + '</div><div class="val">' + v + '</div></div>';
+    }).join('');
+
+    renderTransferSwitches(data.transfer_switches || []);
+
+    var alerts = Array.isArray(data.alerts) ? data.alerts : [];
+    document.getElementById('alertList').innerHTML = alerts.length
+      ? alerts.map(function (a) { return '<li>' + esc(a) + '</li>'; }).join('')
+      : '<li>Uyarı yok</li>';
+
+    var meta = data.meta || {};
+    if (meta.updated_ts) {
+      updatedEl.textContent = 'Son güncelleme: ' + new Date(meta.updated_ts * 1000).toLocaleString('tr-TR');
+    } else {
+      updatedEl.textContent = 'Son güncelleme: ' + new Date().toLocaleString('tr-TR');
+    }
+  }
+
+  function showError(msg) {
+    errEl.textContent = msg;
+    errEl.classList.add('show');
+  }
+
+  function load() {
+    fetch(API_URL, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+      .then(function (r) {
+        if (r.status === 401 || r.status === 403) {
+          showError('Oturum süresi doldu veya erişim reddedildi. Sayfayı yenileyin.');
+          throw new Error('auth');
+        }
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(render)
+      .catch(function (e) {
+        if (e.message !== 'auth') showError('Enerji verisi alınamadı. Ağ bağlantınızı kontrol edin.');
+      });
+  }
+
+  document.getElementById('transferSwitchGrid').addEventListener('click', function (e) {
+    var btn = e.target.closest('button[data-switch][data-action]');
+    if (!btn || btn.disabled) return;
+    var sid = btn.getAttribute('data-switch');
+    var action = btn.getAttribute('data-action');
+    var tok = getCsrfToken();
+    if (!tok) {
+      alert('Güvenlik anahtarı bulunamadı. Sayfayı yenileyin.');
+      return;
+    }
+    setSwitchButtonsDisabled(true);
+    fetch(SWITCH_DEMO_URL, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-CSRFToken': tok,
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+      body: JSON.stringify({ switch_id: sid, action: action }),
+    })
+      .then(function (r) {
+        return r.text().then(function (text) {
+          var data = {};
+          try {
+            data = text ? JSON.parse(text) : {};
+          } catch (e) {
+            data = { error: 'Sunucu yanıtı okunamadı' };
+          }
+          return { ok: r.ok, status: r.status, data: data };
+        });
+      })
+      .then(function (res) {
+        setSwitchButtonsDisabled(false);
+        if (res.ok && res.data && res.data.ok && Array.isArray(res.data.transfer_switches)) {
+          renderTransferSwitches(res.data.transfer_switches);
+        } else {
+          var msg = (res.data && res.data.error) ? res.data.error : ('HTTP ' + res.status);
+          alert('Demo komut uygulanamadı: ' + msg);
+        }
+      })
+      .catch(function () {
+        setSwitchButtonsDisabled(false);
+        alert('Ağ hatası: demo komut gönderilemedi.');
+      });
+  });
+
+  loadPlanlamaOzetOnce();
+  load();
+  setInterval(load, 10000);
+})();
+</script>
+{% endblock %}

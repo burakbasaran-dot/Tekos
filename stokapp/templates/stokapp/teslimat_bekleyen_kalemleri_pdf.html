@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <title>Teslimat Bekleyen Ürünler</title>
+</head>
+<body>
+  <h1>Teslimat Bekleyen Ürünler</h1>
+  <div class="meta">
+    {% if firma_ismi %}{{ firma_ismi }} · {% endif %}
+    Oluşturulma: {{ olusturma_tarihi|date:"d.m.Y H:i" }} · {{ kayit_sayisi }} kalem
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Sipariş No</th>
+        <th>Müşteri</th>
+        <th>Stok Kodu</th>
+        <th>Ürün Adı</th>
+        <th class="num">Sipariş Miktarı</th>
+        <th class="num">Stoktan Ayrılan</th>
+        <th class="num">Teslimde Düşülecek</th>
+        <th>Birim</th>
+        <th>Üretim</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td>{{ row.siparis.siparis_numarasi }}</td>
+        <td>
+          {% if row.siparis.musteri %}
+            {{ row.siparis.musteri.ad }}
+          {% else %}
+            {{ row.siparis.musteri_adi|default:"-" }}
+          {% endif %}
+        </td>
+        <td>
+          {% if row.kalem.stok_item %}
+            {{ row.kalem.stok_item.stok_kodu }}
+          {% else %}
+            -
+          {% endif %}
+        </td>
+        <td>
+          {% if row.kalem.stok_item %}
+            {{ row.kalem.stok_item.ad }}
+          {% else %}
+            {{ row.kalem.aciklama|default:"Serbest kalem" }}
+          {% endif %}
+        </td>
+        <td class="num highlight">{{ row.talep|floatformat:"-3" }}</td>
+        <td class="num">{{ row.stoktan_dusulen|floatformat:"-3" }}</td>
+        <td class="num">{{ row.bekleyen|floatformat:"-3" }}</td>
+        <td>{{ row.birim }}</td>
+        <td>
+          {% if row.siparis.uretim_durumu == 'STOKTAN_SEVK' %}
+            Stoktan sevk
+          {% else %}
+            Tamamlandı
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="9" class="empty">Teslimat bekleyen ürün kalemi bulunmuyor.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>

@@ -1,0 +1,238 @@
+{% extends "stokapp/base.html" %}
+{% load static %}
+{% block title %}Ölçü Aletleri Dashboard{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>📊 Ölçü Aletleri Dashboard</h2>
+        <a href="{% url 'stokapp:olcu_aleti_listesi' %}" class="btn btn-secondary" style="padding: 10px 20px; text-decoration: none;">
+            ← Listeye Dön
+        </a>
+    </div>
+
+    <!-- Özet Kartlar -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
+        <div style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <div style="font-size: 14px; opacity: 0.9; margin-bottom: 8px;">🟢 Sağlıklı</div>
+            <div style="font-size: 32px; font-weight: 700;">{{ saglikli|length }}</div>
+            <div style="font-size: 12px; opacity: 0.8;">>30 gün var</div>
+        </div>
+        
+        <div style="background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%); color: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <div style="font-size: 14px; opacity: 0.9; margin-bottom: 8px;">🟡 Yaklaşıyor</div>
+            <div style="font-size: 32px; font-weight: 700;">{{ yaklasiyor|length }}</div>
+            <div style="font-size: 12px; opacity: 0.8;">30 gün</div>
+        </div>
+        
+        <div style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <div style="font-size: 14px; opacity: 0.9; margin-bottom: 8px;">🟠 Acil</div>
+            <div style="font-size: 32px; font-weight: 700;">{{ acil|length }}</div>
+            <div style="font-size: 12px; opacity: 0.8;">7 gün</div>
+        </div>
+        
+        <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <div style="font-size: 14px; opacity: 0.9; margin-bottom: 8px;">🔴 Süresi Geçmiş</div>
+            <div style="font-size: 32px; font-weight: 700;">{{ gecmis|length }}</div>
+            <div style="font-size: 12px; opacity: 0.8;">Blokaj</div>
+        </div>
+        
+        <div style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); color: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <div style="font-size: 14px; opacity: 0.9; margin-bottom: 8px;">⚪ Toplam</div>
+            <div style="font-size: 32px; font-weight: 700;">{{ toplam }}</div>
+            <div style="font-size: 12px; opacity: 0.8;">Aktif aletler</div>
+        </div>
+    </div>
+
+    <!-- Süresi Geçmiş (Öncelikli) -->
+    {% if gecmis %}
+    <div style="margin-bottom: 30px;">
+        <h3 style="color: #ef4444; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+            <span style="display: inline-block; width: 16px; height: 16px; border-radius: 50%; background-color: #ef4444;"></span>
+            Süresi Geçmiş ({{ gecmis|length }})
+        </h3>
+        <div style="background: white; border: 2px solid #ef4444; border-radius: 8px; overflow: hidden;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background-color: #fee2e2;">
+                        <th style="padding: 12px; text-align: left; font-weight: 600;">Seri No</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600;">Alet Türü</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600;">Marka / Model</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600;">Son Kalibrasyon</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600;">Sonraki Kalibrasyon</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600;">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for alet in gecmis %}
+                    <tr style="border-bottom: 1px solid #fee2e2;">
+                        <td style="padding: 12px; font-weight: 600;">{{ alet.seri_no }}</td>
+                        <td style="padding: 12px;">{{ alet.alet_turu.ad }}</td>
+                        <td style="padding: 12px;">{{ alet.marka }}{% if alet.model %} / {{ alet.model }}{% endif %}</td>
+                        <td style="padding: 12px;">{{ alet.son_kalibrasyon_tarihi|date:"d.m.Y"|default:"-" }}</td>
+                        <td style="padding: 12px; color: #ef4444; font-weight: 600;">{{ alet.sonraki_kalibrasyon_tarihi|date:"d.m.Y" }}</td>
+                        <td style="padding: 12px;">
+                            <a href="{% url 'stokapp:olcu_aleti_duzenle' alet.pk %}" style="padding: 6px 12px; background: #3b82f6; color: white; border-radius: 4px; text-decoration: none; font-size: 12px; margin-right: 5px;">✏️</a>
+                            <a href="{% url 'stokapp:kalibrasyon_ekle' alet.pk %}" style="padding: 6px 12px; background: #22c55e; color: white; border-radius: 4px; text-decoration: none; font-size: 12px;">📋</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Acil -->
+    {% if acil %}
+    <div style="margin-bottom: 30px;">
+        <h3 style="color: #f97316; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+            <span style="display: inline-block; width: 16px; height: 16px; border-radius: 50%; background-color: #f97316;"></span>
+            Acil ({{ acil|length }}) - 7 gün içinde
+        </h3>
+        <div style="background: white; border: 2px solid #f97316; border-radius: 8px; overflow: hidden;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background-color: #ffedd5;">
+                        <th style="padding: 12px; text-align: left; font-weight: 600;">Seri No</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600;">Alet Türü</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600;">Marka / Model</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600;">Son Kalibrasyon</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600;">Sonraki Kalibrasyon</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600;">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for alet in acil %}
+                    <tr style="border-bottom: 1px solid #ffedd5;">
+                        <td style="padding: 12px; font-weight: 600;">{{ alet.seri_no }}</td>
+                        <td style="padding: 12px;">{{ alet.alet_turu.ad }}</td>
+                        <td style="padding: 12px;">{{ alet.marka }}{% if alet.model %} / {{ alet.model }}{% endif %}</td>
+                        <td style="padding: 12px;">{{ alet.son_kalibrasyon_tarihi|date:"d.m.Y"|default:"-" }}</td>
+                        <td style="padding: 12px; color: #f97316; font-weight: 600;">{{ alet.sonraki_kalibrasyon_tarihi|date:"d.m.Y" }}</td>
+                        <td style="padding: 12px;">
+                            <a href="{% url 'stokapp:olcu_aleti_duzenle' alet.pk %}" style="padding: 6px 12px; background: #3b82f6; color: white; border-radius: 4px; text-decoration: none; font-size: 12px; margin-right: 5px;">✏️</a>
+                            <a href="{% url 'stokapp:kalibrasyon_ekle' alet.pk %}" style="padding: 6px 12px; background: #22c55e; color: white; border-radius: 4px; text-decoration: none; font-size: 12px;">📋</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Yaklaşıyor -->
+    {% if yaklasiyor %}
+    <div style="margin-bottom: 30px;">
+        <h3 style="color: #eab308; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+            <span style="display: inline-block; width: 16px; height: 16px; border-radius: 50%; background-color: #eab308;"></span>
+            Yaklaşıyor ({{ yaklasiyor|length }}) - 30 gün içinde
+        </h3>
+        <div style="background: white; border: 2px solid #eab308; border-radius: 8px; overflow: hidden;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background-color: #fef9c3;">
+                        <th style="padding: 12px; text-align: left; font-weight: 600;">Seri No</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600;">Alet Türü</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600;">Marka / Model</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600;">Son Kalibrasyon</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600;">Sonraki Kalibrasyon</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600;">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for alet in yaklasiyor %}
+                    <tr style="border-bottom: 1px solid #fef9c3;">
+                        <td style="padding: 12px; font-weight: 600;">{{ alet.seri_no }}</td>
+                        <td style="padding: 12px;">{{ alet.alet_turu.ad }}</td>
+                        <td style="padding: 12px;">{{ alet.marka }}{% if alet.model %} / {{ alet.model }}{% endif %}</td>
+                        <td style="padding: 12px;">{{ alet.son_kalibrasyon_tarihi|date:"d.m.Y"|default:"-" }}</td>
+                        <td style="padding: 12px; color: #eab308; font-weight: 600;">{{ alet.sonraki_kalibrasyon_tarihi|date:"d.m.Y" }}</td>
+                        <td style="padding: 12px;">
+                            <a href="{% url 'stokapp:olcu_aleti_duzenle' alet.pk %}" style="padding: 6px 12px; background: #3b82f6; color: white; border-radius: 4px; text-decoration: none; font-size: 12px; margin-right: 5px;">✏️</a>
+                            <a href="{% url 'stokapp:kalibrasyon_ekle' alet.pk %}" style="padding: 6px 12px; background: #22c55e; color: white; border-radius: 4px; text-decoration: none; font-size: 12px;">📋</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Sağlıklı -->
+    {% if saglikli %}
+    <div style="margin-bottom: 30px;">
+        <h3 style="color: #22c55e; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+            <span style="display: inline-block; width: 16px; height: 16px; border-radius: 50%; background-color: #22c55e;"></span>
+            Sağlıklı ({{ saglikli|length }}) - >30 gün var
+        </h3>
+        <div style="background: white; border: 2px solid #22c55e; border-radius: 8px; overflow: hidden;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background-color: #d1fae5;">
+                        <th style="padding: 12px; text-align: left; font-weight: 600;">Seri No</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600;">Alet Türü</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600;">Marka / Model</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600;">Son Kalibrasyon</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600;">Sonraki Kalibrasyon</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600;">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for alet in saglikli %}
+                    <tr style="border-bottom: 1px solid #d1fae5;">
+                        <td style="padding: 12px; font-weight: 600;">{{ alet.seri_no }}</td>
+                        <td style="padding: 12px;">{{ alet.alet_turu.ad }}</td>
+                        <td style="padding: 12px;">{{ alet.marka }}{% if alet.model %} / {{ alet.model }}{% endif %}</td>
+                        <td style="padding: 12px;">{{ alet.son_kalibrasyon_tarihi|date:"d.m.Y"|default:"-" }}</td>
+                        <td style="padding: 12px; color: #22c55e; font-weight: 600;">{{ alet.sonraki_kalibrasyon_tarihi|date:"d.m.Y" }}</td>
+                        <td style="padding: 12px;">
+                            <a href="{% url 'stokapp:olcu_aleti_duzenle' alet.pk %}" style="padding: 6px 12px; background: #3b82f6; color: white; border-radius: 4px; text-decoration: none; font-size: 12px; margin-right: 5px;">✏️</a>
+                            <a href="{% url 'stokapp:kalibrasyon_ekle' alet.pk %}" style="padding: 6px 12px; background: #22c55e; color: white; border-radius: 4px; text-decoration: none; font-size: 12px;">📋</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Bilinmiyor (Kalibrasyon tarihi olmayanlar) -->
+    {% if bilinmiyor %}
+    <div style="margin-bottom: 30px;">
+        <h3 style="color: #6b7280; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+            <span style="display: inline-block; width: 16px; height: 16px; border-radius: 50%; background-color: #6b7280;"></span>
+            Bilinmiyor ({{ bilinmiyor|length }}) - Kalibrasyon tarihi yok
+        </h3>
+        <div style="background: white; border: 2px solid #6b7280; border-radius: 8px; overflow: hidden;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background-color: #f3f4f6;">
+                        <th style="padding: 12px; text-align: left; font-weight: 600;">Seri No</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600;">Alet Türü</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600;">Marka / Model</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600;">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for alet in bilinmiyor %}
+                    <tr style="border-bottom: 1px solid #f3f4f6;">
+                        <td style="padding: 12px; font-weight: 600;">{{ alet.seri_no }}</td>
+                        <td style="padding: 12px;">{{ alet.alet_turu.ad }}</td>
+                        <td style="padding: 12px;">{{ alet.marka }}{% if alet.model %} / {{ alet.model }}{% endif %}</td>
+                        <td style="padding: 12px;">
+                            <a href="{% url 'stokapp:olcu_aleti_duzenle' alet.pk %}" style="padding: 6px 12px; background: #3b82f6; color: white; border-radius: 4px; text-decoration: none; font-size: 12px; margin-right: 5px;">✏️</a>
+                            <a href="{% url 'stokapp:kalibrasyon_ekle' alet.pk %}" style="padding: 6px 12px; background: #22c55e; color: white; border-radius: 4px; text-decoration: none; font-size: 12px;">📋</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

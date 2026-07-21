@@ -1,0 +1,179 @@
+{% extends "stokapp/base.html" %}
+{% load custom_filters %}
+{% block title %}{{ rfq.rfq_no }} — Tedarikçi Teklif Talebi{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <div>
+            <h2 style="margin:0;">📨 {{ rfq.rfq_no }}</h2>
+            <div style="color:#6b7280; font-size:14px; margin-top:4px;">{{ rfq.baslik }}</div>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <a href="{% url 'stokapp:satinalma_listesi' %}?tab=teklif_bekleyen" class="btn btn-secondary" style="padding:8px 14px;">← Listeye Dön</a>
+            {% if rfq.durum == 'TASLAK' or rfq.durum == 'TEKLIF_BEKLENIYOR' %}
+                <a href="{% url 'stokapp:rfq_duzenle' rfq.pk %}" class="btn btn-secondary" style="padding:8px 14px;">✏️ Düzenle</a>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding:12px; margin-bottom:15px; border-radius:8px;
+            {% if message.tags == 'error' %}background:#f8d7da; color:#721c24; border-left:4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background:#fff3cd; color:#856404; border-left:4px solid #ffc107;
+            {% else %}background:#d4edda; color:#155724; border-left:4px solid #28a745;{% endif %}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Üst durum kartı -->
+    <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:12px; margin-bottom:20px;">
+        <div style="background:#eef2ff; padding:14px; border-radius:8px;">
+            <div style="font-size:12px; color:#3730a3; font-weight:600;">Durum</div>
+            <div style="font-size:16px; font-weight:700; margin-top:4px;">{{ rfq.get_durum_display }}</div>
+        </div>
+        <div style="background:#fef3c7; padding:14px; border-radius:8px;">
+            <div style="font-size:12px; color:#92400e; font-weight:600;">Öncelik</div>
+            <div style="font-size:16px; font-weight:700; margin-top:4px;">{{ rfq.get_oncelik_display }}</div>
+        </div>
+        <div style="background:#dcfce7; padding:14px; border-radius:8px;">
+            <div style="font-size:12px; color:#166534; font-weight:600;">Kalem</div>
+            <div style="font-size:16px; font-weight:700; margin-top:4px;">{{ kalem_count }}</div>
+        </div>
+        <div style="background:#fce7f3; padding:14px; border-radius:8px;">
+            <div style="font-size:12px; color:#9d174d; font-weight:600;">Tedarikçi</div>
+            <div style="font-size:16px; font-weight:700; margin-top:4px;">{{ tedarikci_count }}</div>
+        </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:20px;">
+        <div style="background:#f9fafb; padding:16px; border-radius:8px;">
+            <strong>Oluşturma Tarihi:</strong> {{ rfq.olusturma_tarihi|date:"d.m.Y" }}<br>
+            <strong>Son Teklif Tarihi:</strong> {{ rfq.son_teklif_tarihi|date:"d.m.Y"|default:"-" }}<br>
+            <strong>Para Birimi:</strong> {{ rfq.para_birimi }}<br>
+            <strong>Oluşturan:</strong> {{ rfq.olusturan|default:"-" }}
+        </div>
+        {% if rfq.notlar %}
+        <div style="background:#f9fafb; padding:16px; border-radius:8px;">
+            <strong>Notlar</strong>
+            <div style="margin-top:6px; white-space:pre-wrap; color:#374151;">{{ rfq.notlar }}</div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Aksiyon barı -->
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px;">
+        {% if rfq.durum == 'TASLAK' or rfq.durum == 'TEKLIF_BEKLENIYOR' %}
+            <a href="{% url 'stokapp:rfq_mail_alici_sec' rfq.pk %}" class="btn btn-primary" style="padding:8px 16px; background:#22c55e;">📧 Tedarikçilere Gönder (BCC)</a>
+        {% endif %}
+        {% if rfq.durum != 'TASLAK' %}
+            <a href="{% url 'stokapp:rfq_karsilastirma' rfq.pk %}" class="btn btn-primary" style="padding:8px 16px; background:#3b82f6;">📊 Teklifleri Karşılaştır</a>
+        {% endif %}
+        {% if rfq.durum != 'SIPARISE_DONUSTURULDU' and rfq.durum != 'IPTAL' %}
+            <form method="post" action="{% url 'stokapp:rfq_sil' rfq.pk %}" style="display:inline;" onsubmit="return confirm('Bu tedarikçi teklif talebini silmek istediğinizden emin misiniz?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-secondary" style="padding:8px 16px; background:#ef4444; color:white; border:none; cursor:pointer;">🗑️ Sil</button>
+            </form>
+        {% endif %}
+    </div>
+
+    <!-- Kalemler -->
+    <h3>📋 Kalemler</h3>
+    <table style="width:100%; border-collapse:collapse; background:white; margin-bottom:24px;">
+        <thead>
+            <tr style="background:#f3f4f6; border-bottom:2px solid #e5e7eb;">
+                <th style="padding:10px; text-align:left;">#</th>
+                <th style="padding:10px; text-align:left;">Stok / Kalem</th>
+                <th style="padding:10px; text-align:left;">Kategori</th>
+                <th style="padding:10px; text-align:right;">Miktar</th>
+                <th style="padding:10px; text-align:left;">İstenen Termin</th>
+                <th style="padding:10px; text-align:left;">Teknik Not</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for k in rfq.kalemler.all %}
+            <tr style="border-bottom:1px solid #e5e7eb;">
+                <td style="padding:10px;">{{ forloop.counter }}</td>
+                <td style="padding:10px;">
+                    {% if k.stok_item %}<small style="color:#6b7280;">{{ k.stok_item.stok_kodu }}</small> — {% endif %}
+                    {{ k.kalem_adi }}
+                </td>
+                <td style="padding:10px;">
+                    {% if k.stok_item and k.stok_item.kategori %}<span style="padding:2px 8px; background:#eef2ff; color:#3730a3; border-radius:10px; font-size:11px;">{{ k.stok_item.kategori.ad }}</span>{% else %}-{% endif %}
+                </td>
+                <td style="padding:10px; text-align:right;">{{ k.miktar|format_decimal }} {{ k.birim }}</td>
+                <td style="padding:10px;">{{ k.istenen_termin|date:"d.m.Y"|default:"-" }}</td>
+                <td style="padding:10px;">{{ k.teknik_notlar|truncatechars:80|default:"-" }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" style="text-align:center; padding:30px; color:#6b7280;">Henüz kalem yok.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Tedarikçi bağlantıları -->
+    <h3>🏪 Tedarikçi Durumu</h3>
+    <table style="width:100%; border-collapse:collapse; background:white; margin-bottom:24px;">
+        <thead>
+            <tr style="background:#f3f4f6; border-bottom:2px solid #e5e7eb;">
+                <th style="padding:10px; text-align:left;">Tedarikçi</th>
+                <th style="padding:10px; text-align:left;">E-posta</th>
+                <th style="padding:10px; text-align:left;">Mail Gönderim</th>
+                <th style="padding:10px; text-align:left;">Durum</th>
+                <th style="padding:10px; text-align:left;">İşlem</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for bag in rfq.tedarikci_baglantilari.all %}
+            <tr style="border-bottom:1px solid #e5e7eb;">
+                <td style="padding:10px;">
+                    {% if bag.tedarikci %}<strong>{{ bag.tedarikci.ad }}</strong>{% else %}<em style="color:#6b7280;">{{ bag.harici_ad|default:"Harici" }}</em>{% endif %}
+                </td>
+                <td style="padding:10px;">{{ bag.gosterim_email|default:"-" }}</td>
+                <td style="padding:10px;">{{ bag.gonderim_tarihi|date:"d.m.Y H:i"|default:"-" }}</td>
+                <td style="padding:10px;">
+                    {% if bag.durum == 'TEKLIF_GIRDI' %}
+                        <span style="padding:2px 10px; background:#dcfce7; color:#166534; border-radius:10px; font-size:11px; font-weight:600;">Teklif Girildi</span>
+                    {% elif bag.durum == 'IPTAL' %}
+                        <span style="padding:2px 10px; background:#fee2e2; color:#991b1b; border-radius:10px; font-size:11px; font-weight:600;">İptal</span>
+                    {% else %}
+                        <span style="padding:2px 10px; background:#fef3c7; color:#92400e; border-radius:10px; font-size:11px; font-weight:600;">Bekliyor</span>
+                    {% endif %}
+                </td>
+                <td style="padding:10px;">
+                    {% if rfq.durum != 'SIPARISE_DONUSTURULDU' %}
+                    <a href="{% url 'stokapp:rfq_teklif_girisi' rfq.pk bag.pk %}" class="btn btn-primary" style="padding:5px 12px; font-size:12px;">💰 Teklif Girişi</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" style="padding:30px; text-align:center; color:#6b7280;">
+                Henüz tedarikçi eklenmemiş.
+                {% if rfq.durum == 'TASLAK' or rfq.durum == 'TEKLIF_BEKLENIYOR' %}
+                    <a href="{% url 'stokapp:rfq_mail_alici_sec' rfq.pk %}">Tedarikçi seç ve mail gönder →</a>
+                {% endif %}
+            </td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Otomatik öneri -->
+    {% if onerilen_listesi %}
+    <div style="background:#f0f9ff; padding:16px; border-radius:8px; border-left:4px solid #0284c7;">
+        <h4 style="margin:0 0 10px 0;">💡 Kategori Bazlı Önerilen Tedarikçiler</h4>
+        <div style="display:flex; flex-wrap:wrap; gap:6px;">
+            {% for item in onerilen_listesi %}
+                <span style="padding:4px 10px; border-radius:14px; font-size:12px; font-weight:600;
+                       {% if item.secili %}background:#dcfce7; color:#166534;{% else %}background:#e0f2fe; color:#075985;{% endif %}">
+                    {{ item.tedarikci.ad }}{% if item.secili %} ✓{% endif %}
+                </span>
+            {% endfor %}
+        </div>
+        {% if rfq.durum == 'TASLAK' or rfq.durum == 'TEKLIF_BEKLENIYOR' %}
+        <div style="margin-top:10px;">
+            <a href="{% url 'stokapp:rfq_mail_alici_sec' rfq.pk %}" style="font-size:13px; color:#0284c7;">Tedarikçi seçim ekranına git →</a>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

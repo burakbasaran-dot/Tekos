@@ -1,0 +1,13 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Belge Arşivle{% endblock %}
+{% block content %}
+<div class="card">
+    <h2>Belgeyi Arşivle</h2>
+    <p><strong>{{ belge.belge_adi }}</strong> belgesini arşivlemek istiyor musunuz?</p>
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn" style="background:#f59e0b; color:#fff;">📦 Arşivle</button>
+        <a href="{% url 'stokapp:personel_belgeleri' personel.pk %}" class="btn" style="background:#6b7280; color:#fff; text-decoration:none;">İptal</a>
+    </form>
+</div>
+{% endblock %}

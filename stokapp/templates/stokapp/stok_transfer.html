@@ -1,0 +1,225 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Stok Transfer{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>🔄 Stok Transfer İşlemi</h2>
+        <a href="{% url 'stokapp:stok_transfer_listesi' %}" class="btn btn-secondary">Transfer Geçmişi</a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 15px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background: #fff3cd; color: #856404; border-left: 4px solid #ffc107;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post" id="transferForm">
+        {% csrf_token %}
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+            <!-- Sol Taraf: Kaynak -->
+            <div style="padding: 20px; background: #fff3cd; border-radius: 10px; border: 2px solid #ffc107;">
+                <h3 style="margin-top: 0; color: #856404;">📤 Kaynak Depo</h3>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Stok:</label>
+                    {{ form.stok_item }}
+                    {% if form.stok_item.errors %}
+                        <div style="color: #dc3545; font-size: 12px; margin-top: 5px;">{{ form.stok_item.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Kaynak Depo:</label>
+                    <select name="kaynak_depo" id="id_kaynak_depo" class="form-control" required>
+                        <option value="">Seçiniz...</option>
+                        {% for depo in form.kaynak_depo.field.queryset %}
+                            <option value="{{ depo.pk }}">{{ depo.ad }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if form.kaynak_depo.errors %}
+                        <div style="color: #dc3545; font-size: 12px; margin-top: 5px;">{{ form.kaynak_depo.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Kaynak Raf (Opsiyonel):</label>
+                    <select name="kaynak_raf" id="id_kaynak_raf" class="form-control">
+                        <option value="">Raf Seçiniz...</option>
+                    </select>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Mevcut Stok:</label>
+                    <div id="mevcut-stok-bilgi" style="padding: 10px; background: white; border-radius: 6px; font-weight: 600; color: #0c5460;">
+                        Stok seçiniz...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sağ Taraf: Hedef -->
+            <div style="padding: 20px; background: #d4edda; border-radius: 10px; border: 2px solid #28a745;">
+                <h3 style="margin-top: 0; color: #155724;">📥 Hedef Depo</h3>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Hedef Depo:</label>
+                    <select name="hedef_depo" id="id_hedef_depo" class="form-control" required>
+                        <option value="">Seçiniz...</option>
+                        {% for depo in form.hedef_depo.field.queryset %}
+                            <option value="{{ depo.pk }}">{{ depo.ad }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if form.hedef_depo.errors %}
+                        <div style="color: #dc3545; font-size: 12px; margin-top: 5px;">{{ form.hedef_depo.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Hedef Raf (Opsiyonel):</label>
+                    <select name="hedef_raf" id="id_hedef_raf" class="form-control">
+                        <option value="">Raf Seçiniz...</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transfer Detayları -->
+        <div style="padding: 20px; background: #f8f9fa; border-radius: 10px; margin-bottom: 20px;">
+            <h3 style="margin-top: 0;">📋 Transfer Detayları</h3>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Transfer Miktarı:</label>
+                    {{ form.miktar }}
+                    {% if form.miktar.errors %}
+                        <div style="color: #dc3545; font-size: 12px; margin-top: 5px;">{{ form.miktar.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Birim:</label>
+                    {{ form.birim }}
+                </div>
+
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">Referans No (Opsiyonel):</label>
+                    {{ form.referans_no }}
+                </div>
+            </div>
+
+            <div style="margin-top: 15px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: 600;">Açıklama:</label>
+                {{ form.aciklama }}
+            </div>
+        </div>
+
+        <!-- Form Hataları -->
+        {% if form.non_field_errors %}
+            <div style="padding: 12px; margin-bottom: 15px; background: #f8d7da; color: #721c24; border-radius: 8px; border-left: 4px solid #dc3545;">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        <!-- Butonlar -->
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+            <a href="{% url 'stokapp:stok_listesi' %}" class="btn btn-secondary">İptal</a>
+            <button type="submit" class="btn btn-primary">🔄 Transfer Et</button>
+        </div>
+    </form>
+</div>
+
+<style>
+.form-control {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+}
+</style>
+
+<script>
+// Depo seçildiğinde rafları yükle
+document.getElementById('id_kaynak_depo').addEventListener('change', function() {
+    const depoId = this.value;
+    const rafSelect = document.getElementById('id_kaynak_raf');
+    
+    rafSelect.innerHTML = '<option value="">Raf Seçiniz...</option>';
+    
+    if (depoId) {
+        fetch(`/stok/api/shelves/?depo_id=${depoId}`)
+            .then(response => response.json())
+            .then(data => {
+                data.forEach(raf => {
+                    const option = document.createElement('option');
+                    option.value = raf.id;
+                    option.textContent = raf.ad;
+                    rafSelect.appendChild(option);
+                });
+            });
+    }
+});
+
+document.getElementById('id_hedef_depo').addEventListener('change', function() {
+    const depoId = this.value;
+    const rafSelect = document.getElementById('id_hedef_raf');
+    
+    rafSelect.innerHTML = '<option value="">Raf Seçiniz...</option>';
+    
+    if (depoId) {
+        fetch(`/stok/api/shelves/?depo_id=${depoId}`)
+            .then(response => response.json())
+            .then(data => {
+                data.forEach(raf => {
+                    const option = document.createElement('option');
+                    option.value = raf.id;
+                    option.textContent = raf.ad;
+                    rafSelect.appendChild(option);
+                });
+            });
+    }
+});
+
+// Stok seçildiğinde mevcut stok bilgisini göster
+document.getElementById('id_stok_item').addEventListener('change', function() {
+    const stokId = this.value;
+    const bilgiDiv = document.getElementById('mevcut-stok-bilgi');
+    
+    if (stokId) {
+        // Stok bilgisini almak için API çağrısı yapabilirsiniz
+        // Şimdilik basit bir yaklaşım kullanıyoruz
+        const selectedOption = this.options[this.selectedIndex];
+        bilgiDiv.textContent = 'Stok bilgisi yükleniyor...';
+        
+        // Gerçek uygulamada bir API endpoint'i ile stok bilgisini çekebilirsiniz
+        // Şimdilik sadece seçilen ürünü gösteriyoruz
+        bilgiDiv.textContent = selectedOption.text;
+    } else {
+        bilgiDiv.textContent = 'Stok seçiniz...';
+    }
+});
+
+// Form gönderilmeden önce kontrol
+document.getElementById('transferForm').addEventListener('submit', function(e) {
+    const kaynakDepo = document.getElementById('id_kaynak_depo').value;
+    const hedefDepo = document.getElementById('id_hedef_depo').value;
+    
+    if (kaynakDepo === hedefDepo) {
+        e.preventDefault();
+        alert('Kaynak ve hedef depo aynı olamaz!');
+        return false;
+    }
+    
+    if (!kaynakDepo || !hedefDepo) {
+        e.preventDefault();
+        alert('Lütfen kaynak ve hedef depo seçiniz!');
+        return false;
+    }
+});
+</script>
+{% endblock %}

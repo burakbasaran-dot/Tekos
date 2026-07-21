@@ -1,0 +1,457 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Üretim Emri Detay{% endblock %}
+{% block content %}
+
+<!-- Üretim Uyarıları -->
+{% if alerts %}
+<div class="card" style="margin-bottom: 20px; border-left: 4px solid #f97316;">
+    <h3 style="margin-top: 0; color: #f97316;">🔔 Üretim Uyarıları</h3>
+    {% for alert in alerts %}
+    <div style="padding: 15px; margin-bottom: 10px; background: 
+        {% if alert.level == 'BLOCK' %}#fee2e2
+        {% elif alert.level == 'ACK_REQUIRED' %}#fef3c7
+        {% else %}#dbeafe{% endif %}; 
+        border-radius: 8px; border-left: 3px solid 
+        {% if alert.level == 'BLOCK' %}#ef4444
+        {% elif alert.level == 'ACK_REQUIRED' %}#f97316
+        {% else %}#3b82f6{% endif %};">
+        <div style="display: flex; justify-content: space-between; align-items: start;">
+            <div style="flex: 1;">
+                <strong style="color: 
+                    {% if alert.level == 'BLOCK' %}#991b1b
+                    {% elif alert.level == 'ACK_REQUIRED' %}#92400e
+                    {% else %}#1e40af{% endif %};">
+                    {% if alert.level == 'BLOCK' %}🚫 ENGEL
+                    {% elif alert.level == 'ACK_REQUIRED' %}⚠️ ONAY GEREKLİ
+                    {% else %}ℹ️ BİLGİ{% endif %}
+                </strong>
+                <p style="margin: 10px 0 0 0;">{{ alert.message }}</p>
+                <small style="color: #6b7280;">Kapsam: {{ alert.get_scope_display }}</small>
+            </div>
+            {% if alert.level == 'ACK_REQUIRED' or alert.level == 'BLOCK' %}
+            <button onclick="acknowledgeAlert({{ alert.pk }}, '{{ alert.level }}')" 
+                    class="btn" 
+                    style="background: {% if alert.level == 'BLOCK' %}#dc3545{% else %}#f97316{% endif %}; 
+                           color: white; padding: 6px 12px; font-size: 12px; margin-left: 10px;">
+                {% if alert.level == 'BLOCK' %}Kalite Onayı İste
+                {% else %}Okudum / Onaylıyorum{% endif %}
+            </button>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<div class="card" style="margin-bottom: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>🏭 Üretim Emri: {{ emir.emir_no }}</h2>
+        <a href="{% url 'stokapp:uretim_emri_listesi' %}" class="btn btn-secondary">← Geri</a>
+    </div>
+    
+    <!-- Emir Bilgileri -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px;">
+        <div>
+            <strong>Ürün:</strong><br>
+            {{ emir.recete.urun.stok_kodu }} - {{ emir.recete.urun.ad }}
+        </div>
+        <div>
+            <strong>Miktar:</strong><br>
+            {{ emir.miktar }} {{ emir.recete.urun.birim }}
+        </div>
+        <div>
+            <strong>Durum:</strong><br>
+            <span style="padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;
+                {% if emir.durum == 'TAMAMLANDI' %}background: #d4edda; color: #155724;
+                {% elif emir.durum == 'BASLADI' %}background: #fff3cd; color: #856404;
+                {% elif emir.durum == 'IPTAL' %}background: #f8d7da; color: #721c24;
+                {% else %}background: #d1ecf1; color: #0c5460;{% endif %}">
+                {{ emir.get_durum_display }}
+            </span>
+        </div>
+        <div>
+            <strong>Planlanan Başlangıç:</strong><br>
+            {{ emir.planlanan_baslama|date:"d.m.Y H:i" }}
+        </div>
+        <div>
+            <strong>Planlanan Bitiş:</strong><br>
+            {{ emir.planlanan_bitis|date:"d.m.Y H:i" }}
+        </div>
+        {% if emir.gerceklesen_baslama %}
+        <div>
+            <strong>Gerçekleşen Başlangıç:</strong><br>
+            {{ emir.gerceklesen_baslama|date:"d.m.Y H:i" }}
+        </div>
+        {% endif %}
+        {% if emir.gerceklesen_bitis %}
+        <div>
+            <strong>Gerçekleşen Bitiş:</strong><br>
+            {{ emir.gerceklesen_bitis|date:"d.m.Y H:i" }}
+        </div>
+        {% endif %}
+        {% if emir.ust_uretim_emri %}
+        <div>
+            <strong>Üst iş emri:</strong><br>
+            <a href="{% url 'stokapp:uretim_emri_detay' emir.ust_uretim_emri.pk %}">{{ emir.ust_uretim_emri.emir_no }}</a>
+            — {{ emir.ust_uretim_emri.recete.urun.stok_kodu }}
+        </div>
+        {% endif %}
+        {% if emir.alt_emir_otomatik %}
+        <div>
+            <strong>Otomatik alt emir:</strong><br>
+            <span style="color: #0369a1;">Evet (sipariş / reçete kuralı)</span>
+        </div>
+        {% endif %}
+    </div>
+
+    {% if emir.alt_emirler.all %}
+    <div style="margin-bottom: 20px; padding: 12px 16px; background: #f0f9ff; border-radius: 8px; border: 1px solid #bae6fd;">
+        <strong style="color: #0c4a6e;">Otomatik oluşturulan alt iş emirleri</strong>
+        <ul style="margin: 10px 0 0 1.2rem; padding: 0;">
+            {% for alt in emir.alt_emirler.all %}
+            <li style="margin-bottom: 6px;">
+                <a href="{% url 'stokapp:uretim_emri_detay' alt.pk %}">{{ alt.emir_no }}</a>
+                — {{ alt.recete.urun.stok_kodu }} ({{ alt.miktar }} {{ alt.recete.urun.birim }})
+                <span style="color: #64748b;">{{ alt.get_durum_display }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+    
+    <!-- İşlem Butonları -->
+    <div style="margin-bottom: 20px; padding: 15px; background: #f9fafb; border-radius: 8px;">
+        {% if emir.durum == 'PLANLANDI' and emir.production_type == 'ORDER' %}
+            <p style="margin:0; max-width: 52rem; color: #374151; font-size: 14px; line-height: 1.5;">
+                Bu iş emri siparişe bağlıdır. Hammadde çıkışı ve üretimin başlaması yalnızca
+                <strong>Satış → Siparişler</strong> ekranındaki <strong>Üretimi Başlat</strong> akışıyla yapılır;
+                iş emri detayından tekrar başlatmayın; aksi halde hammadde ikinci kez düşmeye çalışır ve stok yanlış görünebilir.
+            </p>
+        {% elif emir.durum == 'PLANLANDI' %}
+            <a href="{% url 'stokapp:uretim_emri_baslat' emir.pk %}" class="btn btn-primary" 
+               onclick="return confirm('Üretimi başlatmak istediğinizden emin misiniz? Hammadde stokları kontrol edilecek.');">
+                ▶️ Üretimi Başlat
+            </a>
+        {% elif emir.durum == 'BASLADI' %}
+            <a href="{% url 'stokapp:uretim_emri_tamamla' emir.pk %}" class="btn btn-primary" id="btn-uretim-tamamla">
+                ✅ Üretimi Tamamla
+            </a>
+        {% endif %}
+        {% if emir.durum != 'TAMAMLANDI' and emir.durum != 'IPTAL' %}
+            <a href="{% url 'stokapp:uretim_emri_iptal' emir.pk %}" class="btn btn-secondary" style="background: #dc3545; color: white;">
+                ❌ İptal Et
+            </a>
+        {% endif %}
+        {% if emir.durum != 'TAMAMLANDI' %}
+            <a href="{% url 'stokapp:uretim_emri_sil' emir.pk %}" class="btn btn-secondary" style="background: #dc3545; color: white;">
+                🗑️ Sil
+            </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Reçete Detayları -->
+<div class="card" style="margin-bottom: 20px;">
+    <h3>📋 Reçete Detayları</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Hammadde</th>
+                <th>Gerekli Miktar (Birim)</th>
+                <th>Mevcut Stok</th>
+                <th>Durum{% if emir.production_type == 'STOCK' or emir.durum == 'BASLADI' %} <span style="font-weight: 400; font-size: 11px; color: #64748b;">(mevcut + çıkış yapılan)</span>{% endif %}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in recete_detaylar_list %}
+            {% with detay=item.detay gerekli_miktar=item.gerekli_miktar %}
+            <tr>
+                <td>{{ detay.stok_item.stok_kodu }} - {{ detay.stok_item.ad }}</td>
+                <td>{{ detay.miktar|floatformat:3 }} × {{ emir.miktar }} = {{ gerekli_miktar|floatformat:3 }} {{ detay.birim }}</td>
+                <td>
+                    {{ item.mevcut_miktar|floatformat:3 }} {{ detay.birim }}
+                    {% if item.uretim_cikis_miktar %}
+                    <span style="display: block; font-size: 12px; color: #64748b; margin-top: 2px;">
+                        + {{ item.uretim_cikis_miktar|floatformat:3 }} çıkış yapıldı
+                    </span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if item.yeterli %}
+                        <span style="color: green;">✅ Yeterli</span>
+                    {% else %}
+                        <span style="color: red;">❌ Yetersiz</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endwith %}
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Üretim Operasyon Adımları ve Kontroller -->
+<div class="card">
+    <h3>⚙️ Üretim Operasyon Adımları</h3>
+    {% if recete_operasyonlar %}
+    <div style="margin-top: 20px;">
+        {% for operation_step in recete_operasyonlar %}
+        <div style="margin-bottom: 30px; padding: 20px; background: #f9fafb; border-radius: 12px; border: 1px solid #e5e7eb;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <div>
+                    <h4 style="margin: 0; color: #111827;">
+                        <span style="background: #3b82f6; color: white; padding: 4px 12px; border-radius: 50%; font-size: 14px; margin-right: 10px;">
+                            {{ operation_step.sira }}
+                        </span>
+                        {{ operation_step.operasyon.ad }}
+                    </h4>
+                    {% if operation_step.aciklama %}
+                    <p style="margin: 8px 0 0 0; color: #6b7280; font-size: 14px;">{{ operation_step.aciklama }}</p>
+                    {% endif %}
+                </div>
+                {% if emir.durum == 'BASLADI' and control_plan %}
+                <a href="{% url 'stokapp:inspection_ekle_modal' work_order_pk=emir.pk operation_step_pk=operation_step.pk %}" 
+                   class="btn btn-primary" 
+                   style="padding: 8px 16px; font-size: 13px;">
+                    📊 Kontrol Ekle
+                </a>
+                {% endif %}
+            </div>
+            
+            {% for key, inspection_info in operation_inspections.items %}
+            {% if key == operation_step.pk %}
+            <div style="margin-top: 15px;">
+                <h5 style="margin: 0 0 12px 0; font-size: 14px; font-weight: 600; color: #374151;">📋 Gerekli Kontroller:</h5>
+                
+                <!-- Quality Gate Durumu -->
+                {% if inspection_info.has_fail %}
+                <div style="padding: 12px; background: #fee2e2; border-left: 4px solid #ef4444; border-radius: 8px; margin-bottom: 15px;">
+                    <strong style="color: #991b1b;">⚠️ Başarısız Kontrol Tespit Edildi!</strong>
+                    <p style="margin: 8px 0 0 0; color: #721c24; font-size: 13px;">Bu adım için başarısız kontroller bulunmaktadır. Lütfen disposition işlemlerini tamamlayın.</p>
+                </div>
+                {% elif not inspection_info.all_completed %}
+                <div style="padding: 12px; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 8px; margin-bottom: 15px;">
+                    <strong style="color: #92400e;">⏳ Eksik Kontroller</strong>
+                    <p style="margin: 8px 0 0 0; color: #78350f; font-size: 13px;">Bu adım için bazı kontroller henüz tamamlanmamış.</p>
+                </div>
+                {% else %}
+                <div style="padding: 12px; background: #d1fae5; border-left: 4px solid #10b981; border-radius: 8px; margin-bottom: 15px;">
+                    <strong style="color: #065f46;">✅ Tüm Kontroller Tamamlandı</strong>
+                </div>
+                {% endif %}
+                
+                <!-- Kontrol Maddeleri Listesi -->
+                <div style="display: grid; gap: 10px;">
+                    {% for insp in inspection_info.inspections %}
+                    <div style="padding: 12px; background: white; border: 1px solid #e5e7eb; border-radius: 8px;">
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <div style="flex: 1;">
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                                    <strong style="color: #111827;">{{ insp.item.name }}</strong>
+                                    <span style="padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600;
+                                        {% if insp.item.criticality == 'CRITICAL' %}background: #fee2e2; color: #991b1b;
+                                        {% elif insp.item.criticality == 'MAJOR' %}background: #fed7aa; color: #9a3412;
+                                        {% else %}background: #fef3c7; color: #78350f;{% endif %}">
+                                        {{ insp.item.get_criticality_display }}
+                                    </span>
+                                    {% if insp.item.inspection_type == 'NUMERIC' and insp.item.min_value and insp.item.max_value %}
+                                    <span style="color: #6b7280; font-size: 12px;">
+                                        ({{ insp.item.min_value }} - {{ insp.item.max_value }} {{ insp.item.unit|default:'' }})
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                <div style="font-size: 13px; color: #6b7280;">
+                                    Gerekli: {{ insp.required_count }} | Yapılan: {{ insp.actual_count }} | 
+                                    {% if insp.remaining > 0 %}
+                                    <span style="color: #f59e0b; font-weight: 600;">Kalan: {{ insp.remaining }}</span>
+                                    {% else %}
+                                    <span style="color: #10b981; font-weight: 600;">✅ Tamamlandı</span>
+                                    {% endif %}
+                                </div>
+                                {% if insp.has_fail %}
+                                <div style="margin-top: 6px; color: #ef4444; font-size: 12px; font-weight: 600;">
+                                    ⚠️ Başarısız kontrol kaydı var!
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+            {% if not operation_step.pk in operation_inspections and control_plan %}
+            <div style="padding: 12px; background: #f3f4f6; border-radius: 8px; color: #6b7280; font-size: 13px;">
+                Bu operasyon adımı için kontrol planında tanımlı kontrol maddesi bulunmuyor.
+            </div>
+            {% endif %}
+            
+            <!-- Son Kontrol Kayıtları -->
+            {% if emir.durum == 'BASLADI' %}
+            <div style="margin-top: 15px;">
+                <a href="{% url 'stokapp:work_order_inspection_listesi' work_order_pk=emir.pk %}?operation_step={{ operation_step.pk }}" 
+                   class="btn btn-secondary" 
+                   style="padding: 6px 12px; font-size: 12px;">
+                    📋 Tüm Kontrol Kayıtlarını Gör
+                </a>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p style="padding: 20px; color: #6b7280; text-align: center;">
+        Bu reçete için operasyon adımı tanımlanmamış.
+    </p>
+    {% endif %}
+</div>
+
+<!-- Üretim Aşamaları (Eski) -->
+<div class="card" style="margin-top: 20px;">
+    <h3>📝 Üretim Aşamaları (Süre Takibi)</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Sıra</th>
+                <th>Aşama Adı</th>
+                <th>Planlanan Süre (dk)</th>
+                <th>Gerçekleşen Süre (dk)</th>
+                <th>Durum</th>
+                <th>İşlemler</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for asama in asamalar %}
+            <tr>
+                <td>{{ asama.sira }}</td>
+                <td><strong>{{ asama.ad }}</strong></td>
+                <td>{{ asama.planlanan_sure }}</td>
+                <td>
+                    {% if asama.gerceklesen_sure %}
+                        {{ asama.gerceklesen_sure }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>
+                    <span style="padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;
+                        {% if asama.durum == 'TAMAMLANDI' %}background: #d4edda; color: #155724;
+                        {% elif asama.durum == 'DEVAM_EDIYOR' %}background: #fff3cd; color: #856404;
+                        {% else %}background: #e2e3e5; color: #383d41;{% endif %}">
+                        {{ asama.durum }}
+                    </span>
+                </td>
+                <td>
+                    {% if emir.durum == 'BASLADI' %}
+                        <select class="asama-durum-select" data-asama-id="{{ asama.pk }}" style="padding: 4px 8px; border-radius: 6px;">
+                            <option value="BEKLIYOR" {% if asama.durum == 'BEKLIYOR' %}selected{% endif %}>Bekliyor</option>
+                            <option value="DEVAM_EDIYOR" {% if asama.durum == 'DEVAM_EDIYOR' %}selected{% endif %}>Devam Ediyor</option>
+                            <option value="TAMAMLANDI" {% if asama.durum == 'TAMAMLANDI' %}selected{% endif %}>Tamamlandı</option>
+                        </select>
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 20px; color: #6b7280;">
+                    Bu emir için aşama tanımlanmamış.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+// Aşama durum güncelleme
+document.querySelectorAll('.asama-durum-select').forEach(select => {
+    select.addEventListener('change', function() {
+        const asamaId = this.dataset.asamaId;
+        const yeniDurum = this.value;
+        
+        fetch(`/stok/uretim/asama/${asamaId}/durum/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: `durum=${yeniDurum}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+            }
+        })
+        .catch(error => {
+            alert('Hata: ' + error);
+        });
+    });
+});
+
+// Üretim tamamlama: stok eksi kontrolü + onay akışı
+const tamamlaBtn = document.getElementById('btn-uretim-tamamla');
+if (tamamlaBtn) {
+    tamamlaBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        const completeUrl = this.getAttribute('href');
+        if (!completeUrl) return;
+        const previewUrl = `${completeUrl}?preview=1`;
+
+        fetch(previewUrl, {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (!data.success) {
+                alert(data.error || 'Stok kontrolü sırasında hata oluştu.');
+                return;
+            }
+            if (data.requires_confirmation) {
+                const ok = confirm(data.message || 'Stok eksi değere düşecektir. Onaylıyor musunuz ?');
+                if (!ok) return;
+                window.location.href = `${completeUrl}?allow_negative=1`;
+                return;
+            }
+            const ok = confirm('Üretimi tamamlamak istediğinizden emin misiniz? Ürün stoka eklenecek.');
+            if (!ok) return;
+            window.location.href = completeUrl;
+        })
+        .catch(() => {
+            const ok = confirm('Üretimi tamamlamak istediğinizden emin misiniz? Ürün stoka eklenecek.');
+            if (!ok) return;
+            window.location.href = completeUrl;
+        });
+    });
+}
+
+// Alert onaylama fonksiyonu
+function acknowledgeAlert(alertId, level) {
+    if (level === 'BLOCK') {
+        if (!confirm('Bu üretim emri için kalite onayı gerekmektedir. Kalite departmanından onay alındı mı?')) {
+            return;
+        }
+    } else {
+        if (!confirm('Bu uyarıyı okudum ve onaylıyorum. Devam edebilir miyim?')) {
+            return;
+        }
+    }
+    
+    // Burada API çağrısı yapılabilir veya sadece bilgilendirme için kullanılabilir
+    // Şimdilik sadece alert'i gizleyelim
+    const alertElement = event.target.closest('.card');
+    if (alertElement) {
+        alertElement.style.display = 'none';
+    }
+    
+    // Gelecekte burada bir API endpoint'e kayıt yapılabilir
+    // fetch('/stok/api/kalite/alert-acknowledge/', { ... })
+}
+</script>
+{% endblock %}

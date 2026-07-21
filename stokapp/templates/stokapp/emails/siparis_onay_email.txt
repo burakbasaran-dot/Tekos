@@ -1,0 +1,26 @@
+{% load currency_filters %}
+Siparişiniz işleme alınmıştır
+
+Sayın {{ siparis.musteri.ad }},
+
+İlgili siparişiniz onaylanmış ve işleme alınmıştır.
+
+Sipariş No: {{ siparis.siparis_numarasi }}
+Oluşturulma Tarihi: {{ siparis.olusturulma_tarihi|date:"d.m.Y" }}
+Teslim Tarihi: {{ siparis.tamamlanma_tarihi|date:"d.m.Y"|default:"-" }}
+
+Ürünler:
+{% for kalem in kalemler %}
+- {% if kalem.stok_item %}{{ kalem.stok_item.stok_kodu }} - {{ kalem.stok_item.ad }}{% else %}{{ kalem.aciklama|default:"-" }}{% endif %} | Miktar: {{ kalem.miktar }} | Birim Fiyat: {{ kalem.birim_fiyat|currency }} {{ siparis.para_birimi }} | Toplam: {{ kalem.toplam|currency }} {{ siparis.para_birimi }}
+{% endfor %}
+
+Ara Toplam: {{ ara_toplam|currency }} {{ siparis.para_birimi }}
+Vergi: {{ vergi|currency }} {{ siparis.para_birimi }}
+Toplam: {{ toplam|currency }} {{ siparis.para_birimi }}
+
+Saygılarımızla,
+Tekmar Endüstriyel
+
+Bu e-posta, TEKOS / TEKORA tarafından otomatik olarak oluşturulmuştur.
+Süreçlerimizin kesintisiz ve hatasız ilerlemesi için dijital sistemimiz tarafından iletilmiştir.
+© 2025 TEKOS / TEKORA. Tekmar Endüstriyel Makina Otomasyon San. ve Tic. Ltd. Şti.'nin tescilli dijital yönetim platformlarıdır.

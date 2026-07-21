@@ -1,0 +1,122 @@
+{% extends "stokapp/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <a href="{% url 'stokapp:kredi_kartlari_listesi' %}" class="btn" style="background-color: #6b7280; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px;">
+                ← Geri
+            </a>
+            <h2 style="margin: 0;">{{ title }}</h2>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 15px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background: #fff3cd; color: #856404; border-left: 4px solid #ffc107;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" style="max-width: 800px;">
+        {% csrf_token %}
+        
+        <div style="margin-bottom: 20px;">
+            <label for="{{ form.kart_adi.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.kart_adi.label }} *</label>
+            {{ form.kart_adi }}
+            {% if form.kart_adi.errors %}
+                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.kart_adi.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+            <div>
+                <label for="{{ form.kart_numarasi.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.kart_numarasi.label }} *</label>
+                {{ form.kart_numarasi }}
+                {% if form.kart_numarasi.errors %}
+                    <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.kart_numarasi.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label for="{{ form.son_kullanim_tarihi.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.son_kullanim_tarihi.label }} *</label>
+                {{ form.son_kullanim_tarihi }}
+                {% if form.son_kullanim_tarihi.errors %}
+                    <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.son_kullanim_tarihi.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label for="{{ form.cvv.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.cvv.label }} *</label>
+                {{ form.cvv }}
+                {% if form.cvv.errors %}
+                    <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.cvv.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+            <div>
+                <label for="{{ form.kart_sahibi.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.kart_sahibi.label }}</label>
+                {{ form.kart_sahibi }}
+                {% if form.kart_sahibi.errors %}
+                    <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.kart_sahibi.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label for="{{ form.banka_adi.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.banka_adi.label }}</label>
+                {{ form.banka_adi }}
+                {% if form.banka_adi.errors %}
+                    <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.banka_adi.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label for="{{ form.fotograf.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.fotograf.label }}</label>
+            {{ form.fotograf }}
+            {% if is_edit and kart.fotograf %}
+                <div style="margin-top: 10px;">
+                    <img src="{{ kart.fotograf.url }}" alt="Mevcut fotoğraf" style="max-width: 200px; border-radius: 8px; border: 1px solid #e5e7eb;">
+                </div>
+            {% endif %}
+            {% if form.fotograf.errors %}
+                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.fotograf.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label for="{{ form.aciklama.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.aciklama.label }}</label>
+            {{ form.aciklama }}
+            {% if form.aciklama.errors %}
+                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.aciklama.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                {{ form.aktif }}
+                <span style="font-weight: 600;">{{ form.aktif.label }}</span>
+            </label>
+            {% if form.aktif.errors %}
+                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.aktif.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 30px;">
+            <button type="submit" style="background-color: #22c55e; color: white; padding: 10px 24px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">
+                💾 Kaydet
+            </button>
+            <a href="{% url 'stokapp:kredi_kartlari_listesi' %}" style="background-color: #6b7280; color: white; padding: 10px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+                İptal
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

@@ -1,0 +1,139 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Yeni Çalışma Kaydı Ekle{% endblock %}
+{% block content %}
+{% include "stokapp/includes/tdk_form_styles.html" %}
+
+<div class="tdk-page">
+  <div class="tdk-header">
+    <div>
+      <h1>⏱️ Yeni Çalışma Kaydı Ekle</h1>
+      <p>Personel günlük çalışma süresini ve ödeme bilgilerini kaydedin.</p>
+    </div>
+    <a href="{% url 'stokapp:gunluk_calisma_listesi' %}" class="btn btn-secondary">← Geri</a>
+  </div>
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="tdk-alert {% if message.tags == 'error' %}tdk-alert-error{% elif message.tags == 'warning' %}tdk-alert-warning{% else %}tdk-alert-success{% endif %}">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="post" class="tdk-form-card">
+    {% csrf_token %}
+
+    <section class="tdk-section">
+      <h2 class="tdk-section-title">
+        <span class="tdk-section-icon">👷</span>
+        Çalışma Bilgileri
+      </h2>
+      <div class="tdk-grid">
+        <div class="tdk-field tdk-has-help" data-help="Çalışma kaydı oluşturulacak personel. Seçildiğinde saat ücreti otomatik dolar.">
+          <label class="tdk-label required" for="{{ form.personel.id_for_label }}">{{ form.personel.label }}</label>
+          {{ form.personel }}
+          {% if form.personel.errors %}<div class="tdk-error">{{ form.personel.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Personelin çalıştığı gün. Bordro ve ödeme raporlarında referans olur.">
+          <label class="tdk-label required" for="{{ form.tarih.id_for_label }}">{{ form.tarih.label }}</label>
+          {{ form.tarih }}
+          {% if form.tarih.errors %}<div class="tdk-error">{{ form.tarih.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="O gün çalışılan toplam süre (saat). Ödenecek tutar hesabında kullanılır.">
+          <label class="tdk-label required" for="{{ form.calisma_suresi.id_for_label }}">{{ form.calisma_suresi.label }}</label>
+          {{ form.calisma_suresi }}
+          {% if form.calisma_suresi.errors %}<div class="tdk-error">{{ form.calisma_suresi.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Personelin saatlik ücreti. Personel kartından otomatik gelir; gerekirse düzenlenebilir.">
+          <label class="tdk-label required" for="{{ form.saat_ucreti.id_for_label }}">{{ form.saat_ucreti.label }}</label>
+          {{ form.saat_ucreti }}
+          {% if form.saat_ucreti.errors %}<div class="tdk-error">{{ form.saat_ucreti.errors }}</div>{% endif %}
+        </div>
+      </div>
+    </section>
+
+    <section class="tdk-section">
+      <h2 class="tdk-section-title">
+        <span class="tdk-section-icon green">💰</span>
+        Ödeme Bilgileri
+      </h2>
+      <div class="tdk-grid">
+        <div class="tdk-field tdk-has-help full" data-help="Çalışma süresi × saat ücreti. Alan otomatik hesaplanır.">
+          <label class="tdk-label" for="{{ form.odenecek_tutar.id_for_label }}">{{ form.odenecek_tutar.label }}</label>
+          {{ form.odenecek_tutar }}
+          <span class="tdk-help">Çalışma Süresi × Saat Ücreti = Ödenecek Tutar (otomatik hesaplanır)</span>
+          {% if form.odenecek_tutar.errors %}<div class="tdk-error">{{ form.odenecek_tutar.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Ödemenin mevcut durumu (beklemede, ödendi vb.).">
+          <label class="tdk-label" for="{{ form.odeme_durumu.id_for_label }}">{{ form.odeme_durumu.label }}</label>
+          {{ form.odeme_durumu }}
+          {% if form.odeme_durumu.errors %}<div class="tdk-error">{{ form.odeme_durumu.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Ödemenin yapılacağı yöntem (nakit, banka vb.).">
+          <label class="tdk-label" for="{{ form.odeme_sekli.id_for_label }}">{{ form.odeme_sekli.label }}</label>
+          {{ form.odeme_sekli }}
+          {% if form.odeme_sekli.errors %}<div class="tdk-error">{{ form.odeme_sekli.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Fiilen ödenen tutar. Kısmi ödemelerde kullanılır.">
+          <label class="tdk-label" for="{{ form.odenen_tutar.id_for_label }}">{{ form.odenen_tutar.label }}</label>
+          {{ form.odenen_tutar }}
+          {% if form.odenen_tutar.errors %}<div class="tdk-error">{{ form.odenen_tutar.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help full" data-help="Kayıt hakkında ek not veya açıklama.">
+          <label class="tdk-label" for="{{ form.aciklama.id_for_label }}">{{ form.aciklama.label }}</label>
+          {{ form.aciklama }}
+          {% if form.aciklama.errors %}<div class="tdk-error">{{ form.aciklama.errors }}</div>{% endif %}
+        </div>
+      </div>
+    </section>
+
+    <div class="tdk-footer">
+      <a href="{% url 'stokapp:gunluk_calisma_listesi' %}" class="btn btn-secondary">İptal</a>
+      <button type="submit" class="btn btn-primary">💾 Kaydet</button>
+    </div>
+  </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var personelSelect = document.querySelector('#id_personel');
+  var saatUcretiInput = document.querySelector('#id_saat_ucreti');
+  var calismaSuresiInput = document.querySelector('#id_calisma_suresi');
+  var odenecekTutarInput = document.querySelector('#id_odenecek_tutar');
+
+  function hesaplaOdenecekTutar() {
+    var calismaSuresi = parseFloat(calismaSuresiInput && calismaSuresiInput.value) || 0;
+    var saatUcreti = parseFloat(saatUcretiInput && saatUcretiInput.value) || 0;
+    if (odenecekTutarInput) {
+      odenecekTutarInput.value = (calismaSuresi * saatUcreti).toFixed(2);
+    }
+  }
+
+  if (personelSelect) {
+    personelSelect.addEventListener('change', function () {
+      var personelId = this.value;
+      if (!personelId) return;
+      fetch('/stok/api/personel/' + personelId + '/', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      })
+        .then(function (response) { return response.json(); })
+        .then(function (data) {
+          if (data.saatlik_ucret && saatUcretiInput) {
+            saatUcretiInput.value = parseFloat(data.saatlik_ucret).toFixed(2);
+            hesaplaOdenecekTutar();
+          }
+        })
+        .catch(function (error) { console.error('Error:', error); });
+    });
+  }
+
+  if (calismaSuresiInput && saatUcretiInput) {
+    calismaSuresiInput.addEventListener('input', hesaplaOdenecekTutar);
+    calismaSuresiInput.addEventListener('blur', hesaplaOdenecekTutar);
+    saatUcretiInput.addEventListener('input', hesaplaOdenecekTutar);
+    saatUcretiInput.addEventListener('blur', hesaplaOdenecekTutar);
+  }
+});
+</script>
+{% endblock %}

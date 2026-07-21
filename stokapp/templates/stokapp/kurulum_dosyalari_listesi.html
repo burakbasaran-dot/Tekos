@@ -1,0 +1,203 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Kurulum Dosyaları{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>🔧 Kurulum Dosyaları</h2>
+        <a href="{% url 'stokapp:kurulum_dosyasi_ekle' %}" class="btn btn-primary" style="background-color: #22c55e; border-color: #22c55e; padding: 8px 16px;">
+            ➕ Yeni Kurulum Dosyası
+        </a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 15px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background: #fff3cd; color: #856404; border-left: 4px solid #ffc107;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Arama ve Filtre Bölümü -->
+    <div style="margin-bottom: 20px; padding: 16px; background-color: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
+        <form method="get" style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+            <!-- Arama Kutusu -->
+            <div style="flex: 1; min-width: 250px;">
+                <input type="text" 
+                       name="search" 
+                       value="{{ search_query }}" 
+                       placeholder="🔍 Ürün kodu, ad, parça veya açıklamada ara..." 
+                       style="width: 100%; padding: 10px 15px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 14px; transition: border-color 0.2s;"
+                       onfocus="this.style.borderColor='#3b82f6';"
+                       onblur="this.style.borderColor='#e5e7eb';">
+            </div>
+            
+            <!-- Aktif/Pasif Filtresi -->
+            <div style="min-width: 150px;">
+                <select name="aktif" style="width: 100%; padding: 10px 15px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
+                    <option value="">Tümü</option>
+                    <option value="aktif" {% if aktif_filter == 'aktif' %}selected{% endif %}>Aktif</option>
+                    <option value="pasif" {% if aktif_filter == 'pasif' %}selected{% endif %}>Pasif</option>
+                </select>
+            </div>
+            
+            <!-- Butonlar -->
+            <div style="display: flex; gap: 10px;">
+                <button type="submit" 
+                        style="padding: 10px 20px; background-color: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; transition: background-color 0.2s;"
+                        onmouseover="this.style.backgroundColor='#2563eb'"
+                        onmouseout="this.style.backgroundColor='#3b82f6'">
+                    🔍 Ara
+                </button>
+                {% if search_query or aktif_filter %}
+                <a href="{% url 'stokapp:kurulum_dosyalari_listesi' %}" 
+                   style="padding: 10px 20px; background-color: #6b7280; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; text-decoration: none; display: inline-block; transition: background-color 0.2s;"
+                   onmouseover="this.style.backgroundColor='#4b5563'"
+                   onmouseout="this.style.backgroundColor='#6b7280'">
+                    🔄 Temizle
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <!-- Tablo -->
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; background: white;">
+            <thead>
+                <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                    <th style="padding: 12px; text-align: left; font-weight: 600;">Ürün</th>
+                    <th style="padding: 12px; text-align: left; font-weight: 600;">Parça</th>
+                    <th style="padding: 12px; text-align: left; font-weight: 600;">İstasyon</th>
+                    <th style="padding: 12px; text-align: left; font-weight: 600;">Versiyon</th>
+                    <th style="padding: 12px; text-align: left; font-weight: 600;">Açıklama</th>
+                    <th style="padding: 12px; text-align: center; font-weight: 600;">Durum</th>
+                    <th style="padding: 12px; text-align: center; font-weight: 600;">İşlemler</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if page_obj %}
+                    {% for dosya in page_obj %}
+                    <tr style="border-bottom: 1px solid #e5e7eb; transition: background-color 0.2s;"
+                        onmouseover="this.style.backgroundColor='#f9fafb'"
+                        onmouseout="this.style.backgroundColor='white'">
+                        <td style="padding: 12px;">
+                            <div style="font-weight: 600; color: #111827;">{{ dosya.urun.stok_kodu }}</div>
+                            <div style="font-size: 12px; color: #6b7280;">{{ dosya.urun.ad }}</div>
+                        </td>
+                        <td style="padding: 12px;">
+                            <span style="font-weight: 500; color: #374151;">{{ dosya.urun_parcasi }}</span>
+                        </td>
+                        <td style="padding: 12px;">
+                            <span style="color: #6b7280;">{{ dosya.istasyon.ad|default:"-" }}</span>
+                        </td>
+                        <td style="padding: 12px;">
+                            <span style="display: inline-block; padding: 4px 10px; background: #eff6ff; color: #1e40af; border-radius: 12px; font-weight: 600; font-size: 12px;">
+                                v{{ dosya.versiyon }}
+                            </span>
+                        </td>
+                        <td style="padding: 12px;">
+                            <div style="color: #6b7280; font-size: 13px; max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                                {{ dosya.aciklama|truncatewords:10|default:"-" }}
+                            </div>
+                        </td>
+                        <td style="padding: 12px; text-align: center;">
+                            {% if dosya.aktif %}
+                                <span style="display: inline-block; padding: 4px 10px; background: #d1fae5; color: #065f46; border-radius: 12px; font-weight: 600; font-size: 12px;">
+                                    ✅ Aktif
+                                </span>
+                            {% else %}
+                                <span style="display: inline-block; padding: 4px 10px; background: #fee2e2; color: #991b1b; border-radius: 12px; font-weight: 600; font-size: 12px;">
+                                    ❌ Pasif
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 12px; text-align: center;">
+                            <div style="display: flex; gap: 6px; justify-content: center;">
+                                <a href="{% url 'stokapp:kurulum_dosyasi_detay' dosya.pk %}" 
+                                   style="padding: 6px 12px; background: #3b82f6; color: white; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 500; transition: background-color 0.2s;"
+                                   onmouseover="this.style.backgroundColor='#2563eb'"
+                                   onmouseout="this.style.backgroundColor='#3b82f6'"
+                                   title="Detay">
+                                    👁️
+                                </a>
+                                <a href="{% url 'stokapp:kurulum_dosyasi_pdf_indir' dosya.pk %}" 
+                                   style="padding: 6px 12px; background: #22c55e; color: white; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 500; transition: background-color 0.2s;"
+                                   onmouseover="this.style.backgroundColor='#16a34a'"
+                                   onmouseout="this.style.backgroundColor='#22c55e'"
+                                   title="PDF İndir">
+                                    📥
+                                </a>
+                                <a href="{% url 'stokapp:kurulum_dosyasi_duzenle' dosya.pk %}" 
+                                   style="padding: 6px 12px; background: #f59e0b; color: white; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 500; transition: background-color 0.2s;"
+                                   onmouseover="this.style.backgroundColor='#d97706'"
+                                   onmouseout="this.style.backgroundColor='#f59e0b'"
+                                   title="Düzenle">
+                                    ✏️
+                                </a>
+                                <a href="{% url 'stokapp:kurulum_dosyasi_sil' dosya.pk %}" 
+                                   style="padding: 6px 12px; background: #ef4444; color: white; border-radius: 6px; text-decoration: none; font-size: 12px; font-weight: 500; transition: background-color 0.2s;"
+                                   onmouseover="this.style.backgroundColor='#dc2626'"
+                                   onmouseout="this.style.backgroundColor='#ef4444'"
+                                   title="Sil"
+                                   onclick="return confirm('Bu kurulum dosyasını silmek istediğinizden emin misiniz?');">
+                                    🗑️
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" style="padding: 40px; text-align: center; color: #6b7280;">
+                            <div style="font-size: 18px; margin-bottom: 10px;">📄</div>
+                            <div>Henüz kurulum dosyası eklenmemiş.</div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="7" style="padding: 40px; text-align: center; color: #6b7280;">
+                            <div style="font-size: 18px; margin-bottom: 10px;">📄</div>
+                            <div>Henüz kurulum dosyası eklenmemiş.</div>
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div style="margin-top: 20px; display: flex; justify-content: center; gap: 10px;">
+        {% if page_obj.has_previous %}
+            <a href="?page=1{% if search_query %}&search={{ search_query }}{% endif %}{% if aktif_filter %}&aktif={{ aktif_filter }}{% endif %}" 
+               style="padding: 8px 12px; background: #3b82f6; color: white; border-radius: 6px; text-decoration: none;">
+                « İlk
+            </a>
+            <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if aktif_filter %}&aktif={{ aktif_filter }}{% endif %}" 
+               style="padding: 8px 12px; background: #3b82f6; color: white; border-radius: 6px; text-decoration: none;">
+                ‹ Önceki
+            </a>
+        {% endif %}
+        
+        <span style="padding: 8px 16px; background: #f3f4f6; border-radius: 6px; font-weight: 600;">
+            Sayfa {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+        </span>
+        
+        {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if aktif_filter %}&aktif={{ aktif_filter }}{% endif %}" 
+               style="padding: 8px 12px; background: #3b82f6; color: white; border-radius: 6px; text-decoration: none;">
+                Sonraki ›
+            </a>
+            <a href="?page={{ page_obj.paginator.num_pages }}{% if search_query %}&search={{ search_query }}{% endif %}{% if aktif_filter %}&aktif={{ aktif_filter }}{% endif %}" 
+               style="padding: 8px 12px; background: #3b82f6; color: white; border-radius: 6px; text-decoration: none;">
+                Son »
+            </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

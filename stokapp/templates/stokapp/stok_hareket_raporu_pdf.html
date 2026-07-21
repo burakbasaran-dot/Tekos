@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Stok Hareket Raporu</title>
+</head>
+<body>
+    <h1>Stok Hareket Raporu</h1>
+    <p class="meta">
+        Oluşturulma: {{ olusturma_tarihi|date:"d.m.Y H:i" }}
+        · {{ kayit_sayisi }} kayıt
+    </p>
+
+    {% if hareketler %}
+    <table>
+        <thead>
+            <tr>
+                <th>Tarih</th>
+                <th>Stok Kodu</th>
+                <th>Ürün Adı</th>
+                <th>Hareket Tipi</th>
+                <th class="num">Miktar</th>
+                <th>Birim</th>
+                <th class="num">Önceki Stok</th>
+                <th class="num">Sonraki Stok</th>
+                <th>Referans</th>
+                <th>Kullanıcı</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for hareket in hareketler %}
+            <tr>
+                <td>{{ hareket.tarih|date:"d.m.Y H:i" }}</td>
+                <td>{{ hareket.stok_item.stok_kodu }}</td>
+                <td>{{ hareket.stok_item.ad }}</td>
+                <td>{{ hareket.get_hareket_tipi_display }}</td>
+                <td class="num">{{ hareket.miktar|floatformat:"-3" }}</td>
+                <td>{{ hareket.birim }}</td>
+                <td class="num">{{ hareket.onceki_stok|floatformat:"-3" }}</td>
+                <td class="num">{{ hareket.sonraki_stok|floatformat:"-3" }}</td>
+                <td>{{ hareket.referans_no|default:"-" }}</td>
+                <td>{{ hareket.user|default:"-" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty">Henüz stok hareketi kaydı bulunmuyor.</p>
+    {% endif %}
+</body>
+</html>

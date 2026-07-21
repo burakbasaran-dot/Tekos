@@ -1,0 +1,414 @@
+{% extends "stokapp/base.html" %}
+{% load currency_filters %}
+{% block title %}Günlük Çalışan Takibi{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="no-print" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <a href="{% url 'stokapp:dashboard' %}" class="btn" style="background-color: #6b7280; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px;">
+                ← Geri
+            </a>
+            <h2 style="margin: 0;">Günlük Çalışan Takibi</h2>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <button onclick="window.print()" class="btn" style="background-color: #6366f1; color: white; padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer;">
+                🖨️ Yazdır
+            </button>
+            <a href="{% url 'stokapp:avans_odeme_ekle' %}" class="btn" style="background-color: #f59e0b; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px;">
+                💰 Avans Ödeme
+            </a>
+            <a href="{% url 'stokapp:gunluk_calisma_ekle' %}" class="btn btn-primary" style="background-color: #22c55e; border-color: #22c55e; padding: 8px 16px;">
+                + Yeni Çalışma Kaydı
+            </a>
+        </div>
+    </div>
+
+    <!-- Filtreler -->
+    <form method="get" class="no-print" style="margin-bottom: 20px; padding: 15px; background-color: #f9fafb; border-radius: 8px;">
+        {% if sort_by %}<input type="hidden" name="sort" value="{{ sort_by }}">{% endif %}
+        {% if sort_order %}<input type="hidden" name="order" value="{{ sort_order }}">{% endif %}
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600;">Başlangıç Tarihi</label>
+                <input type="date" name="tarih_baslangic" value="{{ tarih_baslangic }}" class="form-control">
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600;">Bitiş Tarihi</label>
+                <input type="date" name="tarih_bitis" value="{{ tarih_bitis }}" class="form-control">
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600;">Personel</label>
+                <select name="personel" class="form-select">
+                    <option value="">Tümü</option>
+                    {% for personel in personeller %}
+                    <option value="{{ personel.pk }}" {% if personel_id == personel.pk|stringformat:"s" %}selected{% endif %}>
+                        {{ personel.ad }} {{ personel.soyad }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="display: flex; align-items: flex-end;">
+                <button type="submit" class="btn" style="background-color: #3b82f6; color: white; padding: 8px 16px;">Filtrele</button>
+            </div>
+        </div>
+    </form>
+
+    <!-- Özet İstatistikler -->
+    <div class="print-summary" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+        <div class="print-summary-item" style="padding: 15px; background-color: #eff6ff; border-radius: 8px;">
+            <div class="print-summary-label" style="font-size: 14px; color: #6b7280;">Toplam Çalışma Süresi</div>
+            <div class="print-summary-value" style="font-size: 24px; font-weight: 600; color: #1e40af;">{{ toplam_calisma_suresi|floatformat:2 }} Saat</div>
+        </div>
+        <div class="print-summary-item" style="padding: 15px; background-color: #fef3c7; border-radius: 8px;">
+            <div class="print-summary-label" style="font-size: 14px; color: #6b7280;">Toplam Ödenecek</div>
+            <div class="print-summary-value" style="font-size: 24px; font-weight: 600; color: #92400e;">{{ toplam_odenecek|currency }} TRY</div>
+        </div>
+        <div class="print-summary-item" style="padding: 15px; background-color: #d1fae5; border-radius: 8px;">
+            <div class="print-summary-label" style="font-size: 14px; color: #6b7280;">Toplam Ödenen</div>
+            <div class="print-summary-value" style="font-size: 24px; font-weight: 600; color: #065f46;">{{ toplam_odenen|currency }} TRY</div>
+        </div>
+        <div class="print-summary-item" style="padding: 15px; background-color: #fee2e2; border-radius: 8px;">
+            <div class="print-summary-label" style="font-size: 14px; color: #6b7280;">Kalan Ödeme</div>
+            <div class="print-summary-value" style="font-size: 24px; font-weight: 600; color: #991b1b;">
+                {% if toplam_kalan_negatif %}-{% endif %}{{ toplam_kalan_abs|currency }} TRY
+            </div>
+        </div>
+    </div>
+
+    <!-- Yazdırma için başlık -->
+    <div class="print-title" style="display: none; text-align: center; margin-bottom: 20px;">
+        <h2 style="margin: 0;">Günlük Çalışan Takibi</h2>
+        {% if tarih_baslangic or tarih_bitis or personel_id %}
+        <div style="font-size: 12pt; margin-top: 8pt; color: #666;">
+            {% if tarih_baslangic %}Başlangıç: {{ tarih_baslangic|date:"d.m.Y" }}{% endif %}
+            {% if tarih_bitis %} - Bitiş: {{ tarih_bitis|date:"d.m.Y" }}{% endif %}
+            {% if personel_id %}
+                {% for p in personeller %}
+                    {% if p.pk|stringformat:"s" == personel_id %}
+                        - Personel: {{ p.ad }} {{ p.soyad }}
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Çalışma Kayıtları Tablosu -->
+    <table style="width: 100%; border-collapse: collapse; background: white;">
+        <thead>
+            <tr style="background-color: #f9fafb; border-bottom: 2px solid #e5e7eb;">
+                <th style="padding: 12px; text-align: left; font-weight: 600;">
+                    <a href="?{% if tarih_baslangic %}tarih_baslangic={{ tarih_baslangic }}&{% endif %}{% if tarih_bitis %}tarih_bitis={{ tarih_bitis }}&{% endif %}{% if personel_id %}personel={{ personel_id }}&{% endif %}sort=personel&order={% if sort_by == 'personel' and sort_order == 'asc' %}desc{% else %}asc{% endif %}" 
+                       style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 5px;">
+                        Personel
+                        {% if sort_by == 'personel' %}
+                            {% if sort_order == 'asc' %}↑{% else %}↓{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">
+                    <a href="?{% if tarih_baslangic %}tarih_baslangic={{ tarih_baslangic }}&{% endif %}{% if tarih_bitis %}tarih_bitis={{ tarih_bitis }}&{% endif %}{% if personel_id %}personel={{ personel_id }}&{% endif %}sort=tarih&order={% if sort_by == 'tarih' and sort_order == 'asc' %}desc{% else %}asc{% endif %}" 
+                       style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 5px;">
+                        Tarih
+                        {% if sort_by == 'tarih' %}
+                            {% if sort_order == 'asc' %}↑{% else %}↓{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">
+                    <a href="?{% if tarih_baslangic %}tarih_baslangic={{ tarih_baslangic }}&{% endif %}{% if tarih_bitis %}tarih_bitis={{ tarih_bitis }}&{% endif %}{% if personel_id %}personel={{ personel_id }}&{% endif %}sort=calisma_suresi&order={% if sort_by == 'calisma_suresi' and sort_order == 'asc' %}desc{% else %}asc{% endif %}" 
+                       style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 5px;">
+                        Çalışma Süresi
+                        {% if sort_by == 'calisma_suresi' %}
+                            {% if sort_order == 'asc' %}↑{% else %}↓{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">
+                    <a href="?{% if tarih_baslangic %}tarih_baslangic={{ tarih_baslangic }}&{% endif %}{% if tarih_bitis %}tarih_bitis={{ tarih_bitis }}&{% endif %}{% if personel_id %}personel={{ personel_id }}&{% endif %}sort=saat_ucreti&order={% if sort_by == 'saat_ucreti' and sort_order == 'asc' %}desc{% else %}asc{% endif %}" 
+                       style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 5px;">
+                        Saat Ücreti
+                        {% if sort_by == 'saat_ucreti' %}
+                            {% if sort_order == 'asc' %}↑{% else %}↓{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">
+                    <a href="?{% if tarih_baslangic %}tarih_baslangic={{ tarih_baslangic }}&{% endif %}{% if tarih_bitis %}tarih_bitis={{ tarih_bitis }}&{% endif %}{% if personel_id %}personel={{ personel_id }}&{% endif %}sort=odenecek&order={% if sort_by == 'odenecek' and sort_order == 'asc' %}desc{% else %}asc{% endif %}" 
+                       style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 5px;">
+                        Ödenecek
+                        {% if sort_by == 'odenecek' %}
+                            {% if sort_order == 'asc' %}↑{% else %}↓{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Ödeme Durumu</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Ödeme Şekli</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">
+                    <a href="?{% if tarih_baslangic %}tarih_baslangic={{ tarih_baslangic }}&{% endif %}{% if tarih_bitis %}tarih_bitis={{ tarih_bitis }}&{% endif %}{% if personel_id %}personel={{ personel_id }}&{% endif %}sort=odenen&order={% if sort_by == 'odenen' and sort_order == 'asc' %}desc{% else %}asc{% endif %}" 
+                       style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 5px;">
+                        Ödenen
+                        {% if sort_by == 'odenen' %}
+                            {% if sort_order == 'asc' %}↑{% else %}↓{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">
+                    <a href="?{% if tarih_baslangic %}tarih_baslangic={{ tarih_baslangic }}&{% endif %}{% if tarih_bitis %}tarih_bitis={{ tarih_bitis }}&{% endif %}{% if personel_id %}personel={{ personel_id }}&{% endif %}sort=kalan&order={% if sort_by == 'kalan' and sort_order == 'asc' %}desc{% else %}asc{% endif %}" 
+                       style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 5px;">
+                        Kalan
+                        {% if sort_by == 'kalan' %}
+                            {% if sort_order == 'asc' %}↑{% else %}↓{% endif %}
+                        {% endif %}
+                    </a>
+                </th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">İşlemler</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for calisma in calismalar %}
+            <tr style="border-bottom: 1px solid #e5e7eb;">
+                <td style="padding: 12px;">{{ calisma.personel.ad }} {{ calisma.personel.soyad }}</td>
+                <td style="padding: 12px;">{{ calisma.tarih|date:"d.m.Y" }}</td>
+                <td style="padding: 12px;">{{ calisma.calisma_suresi|floatformat:2 }} saat</td>
+                <td style="padding: 12px;">{{ calisma.saat_ucreti|currency }} TRY</td>
+                <td style="padding: 12px;">{{ calisma.odenecek_tutar|currency }} TRY</td>
+                <td style="padding: 12px;">
+                    <span style="padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 500;
+                        {% if calisma.odeme_durumu == 'ODENDI' %}background-color: #d1fae5; color: #065f46;
+                        {% elif calisma.odeme_durumu == 'KISMI' %}background-color: #fef3c7; color: #92400e;
+                        {% else %}background-color: #fee2e2; color: #991b1b;{% endif %}">
+                        {{ calisma.get_odeme_durumu_display }}
+                    </span>
+                </td>
+                <td style="padding: 12px;">{{ calisma.get_odeme_sekli_display|default:"-" }}</td>
+                <td style="padding: 12px;">{{ calisma.odenen_tutar|currency }} TRY</td>
+                <td style="padding: 12px;">
+                    <span style="{% if calisma.kalan_bakiye > 0 %}color: #ef4444; font-weight: 600;{% endif %}">
+                        {{ calisma.kalan_bakiye|currency }} TRY
+                    </span>
+                </td>
+                <td class="no-print" style="padding: 12px;">
+                    <a href="{% url 'stokapp:gunluk_calisma_duzenle' calisma.pk %}" 
+                       class="btn" 
+                       style="background-color: #3b82f6; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; margin-right: 5px; font-size: 13px;">
+                        ✏️
+                    </a>
+                    <a href="{% url 'stokapp:gunluk_calisma_sil' calisma.pk %}" 
+                       class="btn" 
+                       style="background-color: #ef4444; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px;">
+                        🗑️
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+            
+            {% for avans in avans_odemeler %}
+            <tr style="border-bottom: 1px solid #e5e7eb; color: #dc3545;">
+                <td style="padding: 12px; color: #dc3545;">{{ avans.personel.ad }} {{ avans.personel.soyad }}</td>
+                <td style="padding: 12px; color: #dc3545;">{{ avans.tarih|date:"d.m.Y" }}</td>
+                <td style="padding: 12px; color: #dc3545;">-</td>
+                <td style="padding: 12px; color: #dc3545;">-</td>
+                <td style="padding: 12px; color: #dc3545;">-</td>
+                <td style="padding: 12px; color: #dc3545;">
+                    <span style="padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; background-color: #fee2e2; color: #991b1b;">
+                        Avans Ödeme
+                    </span>
+                </td>
+                <td style="padding: 12px; color: #dc3545;">{{ avans.get_odeme_sekli_display|default:"-" }}</td>
+                <td style="padding: 12px; color: #dc3545;">-{{ avans.tutar|currency }} TRY</td>
+                <td style="padding: 12px; color: #dc3545;">
+                    <span style="color: #dc3545; font-weight: 600;">
+                        -{{ avans.tutar|currency }} TRY
+                    </span>
+                </td>
+                <td class="no-print" style="padding: 12px; color: #dc3545;">
+                    <a href="{% url 'stokapp:avans_odeme_duzenle' avans.pk %}" 
+                       class="btn" 
+                       style="background-color: #3b82f6; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; margin-right: 5px; font-size: 13px;">
+                        ✏️
+                    </a>
+                    <a href="{% url 'stokapp:avans_odeme_sil' avans.pk %}" 
+                       class="btn" 
+                       style="background-color: #ef4444; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px;">
+                        🗑️
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+            
+            {% if not calismalar and not avans_odemeler %}
+            <tr>
+                <td colspan="10" style="text-align: center; padding: 40px; color: #6b7280;">
+                    Henüz kayıt bulunmuyor. <a href="{% url 'stokapp:gunluk_calisma_ekle' %}">İlk kaydı oluşturun</a>
+                </td>
+            </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+
+<style>
+@media print {
+    /* Sidebar'ı gizle */
+    .sidebar,
+    aside.sidebar {
+        display: none !important;
+    }
+    
+    /* Layout'u düzelt - sidebar olmadan tam genişlik */
+    .layout {
+        display: block !important;
+    }
+    
+    .content {
+        width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    
+    /* Yazdırma sırasında gizlenecek elementler */
+    .no-print {
+        display: none !important;
+    }
+    
+    /* Sayfa ayarları */
+    @page {
+        size: A4 landscape;
+        margin: 15mm;
+    }
+    
+    /* Genel stiller */
+    body {
+        font-size: 10pt;
+        color: #000;
+        background: #fff;
+        margin: 0;
+        padding: 0;
+    }
+    
+    /* Başlık */
+    h2 {
+        font-size: 18pt;
+        margin-bottom: 10pt;
+        color: #000;
+    }
+    
+    /* Yazdırma için başlık göster */
+    .print-title {
+        display: block !important;
+        font-size: 18pt;
+        font-weight: 600;
+        margin-bottom: 15pt;
+        color: #000;
+        text-align: center;
+    }
+    
+    /* Tablo stilleri */
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 9pt;
+        page-break-inside: auto;
+    }
+    
+    thead {
+        display: table-header-group;
+        background-color: #f9fafb !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    
+    tbody {
+        display: table-row-group;
+    }
+    
+    tr {
+        page-break-inside: avoid;
+        page-break-after: auto;
+    }
+    
+    th, td {
+        border: 1px solid #ddd;
+        padding: 6pt;
+        text-align: left;
+    }
+    
+    th {
+        background-color: #f9fafb !important;
+        font-weight: 600;
+        color: #000 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    
+    /* Özet istatistikler */
+    .print-summary {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10pt;
+        margin-bottom: 15pt;
+        padding: 10pt;
+        border: 1px solid #ddd;
+        border-radius: 4pt;
+    }
+    
+    .print-summary-item {
+        padding: 8pt;
+        background-color: #f9fafb;
+        border-radius: 4pt;
+    }
+    
+    .print-summary-label {
+        font-size: 8pt;
+        color: #666;
+        margin-bottom: 4pt;
+    }
+    
+    .print-summary-value {
+        font-size: 14pt;
+        font-weight: 600;
+        color: #000;
+    }
+    
+    /* Bağlantılar ve butonlar */
+    a {
+        color: #000;
+        text-decoration: none;
+    }
+    
+    /* Buton stilleri (yazdırmada görünmez) */
+    button, .btn {
+        display: none !important;
+    }
+    
+    /* Kart container */
+    .card {
+        box-shadow: none;
+        border: none;
+        padding: 0;
+        margin: 0;
+        width: 100%;
+    }
+    
+    /* Header'ı tamamen gizle */
+    .no-print {
+        display: none !important;
+    }
+    
+    /* Filtre formu (yazdırmada görünmez) */
+    form {
+        display: none !important;
+    }
+    
+    /* Tarih ve personel bilgisi yazdırmada göster */
+    .print-title {
+        display: block !important;
+    }
+}
+</style>
+
+<div class="no-print">
+    <!-- Bu kısım yazdırmada görünmeyecek -->
+</div>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends 'stokapp/base.html' %}
+{% load static %}
+
+{% block title %}Uyarı Kuralı Sil{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h1 style="margin: 0;">🔔 Uyarı Kuralı Sil</h1>
+        <a href="{% url 'stokapp:alert_rule_listesi' %}" class="btn btn-secondary">← Geri</a>
+    </div>
+    
+    <div style="padding: 20px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 8px; margin-bottom: 20px;">
+        <strong>⚠️ Uyarı:</strong> Bu uyarı kuralını silmek istediğinizden emin misiniz?
+    </div>
+    
+    <div style="padding: 20px; background: #f9fafb; border-radius: 8px; margin-bottom: 20px;">
+        <strong>Kapsam:</strong> {{ rule.get_scope_display }}<br>
+        <strong>Mesaj:</strong> {{ rule.message|truncatewords:20 }}<br>
+        <strong>Seviye:</strong> {{ rule.get_level_display }}<br>
+        <strong>Aktif:</strong> {% if rule.active %}Evet{% else %}Hayır{% endif %}<br>
+    </div>
+    
+    <form method="post">
+        {% csrf_token %}
+        <div style="display: flex; gap: 10px;">
+            <button type="submit" class="btn btn-primary" style="background: #dc3545; border-color: #dc3545;">Evet, Sil</button>
+            <a href="{% url 'stokapp:alert_rule_listesi' %}" class="btn btn-secondary">İptal</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

@@ -1,0 +1,679 @@
+{% extends "stokapp/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="card" style="padding: 0;">
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 24px; border-radius: 8px 8px 0 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <a href="{% url 'stokapp:aylik_odemeler_listesi' %}" class="btn" style="background-color: rgba(255,255,255,0.2); color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.3);">
+                    ← Geri
+                </a>
+                <h2 style="margin: 0; color: white; font-size: 24px; font-weight: 600;">{{ title }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <div style="padding: 30px;">
+        {% if messages %}
+            {% for message in messages %}
+            <div style="padding: 12px; margin-bottom: 20px; border-radius: 8px;
+                {% if message.tags == 'error' %}background: #fef2f2; color: #991b1b; border-left: 4px solid #ef4444;
+                {% elif message.tags == 'warning' %}background: #fffbeb; color: #92400e; border-left: 4px solid #f59e0b;
+                {% else %}background: #f0fdf4; color: #166534; border-left: 4px solid #22c55e;{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        {% endif %}
+
+        {% if form.non_field_errors %}
+            <div style="padding: 12px; margin-bottom: 20px; border-radius: 8px; background: #fef2f2; color: #991b1b; border-left: 4px solid #ef4444;">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        <!-- İki sütunlu layout -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: start;">
+            <!-- Sol taraf: Form -->
+            <div>
+                <form method="post" id="odemeForm">
+                    {% csrf_token %}
+                    
+                    <div style="background: #f9fafb; padding: 24px; border-radius: 12px; border: 1px solid #e5e7eb;">
+                        <h3 style="margin: 0 0 24px 0; font-size: 18px; font-weight: 600; color: #111827; border-bottom: 2px solid #e5e7eb; padding-bottom: 12px;">Ödeme Bilgileri</h3>
+                        
+                        <div style="margin-bottom: 24px;">
+                            <label for="{{ form.odeme_aciklamasi.id_for_label }}" style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151; font-size: 14px;">{{ form.odeme_aciklamasi.label }} *</label>
+                            {{ form.odeme_aciklamasi }}
+                            {% if form.odeme_aciklamasi.errors %}
+                                <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.odeme_aciklamasi.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div style="margin-bottom: 24px;">
+                            <label for="{{ form.odeme_sekli.id_for_label }}" style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151; font-size: 14px;">{{ form.odeme_sekli.label }} *</label>
+                            {{ form.odeme_sekli }}
+                            {% if form.odeme_sekli.errors %}
+                                <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.odeme_sekli.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Dinamik alanlar - Ödeme şekline göre -->
+                        <div id="banka_hesabi_div" style="margin-bottom: 24px; display: none;">
+                            <label for="{{ form.banka_hesabi.id_for_label }}" style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151; font-size: 14px;">{{ form.banka_hesabi.label }} *</label>
+                            {{ form.banka_hesabi }}
+                            {% if form.banka_hesabi.errors %}
+                                <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.banka_hesabi.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div id="kredi_karti_div" style="margin-bottom: 24px; display: none;">
+                            <label for="{{ form.kredi_karti.id_for_label }}" style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151; font-size: 14px;">{{ form.kredi_karti.label }} *</label>
+                            {{ form.kredi_karti }}
+                            {% if form.kredi_karti.errors %}
+                                <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.kredi_karti.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+                            <div>
+                                <label for="{{ form.kayit_tarihi.id_for_label }}" style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151; font-size: 14px;">{{ form.kayit_tarihi.label }} *</label>
+                                {{ form.kayit_tarihi }}
+                                {% if form.kayit_tarihi.errors %}
+                                    <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.kayit_tarihi.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div>
+                                <label for="{{ form.odeme_tarihi.id_for_label }}" style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151; font-size: 14px;">{{ form.odeme_tarihi.label }} *</label>
+                                {{ form.odeme_tarihi }}
+                                {% if form.odeme_tarihi.errors %}
+                                    <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.odeme_tarihi.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+                            <div>
+                                <label for="{{ form.tutar.id_for_label }}" style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151; font-size: 14px;">{{ form.tutar.label }} *</label>
+                                <div style="display: flex; gap: 10px; align-items: flex-start;">
+                                    <div style="flex: 1;">
+                                        {{ form.tutar }}
+                                    </div>
+                                    <div style="flex: 0 0 140px;">
+                                        {{ form.para_birimi }}
+                                    </div>
+                                </div>
+                                {% if form.tutar.errors %}
+                                    <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.tutar.errors }}</div>
+                                {% endif %}
+                                {% if form.para_birimi.errors %}
+                                    <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.para_birimi.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div>
+                                <label for="{{ form.odeme_durumu.id_for_label }}" style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151; font-size: 14px;">{{ form.odeme_durumu.label }} *</label>
+                                {{ form.odeme_durumu }}
+                                {% if form.odeme_durumu.errors %}
+                                    <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.odeme_durumu.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div id="odeme_yapildi_tarih_div" style="margin-bottom: 24px; display: none;">
+                            <label for="{{ form.odeme_yapildi_tarih.id_for_label }}" style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151; font-size: 14px;">{{ form.odeme_yapildi_tarih.label }}</label>
+                            {{ form.odeme_yapildi_tarih }}
+                            {% if form.odeme_yapildi_tarih.errors %}
+                                <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.odeme_yapildi_tarih.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div style="margin-bottom: 24px;">
+                            <label for="{{ form.hatirlatma_gun_once.id_for_label }}" style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151; font-size: 14px;">{{ form.hatirlatma_gun_once.label }}</label>
+                            {{ form.hatirlatma_gun_once }}
+                            <small style="display: block; margin-top: 8px; color: #6b7280; font-size: 12px; line-height: 1.5;">Ödeme tarihine kalan gün bu sayıya düştüğünde (ve ödeme günü gelene kadar) panel ve listede hatırlatma gösterilir. Örn: 7 = bir hafta önceden.</small>
+                            {% if form.hatirlatma_gun_once.errors %}
+                                <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.hatirlatma_gun_once.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div style="margin-bottom: 24px;">
+                            <label for="{{ form.aciklama.id_for_label }}" style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151; font-size: 14px;">{{ form.aciklama.label }}</label>
+                            {{ form.aciklama }}
+                            {% if form.aciklama.errors %}
+                                <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.aciklama.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+                            <div>
+                                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 12px; background: white; border-radius: 8px; border: 1px solid #e5e7eb;">
+                                    {{ form.tekrar_eden }}
+                                    <span style="font-weight: 600; color: #374151;">{{ form.tekrar_eden.label }}</span>
+                                </label>
+                                {% if form.tekrar_eden.errors %}
+                                    <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.tekrar_eden.errors }}</div>
+                                {% endif %}
+                                
+                                <!-- Tekrar sayısı alanı -->
+                                <div id="tekrar_sayisi_div" style="margin-top: 16px; {% if is_edit %}{% if odeme.tekrar_eden or tekrar_sayisi > 1 %}display: block;{% else %}display: none;{% endif %}{% else %}display: none;{% endif %}">
+                                    <label for="{{ form.tekrar_sayisi.id_for_label }}" style="display: block; margin-bottom: 8px; font-weight: 600; color: #374151; font-size: 14px;">{{ form.tekrar_sayisi.label }}{% if not is_edit %} *{% endif %}</label>
+                                    {{ form.tekrar_sayisi }}
+                                    {% if form.tekrar_sayisi.help_text %}
+                                        <small style="display: block; margin-top: 6px; color: #6b7280; font-size: 12px;">{{ form.tekrar_sayisi.help_text }}</small>
+                                    {% endif %}
+                                    {% if form.tekrar_sayisi.errors %}
+                                        <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.tekrar_sayisi.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 12px; background: white; border-radius: 8px; border: 1px solid #e5e7eb;">
+                                    {{ form.aktif }}
+                                    <span style="font-weight: 600; color: #374151;">{{ form.aktif.label }}</span>
+                                </label>
+                                {% if form.aktif.errors %}
+                                    <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.aktif.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 12px; margin-top: 32px; padding-top: 24px; border-top: 2px solid #e5e7eb;">
+                            <button type="submit" style="flex: 1; background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; padding: 12px 24px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 15px; box-shadow: 0 4px 6px rgba(34, 197, 94, 0.3); transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 12px rgba(34, 197, 94, 0.4)';" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 6px rgba(34, 197, 94, 0.3)';">
+                                💾 Kaydet
+                            </button>
+                            <a href="{% url 'stokapp:aylik_odemeler_listesi' %}" style="flex: 1; background: #f3f4f6; color: #374151; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; text-align: center; font-size: 15px; border: 1px solid #e5e7eb;">
+                                İptal
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Sağ taraf: Önizleme Tablosu -->
+            <div>
+                <div style="background: #f9fafb; padding: 24px; border-radius: 12px; border: 1px solid #e5e7eb; position: sticky; top: 20px;">
+                    <h3 style="margin: 0 0 20px 0; font-size: 18px; font-weight: 600; color: #111827; border-bottom: 2px solid #e5e7eb; padding-bottom: 12px;">📅 Ödeme Planı Önizlemesi</h3>
+                    
+                    <!-- Mevcut ödemeler (düzenleme modunda - tekrar sayısı değişmediğinde gösterilir) -->
+                    {% if is_edit and ilgili_odemeler %}
+                    <div id="mevcutOdemelerDiv" style="display: block;">
+                        <div style="background: #fff; border-radius: 8px; overflow: hidden; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="background: #374151;">
+                                        <th style="padding: 12px; text-align: left; font-weight: 600; color: white; font-size: 13px;">Tarih</th>
+                                        <th style="padding: 12px; text-align: right; font-weight: 600; color: white; font-size: 13px;">Tutar</th>
+                                        <th style="padding: 12px; text-align: center; font-weight: 600; color: white; font-size: 13px;">Durum</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for ilgili_odeme in ilgili_odemeler %}
+                                    <tr style="border-bottom: 1px solid #e5e7eb; {% if ilgili_odeme.pk == odeme.pk %}background: #fef3c7;{% elif ilgili_odeme.odeme_durumu == 'ODENDI' %}background: #f0fdf4;{% elif ilgili_odeme.gecikmis_mi %}background: #fef2f2;{% else %}background: white;{% endif %}">
+                                        <td style="padding: 12px; font-size: 13px; color: #374151;">{{ ilgili_odeme.odeme_tarihi|date:"d.m.Y" }}</td>
+                                        <td style="padding: 12px; text-align: right; font-weight: 600; font-size: 13px; color: #111827;">{{ ilgili_odeme.tutar|floatformat:2 }} ₺</td>
+                                        <td style="padding: 12px; text-align: center;">
+                                            {% if ilgili_odeme.odeme_durumu == 'ODENDI' %}
+                                            <span style="background: #d1fae5; color: #065f46; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600;">✅ Ödendi</span>
+                                            {% elif ilgili_odeme.gecikmis_mi %}
+                                            <span style="background: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600;">🚨 Gecikmiş</span>
+                                            {% else %}
+                                            <span style="background: #e5e7eb; color: #374151; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600;">⏳ Beklemede</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Önizleme tablosu (yeni kayıt ve düzenleme modunda tekrar sayısı değiştiğinde) -->
+                    <div id="onizlemeTablosu" style="display: none;">
+                        <div style="background: #fff; border-radius: 8px; overflow: hidden; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="background: #374151;">
+                                        <th style="padding: 12px; text-align: left; font-weight: 600; color: white; font-size: 13px;">Tarih</th>
+                                        <th style="padding: 12px; text-align: right; font-weight: 600; color: white; font-size: 13px;">Tutar</th>
+                                        <th style="padding: 12px; text-align: center; font-weight: 600; color: white; font-size: 13px;">Durum</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="onizlemeTablosuBody">
+                                    <!-- JavaScript ile doldurulacak -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div style="margin-top: 16px; padding: 12px; background: #eff6ff; border-radius: 8px; border-left: 4px solid #3b82f6;">
+                            <p style="margin: 0; font-size: 12px; color: #1e40af; line-height: 1.6;">
+                                💡 <strong>Not:</strong> Bu önizleme, tekrar sayısı ve ödeme tarihi bilgilerine göre otomatik oluşturulmuştur. 
+                                Kayıt yapıldığında bu planlar otomatik olarak oluşturulacaktır.
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <!-- Boş durum -->
+                    <div id="onizlemeBosDurum" style="text-align: center; padding: 40px 20px; color: #9ca3af; {% if is_edit %}{% if odeme.tekrar_eden or ilgili_odemeler %}display: none;{% endif %}{% endif %}">
+                        <div style="font-size: 48px; margin-bottom: 12px;">📋</div>
+                        <p style="margin: 0; font-size: 14px;">"Tekrar Eden Ödeme" seçip tekrar sayısı girdiğinizde ödeme planı burada görünecektir.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    /** tr-TR: binlik '.', ondalık ',' (örn. 1.123.450,45) — sunucu tarafıyla uyumlu ayrıştırma */
+    function parseTurkishMoneyString(raw) {
+        if (raw == null) return null;
+        let s = String(raw).trim().replace(/\s/g, '').replace(/\u00a0/g, '');
+        if (!s) return null;
+        let neg = false;
+        if (s.startsWith('-')) {
+            neg = true;
+            s = s.slice(1);
+        }
+        if (!s) return null;
+        let numStr;
+        if (s.includes(',') && s.includes('.')) {
+            numStr = s.replace(/\./g, '').replace(',', '.');
+        } else if ((s.match(/,/g) || []).length > 1) {
+            const parts = s.split(',');
+            const dec = parts.pop();
+            numStr = parts.join('').replace(/\./g, '') + '.' + dec;
+        } else if (s.includes(',')) {
+            numStr = s.replace(',', '.');
+        } else if (s.includes('.')) {
+            const lastDot = s.lastIndexOf('.');
+            const after = s.substring(lastDot + 1);
+            if (after.length > 0 && after.length <= 2 && lastDot > 0) {
+                const before = s.substring(0, lastDot).replace(/\./g, '');
+                numStr = before + '.' + after;
+            } else {
+                numStr = s.replace(/\./g, '');
+            }
+        } else {
+            numStr = s;
+        }
+        if (neg) numStr = '-' + numStr;
+        const num = parseFloat(numStr);
+        return (isNaN(num) || num < 0) ? null : num;
+    }
+
+    function formatTutarTr(num) {
+        return num.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    const odemeSekliSelect = document.getElementById('id_odeme_sekli');
+    const bankaHesabiDiv = document.getElementById('banka_hesabi_div');
+    const krediKartiDiv = document.getElementById('kredi_karti_div');
+    const odemeYapildiTarihDiv = document.getElementById('odeme_yapildi_tarih_div');
+    const odemeDurumuSelect = document.getElementById('id_odeme_durumu');
+    const tutarInput = document.getElementById('id_tutar');
+    const tekrarEdenCheckbox = document.getElementById('id_tekrar_eden');
+    const tekrarSayisiDiv = document.getElementById('tekrar_sayisi_div');
+    const tekrarSayisiInput = document.getElementById('id_tekrar_sayisi');
+    const odemeTarihiInput = document.getElementById('id_odeme_tarihi');
+    const onizlemeTablosu = document.getElementById('onizlemeTablosu');
+    const onizlemeTablosuBody = document.getElementById('onizlemeTablosuBody');
+    const onizlemeBosDurum = document.getElementById('onizlemeBosDurum');
+    const mevcutOdemelerDiv = document.getElementById('mevcutOdemelerDiv');
+    
+    // Tarih hesaplama fonksiyonu (ay ekleme)
+    function ayEkle(tarih, aySayisi) {
+        const date = new Date(tarih);
+        date.setMonth(date.getMonth() + aySayisi);
+        return date;
+    }
+    
+    // Tarih formatla
+    function tarihFormatla(tarih) {
+        const date = new Date(tarih);
+        const gun = String(date.getDate()).padStart(2, '0');
+        const ay = String(date.getMonth() + 1).padStart(2, '0');
+        const yil = date.getFullYear();
+        return `${gun}.${ay}.${yil}`;
+    }
+    
+    // Önizleme tablosunu güncelle
+    function guncelleOnizlemeTablosu() {
+        // Tekrar eden ödeme checkbox'ı kontrol et
+        if (!tekrarEdenCheckbox || !tekrarEdenCheckbox.checked) {
+            if (onizlemeTablosu) onizlemeTablosu.style.display = 'none';
+            if (onizlemeBosDurum) {
+                onizlemeBosDurum.style.display = 'block';
+            }
+            {% if is_edit and ilgili_odemeler %}
+            // Düzenleme modunda checkbox işaretli değilse mevcut ödemeleri göster
+            if (mevcutOdemelerDiv) {
+                mevcutOdemelerDiv.style.display = 'block';
+            }
+            {% endif %}
+            return;
+        }
+        
+        const tekrarSayisi = parseInt(tekrarSayisiInput.value) || 0;
+        const odemeTarihiStr = odemeTarihiInput ? odemeTarihiInput.value : '';
+        const tutarStr = tutarInput ? tutarInput.value : '';
+        
+        if (tekrarSayisi < 1 || tekrarSayisi > 12 || !odemeTarihiStr) {
+            if (onizlemeTablosu) onizlemeTablosu.style.display = 'none';
+            if (onizlemeBosDurum) {
+                onizlemeBosDurum.style.display = 'block';
+            }
+            {% if is_edit and ilgili_odemeler %}
+            // Geçersiz değerler varsa mevcut ödemeleri göster
+            if (mevcutOdemelerDiv) {
+                mevcutOdemelerDiv.style.display = 'block';
+            }
+            {% endif %}
+            return;
+        }
+        
+        // Düzenleme modunda mevcut ödemeleri gizle, önizlemeyi göster
+        {% if is_edit and ilgili_odemeler %}
+        if (mevcutOdemelerDiv) {
+            mevcutOdemelerDiv.style.display = 'none';
+        }
+        {% endif %}
+        
+        // Tutarı parse et
+        let tutar = 0;
+        if (tutarStr) {
+            tutar = parseTurkishMoneyString(tutarStr) || 0;
+        }
+        
+        // Tarihi parse et
+        const ilkOdemeTarihi = new Date(odemeTarihiStr + 'T00:00:00');
+        
+        // Tablo body'yi temizle
+        if (onizlemeTablosuBody) {
+            onizlemeTablosuBody.innerHTML = '';
+            
+            // Her ay için satır oluştur
+            for (let i = 0; i < tekrarSayisi; i++) {
+                const odemeTarihi = ayEkle(ilkOdemeTarihi, i);
+                const satir = document.createElement('tr');
+                satir.style.borderBottom = '1px solid #e5e7eb';
+                satir.style.background = i === 0 ? '#fef3c7' : 'white';
+                
+                const tarihCell = document.createElement('td');
+                tarihCell.style.padding = '12px';
+                tarihCell.style.fontSize = '13px';
+                tarihCell.style.color = '#374151';
+                tarihCell.textContent = tarihFormatla(odemeTarihi);
+                
+                const tutarCell = document.createElement('td');
+                tutarCell.style.padding = '12px';
+                tutarCell.style.textAlign = 'right';
+                tutarCell.style.fontWeight = '600';
+                tutarCell.style.fontSize = '13px';
+                tutarCell.style.color = '#111827';
+                tutarCell.textContent = formatTutarTr(tutar) + ' ₺';
+                
+                const durumCell = document.createElement('td');
+                durumCell.style.padding = '12px';
+                durumCell.style.textAlign = 'center';
+                const durumSpan = document.createElement('span');
+                durumSpan.style.padding = '4px 10px';
+                durumSpan.style.borderRadius = '6px';
+                durumSpan.style.fontSize = '11px';
+                durumSpan.style.fontWeight = '600';
+                durumSpan.textContent = '⏳ Beklemede';
+                durumSpan.style.background = '#e5e7eb';
+                durumSpan.style.color = '#374151';
+                durumCell.appendChild(durumSpan);
+                
+                satir.appendChild(tarihCell);
+                satir.appendChild(tutarCell);
+                satir.appendChild(durumCell);
+                onizlemeTablosuBody.appendChild(satir);
+            }
+        }
+        
+        // Tabloyu göster
+        if (onizlemeTablosu) {
+            onizlemeTablosu.style.display = 'block';
+        }
+        if (onizlemeBosDurum) {
+            onizlemeBosDurum.style.display = 'none';
+        }
+        {% if is_edit and ilgili_odemeler %}
+        // Önizleme gösterilirken mevcut ödemeleri gizle
+        if (mevcutOdemelerDiv) {
+            mevcutOdemelerDiv.style.display = 'none';
+        }
+        {% endif %}
+    }
+    
+    // Tutar formatlaması
+    if (tutarInput) {
+        let isFormatting = false;
+        
+        if (tutarInput.value && tutarInput.value.trim() !== '') {
+            formatTutarOnBlur(tutarInput);
+        }
+        
+        tutarInput.addEventListener('input', function(e) {
+            if (isFormatting) return;
+            
+            const input = e.target;
+            let value = input.value;
+            value = value.replace(/[^\d.,]/g, '');
+            
+            if (!value || value === '') {
+                input.value = '';
+                guncelleOnizlemeTablosu();
+                return;
+            }
+            
+            isFormatting = true;
+            const num = parseTurkishMoneyString(value);
+            
+            if (num !== null && num >= 0) {
+                const cursorPos = input.selectionStart;
+                const digitsBeforeCursor = (value.substring(0, cursorPos).match(/\d/g) || []).length;
+                
+                const formatted = formatTutarTr(num);
+                
+                input.value = formatted;
+                
+                setTimeout(() => {
+                    let newPos = 0;
+                    let digitsFound = 0;
+                    for (let i = 0; i < formatted.length; i++) {
+                        if (/\d/.test(formatted[i])) {
+                            digitsFound++;
+                            if (digitsFound > digitsBeforeCursor) {
+                                newPos = i;
+                                break;
+                            }
+                        }
+                        newPos = i + 1;
+                    }
+                    input.setSelectionRange(Math.min(newPos, formatted.length), Math.min(newPos, formatted.length));
+                    isFormatting = false;
+                    guncelleOnizlemeTablosu();
+                }, 0);
+            } else {
+                input.value = value;
+                isFormatting = false;
+                guncelleOnizlemeTablosu();
+            }
+        });
+        
+        tutarInput.addEventListener('blur', function(e) {
+            formatTutarOnBlur(e.target);
+            guncelleOnizlemeTablosu();
+        });
+    }
+    
+    function formatTutarOnBlur(input) {
+        let value = input.value.trim();
+        if (!value || value === '') return;
+        
+        let cleanValue = value.replace(/[^\d.,]/g, '');
+        if (!cleanValue || cleanValue === '') {
+            input.value = value.replace(/[^\d.,]/g, '');
+            return;
+        }
+        
+        const num = parseTurkishMoneyString(cleanValue);
+        if (num !== null && num >= 0) {
+            input.value = formatTutarTr(num);
+        } else {
+            input.value = cleanValue;
+        }
+    }
+    
+    function toggleOdemeSekliFields() {
+        const odemeSekli = odemeSekliSelect.value;
+        
+        if (odemeSekli === 'BANKA_HESABI' || odemeSekli === 'HAVALE_EFT') {
+            bankaHesabiDiv.style.display = 'block';
+            krediKartiDiv.style.display = 'none';
+            document.getElementById('id_banka_hesabi').required = true;
+            document.getElementById('id_kredi_karti').required = false;
+            document.getElementById('id_kredi_karti').value = '';
+        } else if (odemeSekli === 'KREDI_KARTI') {
+            bankaHesabiDiv.style.display = 'none';
+            krediKartiDiv.style.display = 'block';
+            document.getElementById('id_kredi_karti').required = true;
+            document.getElementById('id_banka_hesabi').required = false;
+            document.getElementById('id_banka_hesabi').value = '';
+        } else {
+            bankaHesabiDiv.style.display = 'none';
+            krediKartiDiv.style.display = 'none';
+            document.getElementById('id_banka_hesabi').required = false;
+            document.getElementById('id_kredi_karti').required = false;
+        }
+    }
+    
+    function toggleOdemeYapildiTarih() {
+        const durum = odemeDurumuSelect.value;
+        if (durum === 'ODENDI') {
+            odemeYapildiTarihDiv.style.display = 'block';
+            if (!document.getElementById('id_odeme_yapildi_tarih').value) {
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('id_odeme_yapildi_tarih').value = today;
+            }
+        } else {
+            odemeYapildiTarihDiv.style.display = 'none';
+        }
+    }
+    
+    function toggleTekrarSayisi() {
+        if (tekrarEdenCheckbox && tekrarEdenCheckbox.checked) {
+            tekrarSayisiDiv.style.display = 'block';
+            if (tekrarSayisiInput) {
+                tekrarSayisiInput.style.display = 'block';
+                // Düzenleme modunda required değil, sadece görüntüleme için
+                {% if not is_edit %}
+                tekrarSayisiInput.required = true;
+                {% endif %}
+            }
+        } else {
+            tekrarSayisiDiv.style.display = 'none';
+            if (tekrarSayisiInput && !tekrarEdenCheckbox.checked) {
+                tekrarSayisiInput.style.display = 'none';
+                tekrarSayisiInput.required = false;
+                // Düzenleme modunda değeri silme
+                {% if not is_edit %}
+                tekrarSayisiInput.value = '';
+                {% endif %}
+            }
+        }
+        guncelleOnizlemeTablosu();
+    }
+    
+    // Event listener'lar
+    if (tekrarEdenCheckbox) {
+        tekrarEdenCheckbox.addEventListener('change', toggleTekrarSayisi);
+    }
+    
+    {% if is_edit %}
+    {% if odeme.tekrar_eden or tekrar_sayisi > 1 %}
+    const tekrarSayisiDeger = {{ tekrar_sayisi|default:0 }};
+    if (tekrarSayisiInput) {
+        tekrarSayisiInput.value = tekrarSayisiDeger;
+        tekrarSayisiInput.style.display = 'block';
+        tekrarSayisiInput.style.visibility = 'visible';
+    }
+    if (tekrarSayisiDiv) {
+        tekrarSayisiDiv.style.display = 'block';
+    }
+    if (tekrarEdenCheckbox) {
+        tekrarEdenCheckbox.checked = true;
+    }
+    setTimeout(function() {
+        if (tekrarSayisiInput && !tekrarSayisiInput.value) {
+            tekrarSayisiInput.value = tekrarSayisiDeger;
+        }
+        if (tekrarSayisiInput && tekrarSayisiInput.value && odemeTarihiInput && odemeTarihiInput.value) {
+            guncelleOnizlemeTablosu();
+        }
+    }, 800);
+    {% else %}
+    if (tekrarEdenCheckbox) {
+        toggleTekrarSayisi();
+    }
+    {% endif %}
+    {% else %}
+    if (tekrarEdenCheckbox) {
+        toggleTekrarSayisi();
+    }
+    {% endif %}
+    
+    if (tekrarSayisiInput) {
+        tekrarSayisiInput.addEventListener('input', guncelleOnizlemeTablosu);
+        tekrarSayisiInput.addEventListener('change', guncelleOnizlemeTablosu);
+    }
+    
+    if (odemeTarihiInput) {
+        odemeTarihiInput.addEventListener('change', guncelleOnizlemeTablosu);
+        odemeTarihiInput.addEventListener('input', guncelleOnizlemeTablosu);
+    }
+    
+    toggleOdemeSekliFields();
+    toggleOdemeYapildiTarih();
+    
+    if (odemeSekliSelect) {
+        odemeSekliSelect.addEventListener('change', toggleOdemeSekliFields);
+    }
+    if (odemeDurumuSelect) {
+        odemeDurumuSelect.addEventListener('change', toggleOdemeYapildiTarih);
+    }
+    
+    // Form submit
+    const form = document.getElementById('odemeForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            if (tutarInput) {
+                let value = tutarInput.value.trim();
+                if (!value || value === '') {
+                    return true;
+                }
+                
+                const num = parseTurkishMoneyString(value);
+                
+                if (num === null) {
+                    e.preventDefault();
+                    alert('Lütfen geçerli bir tutar girin. Örnek: 1.123.450,45');
+                    tutarInput.focus();
+                    return false;
+                } else {
+                    tutarInput.value = num.toFixed(2);
+                }
+            }
+            return true;
+        });
+    }
+    
+    // İlk yüklemede kontrol et - bu kod yukarıda zaten çalışıyor
+});
+</script>
+{% endblock %}

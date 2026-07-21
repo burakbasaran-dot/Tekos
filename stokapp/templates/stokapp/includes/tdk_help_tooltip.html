@@ -1,0 +1,299 @@
+<style>
+  .tdk-has-help {
+    position: relative;
+  }
+  .tdk-tip-float {
+    position: fixed;
+    z-index: 10050;
+    padding: 10px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.45;
+    color: #f8fafc;
+    background: #1e293b;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.28);
+    pointer-events: none;
+    white-space: normal;
+    max-width: min(340px, calc(100vw - 24px));
+    min-width: 160px;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.12s ease;
+    cursor: default;
+  }
+  .tdk-tip-float.is-visible {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+  }
+  .tdk-tip-float.is-below::before {
+    content: "";
+    position: absolute;
+    top: -5px;
+    left: 18px;
+    width: 10px;
+    height: 10px;
+    background: #1e293b;
+    transform: rotate(45deg);
+  }
+  .tdk-tip-float.is-above::after {
+    content: "";
+    position: absolute;
+    bottom: -5px;
+    left: 18px;
+    width: 10px;
+    height: 10px;
+    background: #1e293b;
+    transform: rotate(45deg);
+  }
+</style>
+<script>
+(function () {
+  var SKIP_TYPES = { hidden: 1, submit: 1, button: 1, reset: 1, image: 1 };
+
+  function baseFieldName(name) {
+    if (!name) return '';
+    var parts = name.split('-');
+    if (parts.length >= 3 && /^\d+$/.test(parts[parts.length - 2])) {
+      return parts[parts.length - 1];
+    }
+    return name;
+  }
+
+  function normalizeHeader(text) {
+    return (text || '').replace(/\s+/g, ' ').trim();
+  }
+
+  function hasHelp(el) {
+    return el && el.classList && el.classList.contains('tdk-has-help') && el.getAttribute('data-help');
+  }
+
+  function lookupHelp(cfg, name) {
+    if (!name || !cfg || !cfg.fields) return '';
+    return cfg.fields[name] || cfg.fields[baseFieldName(name)] || '';
+  }
+
+  function applyHelpTarget(el, help) {
+    if (!el || !help || hasHelp(el)) return;
+    el.classList.add('tdk-has-help');
+    el.setAttribute('data-help', help);
+  }
+
+  function applyHelpToControl(el, cfg) {
+    if (!el || el.disabled) return;
+    if (SKIP_TYPES[el.type]) return;
+    if (hasHelp(el)) return;
+
+    var name = el.name || el.id || '';
+    var help = lookupHelp(cfg, name);
+    if (!help) return;
+
+    if (el.type === 'checkbox' || el.type === 'radio') {
+      var lbl = null;
+      if (el.id) {
+        try {
+          lbl = document.querySelector('label[for="' + CSS.escape(el.id) + '"]');
+        } catch (e) {
+          lbl = document.querySelector('label[for="' + el.id.replace(/"/g, '\\"') + '"]');
+        }
+      }
+      if (!lbl) lbl = el.closest('label');
+      if (lbl && !hasHelp(lbl)) {
+        applyHelpTarget(lbl, help);
+        return;
+      }
+    }
+
+    applyHelpTarget(el, help);
+  }
+
+  function applyTableHeaderHelps(root, cfg) {
+    if (!cfg || !cfg.headers) return;
+    (root.querySelectorAll ? root.querySelectorAll('table th') : []).forEach(function (th) {
+      if (hasHelp(th)) return;
+      var text = normalizeHeader(th.textContent);
+      var help = cfg.headers[text];
+      if (help) applyHelpTarget(th, help);
+    });
+  }
+
+  function applyAutoHelp(root, cfg) {
+    if (!cfg || cfg.skip || !root) return;
+
+    var nodes = [];
+    if (root.matches && root.matches('input, select, textarea')) nodes.push(root);
+    if (root.querySelectorAll) {
+      root.querySelectorAll('input, select, textarea').forEach(function (el) {
+        nodes.push(el);
+      });
+    }
+    nodes.forEach(function (el) {
+      applyHelpToControl(el, cfg);
+    });
+    applyTableHeaderHelps(root, cfg);
+  }
+
+  function readConfig() {
+    var el = document.getElementById('tekos-form-field-helps');
+    if (!el) return null;
+    try {
+      return JSON.parse(el.textContent);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function initTooltip() {
+    if (window.__tdkHelpTooltipInit) return;
+    window.__tdkHelpTooltipInit = true;
+
+    var tip = document.createElement('div');
+    tip.className = 'tdk-tip-float';
+    tip.setAttribute('role', 'tooltip');
+    document.body.appendChild(tip);
+
+    var activeEl = null;
+    var pendingEl = null;
+    var showTimer = null;
+    var SHOW_DELAY = 1000;
+
+    function clearShowTimer() {
+      if (showTimer) {
+        clearTimeout(showTimer);
+        showTimer = null;
+      }
+      pendingEl = null;
+    }
+
+    function hideTip() {
+      clearShowTimer();
+      activeEl = null;
+      tip.classList.remove('is-visible', 'is-above', 'is-below');
+    }
+
+    function placeTip(el) {
+      var text = el.getAttribute('data-help');
+      if (!text) return hideTip();
+
+      tip.textContent = text;
+      tip.style.left = '-9999px';
+      tip.style.top = '0';
+      tip.classList.add('is-visible');
+      tip.classList.remove('is-above', 'is-below');
+
+      var rect = el.getBoundingClientRect();
+      var tipRect = tip.getBoundingClientRect();
+      var gap = 8;
+      var margin = 12;
+      var maxW = Math.min(340, window.innerWidth - margin * 2);
+
+      tip.style.maxWidth = maxW + 'px';
+      tipRect = tip.getBoundingClientRect();
+
+      var left = rect.left;
+      if (left + tipRect.width > window.innerWidth - margin) {
+        left = window.innerWidth - margin - tipRect.width;
+      }
+      if (left < margin) left = margin;
+
+      var top = rect.top - tipRect.height - gap;
+      var placement = 'above';
+      if (top < margin) {
+        top = rect.bottom + gap;
+        placement = 'below';
+      }
+
+      tip.style.left = Math.round(left) + 'px';
+      tip.style.top = Math.round(top) + 'px';
+      tip.classList.add(placement === 'below' ? 'is-below' : 'is-above');
+    }
+
+    function scheduleShow(el) {
+      if (!el || !el.classList.contains('tdk-has-help')) return;
+      if (!el.getAttribute('data-help')) return;
+      if (activeEl === el && tip.classList.contains('is-visible')) return;
+
+      clearShowTimer();
+      pendingEl = el;
+      showTimer = setTimeout(function () {
+        showTimer = null;
+        if (pendingEl !== el) return;
+        pendingEl = null;
+        activeEl = el;
+        placeTip(el);
+      }, SHOW_DELAY);
+    }
+
+    function leaveHelp(el) {
+      if (pendingEl === el) clearShowTimer();
+      if (activeEl === el) hideTip();
+    }
+
+    document.addEventListener('mouseover', function (e) {
+      var el = e.target.closest('.tdk-has-help[data-help]');
+      if (el) scheduleShow(el);
+    });
+
+    document.addEventListener('mouseout', function (e) {
+      var el = e.target.closest('.tdk-has-help[data-help]');
+      if (!el) return;
+      var rel = e.relatedTarget;
+      if (rel && el.contains(rel)) return;
+      leaveHelp(el);
+    });
+
+    document.addEventListener('focusin', function (e) {
+      var el = e.target.closest('.tdk-has-help[data-help]');
+      if (el) scheduleShow(el);
+    });
+
+    document.addEventListener('focusout', function (e) {
+      var el = e.target.closest('.tdk-has-help[data-help]');
+      if (el) leaveHelp(el);
+    });
+
+    document.addEventListener('click', function () {
+      if (tip.classList.contains('is-visible') || pendingEl) hideTip();
+    });
+
+    tip.addEventListener('click', function (e) {
+      e.stopPropagation();
+      hideTip();
+    });
+
+    window.addEventListener('scroll', function () {
+      if (activeEl) placeTip(activeEl);
+    }, true);
+
+    window.addEventListener('resize', function () {
+      if (activeEl) placeTip(activeEl);
+    });
+  }
+
+  function boot() {
+    var cfg = readConfig();
+    initTooltip();
+    if (cfg && !cfg.skip) {
+      applyAutoHelp(document, cfg);
+      if (window.MutationObserver) {
+        var observer = new MutationObserver(function (mutations) {
+          mutations.forEach(function (m) {
+            for (var i = 0; i < m.addedNodes.length; i++) {
+              var node = m.addedNodes[i];
+              if (node.nodeType === 1) applyAutoHelp(node, cfg);
+            }
+          });
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+      }
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+})();
+</script>

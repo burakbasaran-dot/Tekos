@@ -1,0 +1,293 @@
+{% extends "stokapp/base.html" %}
+{% load currency_filters %}
+{% block title %}Teklif Talep Formu{% endblock %}
+{% block content %}
+<style>
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    body {
+        margin: 0;
+        padding: 20px;
+    }
+    .teklif-formu {
+        box-shadow: none;
+        border: none;
+    }
+}
+.teklif-formu {
+    max-width: 800px;
+    margin: 0 auto;
+    background: white;
+    padding: 30px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.header-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 30px;
+    border-bottom: 2px solid #e5e7eb;
+    padding-bottom: 20px;
+}
+.logo-section {
+    flex: 0 0 250px;
+}
+.header-info {
+    flex: 1;
+    text-align: right;
+}
+.form-title {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    text-align: center;
+    width: 100%;
+}
+.info-row {
+    margin: 5px 0;
+    font-size: 14px;
+}
+.info-label {
+    font-weight: 600;
+    display: inline-block;
+    min-width: 120px;
+}
+.section-title {
+    font-size: 16px;
+    font-weight: bold;
+    margin-top: 20px;
+    margin-bottom: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #e5e7eb;
+    color: #dc3545;
+}
+.address-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin: 20px 0;
+}
+.address-box {
+    background: #f9fafb;
+    padding: 15px;
+    border-radius: 5px;
+    border: 1px solid #e5e7eb;
+}
+.address-label {
+    font-weight: 600;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+.address-content {
+    font-size: 13px;
+    line-height: 1.6;
+}
+.products-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+}
+.products-table th {
+    background: #f9fafb;
+    padding: 12px;
+    text-align: left;
+    border: 1px solid #e5e7eb;
+    font-weight: 600;
+    font-size: 14px;
+    color: #dc3545;
+}
+.products-table td {
+    padding: 10px 12px;
+    border: 1px solid #e5e7eb;
+    font-size: 13px;
+}
+.products-table tr:nth-child(even) {
+    background: #f9fafb;
+}
+.summary-section {
+    margin-top: 20px;
+    display: flex;
+    justify-content: flex-end;
+}
+.summary-table {
+    width: 300px;
+    border-collapse: collapse;
+}
+.summary-table td {
+    padding: 8px 12px;
+    border: 1px solid #e5e7eb;
+    font-size: 14px;
+}
+.summary-table td:first-child {
+    background: #f9fafb;
+    font-weight: 600;
+    text-align: right;
+}
+.summary-table tr:last-child td {
+    font-weight: bold;
+    font-size: 16px;
+    border-top: 2px solid #e5e7eb;
+}
+.description-section {
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 2px solid #e5e7eb;
+}
+.description-label {
+    font-weight: 600;
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+.description-content {
+    min-height: 80px;
+    border: 1px solid #e5e7eb;
+    padding: 10px;
+    border-radius: 4px;
+    background: #f9fafb;
+}
+</style>
+
+<div class="teklif-formu">
+    <div class="no-print" style="margin-bottom: 20px; text-align: right;">
+        <a href="{% url 'stokapp:satinalma_mail_alici_sec' %}?kind=teklif&amp;ids={{ request.GET.ids }}" style="padding: 10px 20px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; margin-right: 10px; text-decoration: none; display: inline-block;">📧 E-Posta ile gönder</a>
+        <a href="{% url 'stokapp:teklif_talep_formu_pdf' %}?ids={{ request.GET.ids }}" id="pdfDownloadBtn" style="padding: 10px 20px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; text-decoration: none; display: inline-block; margin-right: 10px;">📄 PDF İndir</a>
+        <button onclick="window.print()" style="padding: 10px 20px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">🖨️ Yazdır</button>
+        <a href="{% url 'stokapp:satinalma_listesi' %}" style="padding: 10px 20px; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; text-decoration: none; display: inline-block; margin-left: 10px;">← Geri Dön</a>
+    </div>
+
+    <!-- Header -->
+    <div class="header-section">
+        <div class="logo-section">
+            {% if sablon and sablon.logo_goster and sablon.logo_yolu %}
+                <img src="{{ sablon.logo_yolu.url }}" alt="Logo" style="max-width: 250px; max-height: 120px;">
+            {% endif %}
+        </div>
+        <div style="flex: 1; text-align: center;">
+            <div class="form-title">TEKLİF TALEP FORMU</div>
+        </div>
+        <div class="header-info">
+            <div class="info-row">
+                <span class="info-label">Teklif Numarası:</span>
+                <strong>{{ teklif_no }}</strong>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Termin Tarihi:</span>
+                <strong>{{ termin_tarihi|date:"d-m-Y" }}</strong>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tedarikçi Bilgisi -->
+    <div class="section-title">TEDARİKÇİ: 
+        <strong>
+            {% if tedarikci %}
+                {% if tedarikci.ad %}
+                    {{ tedarikci.ad }}
+                {% elif tedarikci.unvan %}
+                    {{ tedarikci.unvan }}
+                {% else %}
+                    {{ tedarikci }}
+                {% endif %}
+            {% else %}
+                -
+            {% endif %}
+        </strong>
+    </div>
+
+    <!-- Adresler -->
+    <div class="address-section">
+        <div class="address-box">
+            <div class="address-label">Teslimat Adresi</div>
+            <div class="address-content">
+                {% if sablon %}
+                    {{ sablon.firma_adi|default:"Tekmar Endüstriyel Makina Otomasyon San. ve Tic. Ltd. Şti." }}<br>
+                    {{ sablon.firma_adres|default:"Karadenizliler Mahallesi, Horon Sokak, NO:7, Başiskele / KOCAELİ" }}<br>
+                    TEL: {{ sablon.firma_telefon|default:"+90 532 488 38 09" }}
+                {% else %}
+                    Tekmar Endüstriyel Makina Otomasyon San. ve Tic. Ltd. Şti.<br>
+                    Karadenizliler Mahallesi, Horon Sokak, NO:7, Başiskele / KOCAELİ<br>
+                    TEL: +90 532 488 38 09
+                {% endif %}
+            </div>
+        </div>
+        <div class="address-box">
+            <div class="address-label">Fatura Adresi</div>
+            <div class="address-content">
+                {% if sablon %}
+                    {{ sablon.firma_adi|default:"Tekmar Endüstriyel Makina Otomasyon San. ve Tic. Ltd. Şti." }}<br>
+                    {{ sablon.firma_adres|default:"Karadenizliler Mahallesi, Horon Sokak, NO:7, Başiskele / KOCAELİ" }}<br>
+                    Vergi Dairesi / Numarası: 
+                    {% if sablon.firma_vergi_no %}
+                        {{ sablon.firma_vergi_no }}
+                    {% else %}
+                        Tepecik / 8360669996
+                    {% endif %}
+                {% else %}
+                    Tekmar Endüstriyel Makina Otomasyon San. ve Tic. Ltd. Şti.<br>
+                    Karadenizliler Mahallesi, Horon Sokak, NO:7, Başiskele / KOCAELİ<br>
+                    Vergi Dairesi / Numarası: Tepecik / 8360669996
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Ürün Listesi -->
+    <div class="section-title">TEKLİF TALEP LİSTESİ</div>
+    <table class="products-table">
+        <thead>
+            <tr>
+                <th>Ürün Kodu</th>
+                <th>Ürün Adı</th>
+                <th style="text-align: center;">Adet</th>
+                <th style="text-align: right;">Birim Fiyatı</th>
+                <th style="text-align: right;">Ara Toplam</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in kalemler %}
+            <tr>
+                <td>{{ item.kalem.stok_item.stok_kodu|default:"-" }}</td>
+                <td>{{ item.urun_adi|default:"" }}</td>
+                <td style="text-align: center;">{{ item.adet|format_adet }}</td>
+                <td style="text-align: right;">&nbsp;</td>
+                <td style="text-align: right;">&nbsp;</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Özet -->
+    <div class="summary-section">
+        <table class="summary-table">
+            <tr>
+                <td>Toplam Birim</td>
+                <td style="text-align: right;">{{ toplam_birim|format_adet }}</td>
+            </tr>
+            <tr>
+                <td>Ara Toplam</td>
+                <td style="text-align: right;">&nbsp;</td>
+            </tr>
+            <tr>
+                <td>Vergi</td>
+                <td style="text-align: right;">&nbsp;</td>
+            </tr>
+            <tr>
+                <td>Toplam</td>
+                <td style="text-align: right;">&nbsp;</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Açıklama -->
+    <div class="description-section">
+        <div class="description-label">Açıklama:</div>
+        <div class="description-content">
+            &nbsp;
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+

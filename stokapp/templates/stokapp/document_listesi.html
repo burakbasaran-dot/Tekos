@@ -1,0 +1,190 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Belgeler{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>Belgeler</h2>
+        <a href="{% url 'stokapp:document_ekle' %}" class="btn btn-primary" style="background-color: #22c55e; border-color: #22c55e; padding: 8px 16px;">
+            <span style="font-size: 18px;">+</span> Yeni Belge
+        </a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 15px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background: #fff3cd; color: #856404; border-left: 4px solid #ffc107;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Filtreler -->
+    <div style="margin-bottom: 20px; padding: 16px; background-color: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
+        <form method="get" style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+            <!-- Arama -->
+            <div style="flex: 1; min-width: 250px;">
+                <input type="text" 
+                       name="search" 
+                       value="{{ search }}" 
+                       placeholder="🔍 Başlık, belge no, veren makam..." 
+                       style="width: 100%; padding: 10px 15px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
+            </div>
+            
+            <!-- Durum Filtresi -->
+            <div>
+                <select name="status" style="padding: 10px 15px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
+                    <option value="">Tüm Durumlar</option>
+                    <option value="ACTIVE" {% if status == 'ACTIVE' %}selected{% endif %}>Aktif</option>
+                    <option value="EXPIRING" {% if status == 'EXPIRING' %}selected{% endif %}>Süresi Yaklaşıyor</option>
+                    <option value="EXPIRED" {% if status == 'EXPIRED' %}selected{% endif %}>Süresi Dolmuş</option>
+                    <option value="PENDING_RENEWAL" {% if status == 'PENDING_RENEWAL' %}selected{% endif %}>Yenileme Bekliyor</option>
+                </select>
+            </div>
+            
+            <!-- Tür Filtresi -->
+            <div>
+                <select name="type" style="padding: 10px 15px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
+                    <option value="">Tüm Türler</option>
+                    {% for type in types %}
+                    <option value="{{ type.pk }}" {% if type_id|stringformat:"s" == type.pk|stringformat:"s" %}selected{% endif %}>{{ type.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Risk Filtresi -->
+            <div>
+                <select name="risk_level" style="padding: 10px 15px; border: 2px solid #e5e7eb; border-radius: 6px; font-size: 14px;">
+                    <option value="">Tüm Risk Seviyeleri</option>
+                    <option value="LOW" {% if risk_level == 'LOW' %}selected{% endif %}>Düşük</option>
+                    <option value="MEDIUM" {% if risk_level == 'MEDIUM' %}selected{% endif %}>Orta</option>
+                    <option value="HIGH" {% if risk_level == 'HIGH' %}selected{% endif %}>Yüksek</option>
+                </select>
+            </div>
+            
+            <!-- Butonlar -->
+            <div style="display: flex; gap: 10px;">
+                <button type="submit" 
+                        style="padding: 10px 20px; background-color: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer;">
+                    🔍 Ara
+                </button>
+                {% if search or status or type_id or risk_level %}
+                <a href="{% url 'stokapp:document_listesi' %}" 
+                   style="padding: 10px 20px; background-color: #6b7280; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; text-decoration: none; display: inline-block;">
+                    🔄 Temizle
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <!-- Belgeler Listesi -->
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background-color: #3b82f6; color: white;">
+                    <th style="padding: 12px; text-align: left;">Başlık</th>
+                    <th style="padding: 12px; text-align: left;">Tür</th>
+                    <th style="padding: 12px; text-align: left;">Veren Makam</th>
+                    <th style="padding: 12px; text-align: left;">Evrak Tarihi</th>
+                    <th style="padding: 12px; text-align: left;">Geçerlilik</th>
+                    <th style="padding: 12px; text-align: left;">Kalan Gün</th>
+                    <th style="padding: 12px; text-align: left;">Durum</th>
+                    <th style="padding: 12px; text-align: left;">Risk</th>
+                    <th style="padding: 12px; text-align: left;">Sorumlu</th>
+                    <th style="padding: 12px; text-align: left;">İşlemler</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for doc in documents %}
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                    <td style="padding: 12px;">
+                        <strong>{{ doc.title }}</strong>
+                        {% if doc.document_no %}
+                        <br><small style="color: #6b7280;">No: {{ doc.document_no }}</small>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 12px;">{{ doc.type.name }}</td>
+                    <td style="padding: 12px;">{{ doc.issuer_authority }}</td>
+                    <td style="padding: 12px;">{{ doc.issue_date|date:"d.m.Y" }}</td>
+                    <td style="padding: 12px;">
+                        {% if doc.valid_until %}
+                        {{ doc.valid_until|date:"d.m.Y" }}
+                        {% else %}
+                        <span style="color: #6b7280;">-</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 12px;">
+                        {% if doc.valid_until %}
+                            {% with days=doc.get_days_remaining %}
+                                {% if days < 0 %}
+                                    <span style="color: #dc3545; font-weight: 600;">{{ days }} gün</span>
+                                {% elif days <= 30 %}
+                                    <span style="color: #f59e0b; font-weight: 600;">{{ days }} gün</span>
+                                {% else %}
+                                    <span style="color: #22c55e;">{{ days }} gün</span>
+                                {% endif %}
+                            {% endwith %}
+                        {% else %}
+                        <span style="color: #6b7280;">-</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 12px;">
+                        {% if doc.status == 'ACTIVE' %}
+                        <span style="background-color: #22c55e; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Aktif</span>
+                        {% elif doc.status == 'EXPIRING' %}
+                        <span style="background-color: #f59e0b; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Yaklaşıyor</span>
+                        {% elif doc.status == 'EXPIRED' %}
+                        <span style="background-color: #dc3545; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Süresi Dolmuş</span>
+                        {% elif doc.status == 'PENDING_RENEWAL' %}
+                        <span style="background-color: #3b82f6; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Yenileme Bekliyor</span>
+                        {% else %}
+                        <span style="background-color: #6b7280; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">{{ doc.get_status_display }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 12px;">
+                        {% if doc.risk_level == 'HIGH' %}
+                        <span style="background-color: #dc3545; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Yüksek</span>
+                        {% elif doc.risk_level == 'MEDIUM' %}
+                        <span style="background-color: #f59e0b; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Orta</span>
+                        {% else %}
+                        <span style="background-color: #22c55e; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">Düşük</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 12px;">
+                        {% if doc.owner_user %}
+                        {{ doc.owner_user.get_full_name|default:doc.owner_user.username }}
+                        {% else %}
+                        <span style="color: #6b7280;">-</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 12px;">
+                        <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                            <a href="{% url 'stokapp:document_detay' doc.pk %}" 
+                               style="padding: 6px 12px; background-color: #3b82f6; color: white; border-radius: 4px; text-decoration: none; font-size: 12px;">
+                                👁️
+                            </a>
+                            <a href="{% url 'stokapp:document_duzenle' doc.pk %}" 
+                               style="padding: 6px 12px; background-color: #f59e0b; color: white; border-radius: 4px; text-decoration: none; font-size: 12px;">
+                                ✏️
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="10" style="padding: 40px; text-align: center; color: #6b7280;">
+                        {% if search or status or type_id or risk_level %}
+                            Filtre kriterlerinize uygun belge bulunamadı.
+                        {% else %}
+                            Henüz belge bulunmuyor. <a href="{% url 'stokapp:document_ekle' %}">İlk belgeyi oluşturun</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

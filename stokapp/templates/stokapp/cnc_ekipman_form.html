@@ -1,0 +1,41 @@
+{% extends "stokapp/base.html" %}
+{% block title %}{{ baslik }}{% endblock %}
+{% block content %}
+<style>
+  .cnc-f-form { max-width: 640px; margin: 0 auto; }
+  .cnc-f-head {
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .cnc-f-head h2 { margin: 0 0 6px; font-size: 1.35rem; color: #0f172a; }
+  .cnc-f-head p { margin: 0; color: #64748b; font-size: 0.9rem; }
+  .cnc-f-row { margin-bottom: 18px; }
+  .cnc-f-row label { display: block; font-weight: 600; font-size: 0.85rem; color: #334155; margin-bottom: 6px; }
+  .cnc-f-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 28px; padding-top: 20px; border-top: 1px solid #e2e8f0; }
+</style>
+<div class="card cnc-f-form">
+  <div class="cnc-f-head">
+    <h2>{{ baslik }}</h2>
+    <p>Kapsam alanı listelerde görünürlüğü belirler. PDF yalnızca <code>.pdf</code>; fotoğraf için JPG/PNG vb. kullanın.</p>
+  </div>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {% if form.non_field_errors %}
+      <div style="padding:12px;background:#fef2f2;border-radius:8px;color:#991b1b;margin-bottom:16px;">{{ form.non_field_errors }}</div>
+    {% endif %}
+    {% for field in form %}
+    <div class="cnc-f-row">
+      <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {{ field }}
+      {% if field.help_text %}<div style="font-size:0.8rem;color:#64748b;margin-top:4px;">{{ field.help_text }}</div>{% endif %}
+      {% if field.errors %}<div style="color:#b91c1c;font-size:0.8rem;margin-top:4px;">{{ field.errors }}</div>{% endif %}
+    </div>
+    {% endfor %}
+    <div class="cnc-f-actions">
+      <button type="submit" class="btn btn-primary" style="padding:10px 22px;border-radius:10px;font-weight:600;">Kaydet</button>
+      <a href="{% url 'stokapp:cnc_ekipman_listesi' %}" class="btn btn-secondary" style="padding:10px 18px;border-radius:10px;">Vazgeç</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

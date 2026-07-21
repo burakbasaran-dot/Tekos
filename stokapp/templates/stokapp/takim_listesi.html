@@ -1,0 +1,517 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Takım Yönetimi{% endblock %}
+
+{% block content %}
+<div class="tool-page">
+  <div class="tool-header">
+    <div>
+      <h1>Takım Yönetimi</h1>
+      <p>CNC takımlarını kaydedin, operasyona bağlayın ve ömür takibini mm bazında yönetin.</p>
+    </div>
+    <div style="display:flex; gap:8px;">
+      <a href="{% url 'stokapp:takim_secenek_yonetimi' %}" class="btn btn-secondary">Seçenek Yönetimi</a>
+      <a href="{% url 'stokapp:takim_raporlari' %}" class="btn btn-secondary">Takım Performans Raporu</a>
+    </div>
+  </div>
+
+  <section class="card panel">
+    <h3>Yeni Takım Kartı</h3>
+    <form method="post" class="tool-form">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="create_tool">
+      <div class="field-group">
+        <label>Takım Tipi</label>
+        <div class="with-add">
+          <select name="tool_type_option_id" required>
+            <option value="">Seçiniz</option>
+            {% for opt in tool_type_options %}
+              <option value="{{ opt.id }}">{{ opt.name }} ({{ opt.prefix }})</option>
+            {% endfor %}
+          </select>
+          <button type="button" class="add-btn" data-kind="tool_type">+</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Marka</label>
+        <div class="with-add">
+          <select name="brand_option_id">
+            <option value="">Seçiniz</option>
+            {% for opt in brand_options %}
+              <option value="{{ opt.id }}">{{ opt.name }}</option>
+            {% endfor %}
+          </select>
+          <button type="button" class="add-btn" data-kind="brand">+</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Kaplama</label>
+        <div class="with-add">
+          <select name="coating_option_id">
+            <option value="">Seçiniz</option>
+            {% for opt in coating_options %}
+              <option value="{{ opt.id }}">{{ opt.name }}</option>
+            {% endfor %}
+          </select>
+          <button type="button" class="add-btn" data-kind="coating">+</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Model Numarası</label>
+        <div class="with-add">
+          <select name="model_option_id">
+            <option value="">Seçiniz</option>
+            {% for opt in model_options %}
+              <option value="{{ opt.id }}">{{ opt.name }}</option>
+            {% endfor %}
+          </select>
+          <button type="button" class="add-btn" data-kind="model">+</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Takım Malzemesi</label>
+        <div class="with-add">
+          <select name="body_material_option_id">
+            <option value="">Seçiniz</option>
+            {% for opt in body_material_options %}
+              <option value="{{ opt.id }}">{{ opt.name }}</option>
+            {% endfor %}
+          </select>
+          <button type="button" class="add-btn" data-kind="body_material">+</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Çap (mm)</label>
+        <input type="number" step="0.001" min="0.001" name="diameter" required>
+      </div>
+      <div class="field-group">
+        <label>Maks Ömür (mm)</label>
+        <input type="number" step="0.001" min="0" name="max_cutting_mm" required>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="btn btn-secondary">Takım Oluştur</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="card panel">
+    <h3>Takım Havuzu</h3>
+    <form method="get" class="tool-filters">
+      <label>Durum
+        <select name="status">
+          <option value="">Tümü</option>
+          {% for key, label in status_choices %}
+            <option value="{{ key }}" {% if selected_status == key %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Takım Tipi
+        <select name="tool_type">
+          <option value="">Tümü</option>
+          {% for opt in tool_type_options %}
+            <option value="{{ opt.id }}" {% if selected_tool_type == opt.id|stringformat:"s" %}selected{% endif %}>{{ opt.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button type="submit" class="btn btn-secondary">Filtrele</button>
+      <a href="{% url 'stokapp:takim_listesi' %}" class="btn btn-secondary">Temizle</a>
+    </form>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Kod</th>
+            <th>Tip</th>
+            <th>Marka</th>
+            <th>Model</th>
+            <th>Çap</th>
+            <th>Toplam mm</th>
+            <th>Max mm</th>
+            <th>Kullanım %</th>
+            <th>Durum</th>
+            <th>Uyarı</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in tools %}
+            <tr>
+              <td>{{ t.tool_code }}</td>
+              <td>{{ t.tool_type_label }}</td>
+              <td>{{ t.brand|default:"-" }}</td>
+              <td>{{ t.model_no|default:"-" }}</td>
+              <td>{{ t.diameter }}</td>
+              <td>{{ t.total_cutting_mm }}</td>
+              <td>{{ t.max_cutting_mm }}</td>
+              <td>{{ t.usage_percent }}%</td>
+              <td>{{ t.get_status_display }}</td>
+              <td>
+                {% if t.warning_level == "replace_required" %}
+                  <span class="badge-danger">Değiştirilmeli</span>
+                {% elif t.warning_level == "warning" %}
+                  <span class="badge-warn">%80 üzeri</span>
+                {% else %}
+                  <span class="badge-ok">Normal</span>
+                {% endif %}
+              </td>
+              <td><a class="btn btn-secondary" href="{% url 'stokapp:takim_detay' t.id %}">Detay</a></td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="11">Kayıt bulunamadı.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card panel">
+    <h3>Operasyona Takım Bağla</h3>
+    <div class="link-entry-panel">
+      <div class="sub-title">Veri Giriş / Düzenleme Alanı</div>
+    <form method="post" class="link-form">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="add_recipe_tool">
+      <label>İstasyon
+        <select name="station_id" id="stationSelect" required>
+          <option value="">İstasyon seçiniz</option>
+          {% for station in stations %}
+            <option value="{{ station.id }}">{{ station.ad }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Reçete Operasyonu
+        <select name="recete_operasyon_id" id="operationSelect" required>
+          <option value="">Önce istasyon seçiniz</option>
+          {% for op in recipe_operations %}
+            <option value="{{ op.id }}" data-station="{{ op.istasyon_id|default:'' }}">
+              {{ op.recete.urun.stok_kodu }} - {{ op.operasyon.ad }}{% if op.istasyon %} ({{ op.istasyon.ad }}){% endif %}
+            </option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Takım Tipi
+        <select name="tool_type" id="recipeToolTypeSelect">
+          <option value="">Seçiniz</option>
+          {% for opt in tool_type_options %}
+            <option value="{{ opt.name }}">{{ opt.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Takım
+        <select name="tool_id" id="recipeToolSelect">
+          <option value="">(Sadece tipe göre)</option>
+          {% for t in all_tools %}
+            <option value="{{ t.id }}" data-tool-type="{{ t.tool_type }}">{{ t.tool_code }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Delik Sayısı<input type="number" min="1" name="hole_count" required></label>
+      <label>Delik Boyu (mm)<input type="number" step="0.001" min="0.001" name="hole_depth_mm" required></label>
+      <label>İşlenen Malzeme
+        <select name="material_id">
+          <option value="">Seçiniz</option>
+          {% for m in materials %}
+            <option value="{{ m.id }}">{{ m.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <button type="submit" class="btn btn-secondary">Eşleştirmeyi Kaydet</button>
+    </form>
+
+    {% if edit_link %}
+      <div class="edit-box">
+        <h4>Seçili Eşleştirmeyi Düzenle (#{{ edit_link.id }})</h4>
+        <form method="post" class="link-form">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="update_recipe_tool">
+          <input type="hidden" name="link_id" value="{{ edit_link.id }}">
+          <label>İstasyon
+            <select name="station_id" id="editStationSelect" required>
+              <option value="">İstasyon seçiniz</option>
+              {% for station in stations %}
+                <option value="{{ station.id }}" {% if edit_link.recete_operasyon.istasyon_id == station.id %}selected{% endif %}>{{ station.ad }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>Reçete Operasyonu
+            <select name="recete_operasyon_id" id="editOperationSelect" required>
+              <option value="">Önce istasyon seçiniz</option>
+              {% for op in recipe_operations %}
+                <option value="{{ op.id }}" data-station="{{ op.istasyon_id|default:'' }}" {% if edit_link.recete_operasyon_id == op.id %}selected{% endif %}>
+                  {{ op.recete.urun.stok_kodu }} - {{ op.operasyon.ad }}{% if op.istasyon %} ({{ op.istasyon.ad }}){% endif %}
+                </option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>Takım Tipi
+            <select name="tool_type" id="editToolTypeSelect">
+              <option value="">Seçiniz</option>
+              {% for opt in tool_type_options %}
+                <option value="{{ opt.name }}" {% if edit_link.tool_type == opt.name %}selected{% endif %}>{{ opt.name }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>Takım
+            <select name="tool_id" id="editToolSelect">
+              <option value="">(Sadece tipe göre)</option>
+              {% for t in all_tools %}
+                <option value="{{ t.id }}" data-tool-type="{{ t.tool_type }}" {% if edit_link.tool_id == t.id %}selected{% endif %}>{{ t.tool_code }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>Delik Sayısı<input type="number" min="1" name="hole_count" value="{{ edit_link.hole_count }}" required></label>
+          <label>Delik Boyu (mm)<input type="number" step="0.001" min="0.001" name="hole_depth_mm" value="{{ edit_link.hole_depth_mm }}" required></label>
+          <label>İşlenen Malzeme
+            <select name="material_id">
+              <option value="">Seçiniz</option>
+              {% for m in materials %}
+                <option value="{{ m.id }}" {% if edit_link.material_id == m.id %}selected{% endif %}>{{ m.name }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <div style="display:flex; gap:8px;">
+            <button type="submit" class="btn btn-secondary">Güncelle</button>
+            <a class="btn btn-secondary" href="{% url 'stokapp:takim_listesi' %}">İptal</a>
+          </div>
+        </form>
+      </div>
+    {% endif %}
+    </div>
+
+    <div class="link-table-panel">
+    <div class="sub-title">Kayıt Listesi ve Filtreleme</div>
+    <form method="get" class="tool-filters" style="margin-top:12px;">
+      <label>İstasyon
+        <select name="link_station">
+          <option value="">Tümü</option>
+          {% for station in stations %}
+            <option value="{{ station.id }}" {% if link_station == station.id|stringformat:"s" %}selected{% endif %}>{{ station.ad }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Takım Tipi
+        <select name="link_tool_type">
+          <option value="">Tümü</option>
+          {% for opt in tool_type_options %}
+            <option value="{{ opt.name }}" {% if link_tool_type == opt.name %}selected{% endif %}>{{ opt.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Malzeme
+        <select name="link_material">
+          <option value="">Tümü</option>
+          {% for m in materials %}
+            <option value="{{ m.id }}" {% if link_material == m.id|stringformat:"s" %}selected{% endif %}>{{ m.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Ara
+        <input type="text" name="link_q" value="{{ link_q }}" placeholder="Ürün / operasyon / takım kodu">
+      </label>
+      <button type="submit" class="btn btn-secondary">Filtrele</button>
+      <a href="{% url 'stokapp:takim_listesi' %}" class="btn btn-secondary">Temizle</a>
+    </form>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>İstasyon</th>
+            <th>Ürün</th>
+            <th>Operasyon</th>
+            <th>Takım</th>
+            <th>Malzeme</th>
+            <th>Parça Başına mm</th>
+            <th>İşlem</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for link in recipe_tool_links %}
+            <tr>
+              <td>{{ link.recete_operasyon.istasyon.ad|default:"-" }}</td>
+              <td>{{ link.recete_operasyon.recete.urun.stok_kodu }}</td>
+              <td>{{ link.recete_operasyon.operasyon.ad }}</td>
+              <td>{% if link.tool %}{{ link.tool.tool_code }}{% else %}{{ link.tool_type|default:"-" }}{% endif %}</td>
+              <td>{{ link.material.name|default:"-" }}</td>
+              <td>{{ link.cutting_mm_per_piece }}</td>
+              <td style="display:flex; gap:6px;">
+                <a class="btn btn-secondary" href="{% url 'stokapp:takim_listesi' %}?edit_link={{ link.id }}">Düzenle</a>
+                <form method="post" onsubmit="return confirm('Bu kayıt silinsin mi?');">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="delete_recipe_tool">
+                  <input type="hidden" name="link_id" value="{{ link.id }}">
+                  <button type="submit" class="btn btn-secondary">Sil</button>
+                </form>
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="7">Henüz eşleştirme yok.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    </div>
+  </section>
+</div>
+
+<style>
+.tool-page { max-width: 1320px; margin:0 auto; }
+.tool-header { display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:14px; }
+.tool-header h1 { margin:0 0 4px 0; font-size:26px; }
+.tool-header p { margin:0; color:#6b7280; font-size:13px; }
+.panel { background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:14px; margin-bottom:14px; box-shadow:0 2px 8px rgba(15,23,42,.04); }
+.tool-form, .link-form { display:grid; grid-template-columns:repeat(4,minmax(180px,1fr)); gap:10px; align-items:end; }
+.field-group label { display:block; margin-bottom:4px; font-weight:600; font-size:12px; color:#374151; }
+.field-group input, .field-group select, .link-form input, .link-form select, .tool-filters select { width:100%; height:36px; border:1px solid #d1d5db; border-radius:8px; padding:0 10px; background:#fff; }
+.with-add { display:flex; gap:6px; }
+.with-add select { flex:1; }
+.add-btn { width:36px; height:36px; border:1px solid #d1d5db; border-radius:8px; background:#f9fafb; cursor:pointer; font-weight:700; }
+.add-btn:hover { background:#eef2ff; border-color:#c7d2fe; }
+.form-actions { display:flex; align-items:end; }
+.tool-filters { display:flex; gap:10px; align-items:end; margin-bottom:10px; flex-wrap:wrap; }
+.edit-box { border:1px dashed #cbd5e1; background:#f8fafc; border-radius:10px; padding:10px; margin-top:12px; }
+.link-entry-panel { background:#f8fafc; border:1px solid #dbeafe; border-radius:10px; padding:12px; margin-bottom:12px; }
+.link-table-panel { background:#f9fafb; border:1px solid #e5e7eb; border-radius:10px; padding:12px; }
+.sub-title { font-size:12px; font-weight:700; color:#1e3a8a; margin:0 0 10px 0; text-transform:uppercase; letter-spacing:.02em; }
+.table-wrap { overflow:auto; }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+th, td { border:1px solid #e5e7eb; padding:8px; text-align:left; white-space:nowrap; }
+th { background:#f8fafc; color:#1f2937; font-weight:600; }
+.badge-danger, .badge-warn, .badge-ok { padding:3px 8px; border-radius:999px; font-size:11px; font-weight:700; }
+.badge-danger { color:#991b1b; background:#fee2e2; }
+.badge-warn { color:#92400e; background:#fef3c7; }
+.badge-ok { color:#065f46; background:#d1fae5; }
+@media (max-width:1000px) {
+  .tool-form, .link-form { grid-template-columns:1fr 1fr; }
+  .tool-header { flex-direction:column; align-items:flex-start; gap:10px; }
+}
+@media (max-width:700px) {
+  .tool-form, .link-form { grid-template-columns:1fr; }
+}
+</style>
+
+<script>
+(function () {
+  const stationSelect = document.getElementById("stationSelect");
+  const operationSelect = document.getElementById("operationSelect");
+  const originalOptions = Array.from(operationSelect.querySelectorAll("option")).filter(opt => opt.value);
+  const recipeToolTypeSelect = document.getElementById("recipeToolTypeSelect");
+  const recipeToolSelect = document.getElementById("recipeToolSelect");
+  const originalToolOptions = Array.from(recipeToolSelect.querySelectorAll("option")).filter(opt => opt.value);
+  const editStationSelect = document.getElementById("editStationSelect");
+  const editOperationSelect = document.getElementById("editOperationSelect");
+  const editToolTypeSelect = document.getElementById("editToolTypeSelect");
+  const editToolSelect = document.getElementById("editToolSelect");
+  const editOperationOptions = editOperationSelect ? Array.from(editOperationSelect.querySelectorAll("option")).filter(opt => opt.value) : [];
+  const editToolOptions = editToolSelect ? Array.from(editToolSelect.querySelectorAll("option")).filter(opt => opt.value) : [];
+
+  function refreshOperations() {
+    const stationId = stationSelect.value;
+    operationSelect.innerHTML = "";
+    const defaultOpt = document.createElement("option");
+    defaultOpt.value = "";
+    defaultOpt.textContent = stationId ? "Operasyon seçiniz" : "Önce istasyon seçiniz";
+    operationSelect.appendChild(defaultOpt);
+    originalOptions.forEach((opt) => {
+      if (stationId && String(opt.dataset.station) === String(stationId)) {
+        operationSelect.appendChild(opt.cloneNode(true));
+      }
+    });
+  }
+  stationSelect.addEventListener("change", refreshOperations);
+  refreshOperations();
+
+  function refreshToolsByType() {
+    const selectedType = recipeToolTypeSelect.value;
+    recipeToolSelect.innerHTML = "";
+    const defaultOpt = document.createElement("option");
+    defaultOpt.value = "";
+    defaultOpt.textContent = selectedType ? "Takım seçiniz" : "(Sadece tipe göre)";
+    recipeToolSelect.appendChild(defaultOpt);
+    originalToolOptions.forEach((opt) => {
+      if (!selectedType || String(opt.dataset.toolType) === String(selectedType)) {
+        recipeToolSelect.appendChild(opt.cloneNode(true));
+      }
+    });
+  }
+  recipeToolTypeSelect.addEventListener("change", refreshToolsByType);
+  refreshToolsByType();
+
+  function refreshEditOperations() {
+    if (!editStationSelect || !editOperationSelect) return;
+    const stationId = editStationSelect.value;
+    const current = editOperationSelect.value;
+    editOperationSelect.innerHTML = "";
+    const defaultOpt = document.createElement("option");
+    defaultOpt.value = "";
+    defaultOpt.textContent = stationId ? "Operasyon seçiniz" : "Önce istasyon seçiniz";
+    editOperationSelect.appendChild(defaultOpt);
+    editOperationOptions.forEach((opt) => {
+      if (stationId && String(opt.dataset.station) === String(stationId)) {
+        const clone = opt.cloneNode(true);
+        if (clone.value === current) clone.selected = true;
+        editOperationSelect.appendChild(clone);
+      }
+    });
+  }
+
+  function refreshEditTools() {
+    if (!editToolTypeSelect || !editToolSelect) return;
+    const selectedType = editToolTypeSelect.value;
+    const current = editToolSelect.value;
+    editToolSelect.innerHTML = "";
+    const defaultOpt = document.createElement("option");
+    defaultOpt.value = "";
+    defaultOpt.textContent = selectedType ? "Takım seçiniz" : "(Sadece tipe göre)";
+    editToolSelect.appendChild(defaultOpt);
+    editToolOptions.forEach((opt) => {
+      if (!selectedType || String(opt.dataset.toolType) === String(selectedType)) {
+        const clone = opt.cloneNode(true);
+        if (clone.value === current) clone.selected = true;
+        editToolSelect.appendChild(clone);
+      }
+    });
+  }
+
+  if (editStationSelect) {
+    editStationSelect.addEventListener("change", refreshEditOperations);
+    refreshEditOperations();
+  }
+  if (editToolTypeSelect) {
+    editToolTypeSelect.addEventListener("change", refreshEditTools);
+    refreshEditTools();
+  }
+
+  async function addOption(kind) {
+    let label = "Yeni seçenek";
+    if (kind === "tool_type") label = "Yeni takım tipi";
+    if (kind === "brand") label = "Yeni marka";
+    if (kind === "coating") label = "Yeni kaplama";
+    if (kind === "model") label = "Yeni model numarası";
+    if (kind === "body_material") label = "Yeni takım malzemesi";
+    const name = window.prompt(`${label} adı:`);
+    if (!name) return;
+    let prefix = "";
+    if (kind === "tool_type") {
+      prefix = window.prompt("Prefix (örn: DR, EM):", "TL");
+      if (!prefix) return;
+    }
+    const res = await fetch("{% url 'stokapp:create_tool_option' %}", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": document.querySelector("input[name='csrfmiddlewaretoken']").value
+      },
+      body: JSON.stringify({ option_kind: kind, option_name: name, option_prefix: prefix })
+    });
+    const data = await res.json();
+    if (!data.success) {
+      alert(data.error || "Kayıt eklenemedi.");
+      return;
+    }
+    window.location.reload();
+  }
+  document.querySelectorAll(".add-btn").forEach((btn) => {
+    btn.addEventListener("click", () => addOption(btn.dataset.kind));
+  });
+})();
+</script>
+{% endblock %}

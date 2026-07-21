@@ -1,0 +1,20 @@
+{# Üretim Kontrol üst sekmeler #}
+<nav class="tekos-tab-buttons" aria-label="Üretim kontrol bölümleri">
+  <a href="{% url 'stokapp:uretim_kontrol_ana' %}?tab=sablonlar{% if search_q %}&amp;q={{ search_q|urlencode }}{% endif %}{% if aktif_emir %}&amp;aktif_emir=1{% endif %}"
+     class="tekos-tab-btn tab-blue{% if tab == 'sablonlar' %} is-active{% endif %}">
+    <span class="tab-icon" aria-hidden="true">📐</span>
+    <span>Şablon Tanımla / Yönet</span>
+  </a>
+  <a href="{% url 'stokapp:uretim_kontrol_ana' %}?tab=gecmis{% if gecmis_q %}&amp;q={{ gecmis_q|urlencode }}{% endif %}{% if sonuc_filter %}&amp;sonuc={{ sonuc_filter }}{% endif %}"
+     class="tekos-tab-btn tab-delivered{% if tab == 'gecmis' %} is-active{% endif %}">
+    <span class="tab-icon" aria-hidden="true">✅</span>
+    <span>Tamamlanan Kontroller</span>
+    {% if gecmis_count %}<span class="tab-count">{{ gecmis_count }}</span>{% endif %}
+  </a>
+  <a href="{% url 'stokapp:uretim_kontrol_ana' %}?tab=arsiv{% if gecmis_q %}&amp;q={{ gecmis_q|urlencode }}{% endif %}{% if sonuc_filter %}&amp;sonuc={{ sonuc_filter }}{% endif %}"
+     class="tekos-tab-btn tab-detail{% if tab == 'arsiv' %} is-active{% endif %}">
+    <span class="tab-icon" aria-hidden="true">📁</span>
+    <span>Arşivlenen Kontroller</span>
+    {% if arsiv_count %}<span class="tab-count">{{ arsiv_count }}</span>{% endif %}
+  </a>
+</nav>

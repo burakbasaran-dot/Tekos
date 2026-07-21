@@ -1,0 +1,19 @@
+{% extends "stokapp/base.html" %}
+{% block title %}İzin Düzenle{% endblock %}
+{% block content %}
+<div class="card" style="max-width: 760px;">
+  <h2>✏️ Personel İzin Düzenle</h2>
+  <form method="post" style="display:grid; grid-template-columns: repeat(2, minmax(220px, 1fr)); gap:10px;">
+    {% csrf_token %}
+    <div>{{ form.personel.label_tag }}{{ form.personel }}</div>
+    <div>{{ form.izin_tipi.label_tag }}{{ form.izin_tipi }}</div>
+    <div>{{ form.baslangic_zamani.label_tag }}{{ form.baslangic_zamani }}</div>
+    <div>{{ form.bitis_zamani.label_tag }}{{ form.bitis_zamani }}</div>
+    <div style="grid-column: 1 / -1;">{{ form.aciklama.label_tag }}{{ form.aciklama }}</div>
+    <div style="grid-column: 1 / -1; display:flex; gap:8px;">
+      <button type="submit" class="btn btn-primary">Kaydet</button>
+      <a href="{% url 'stokapp:personel_izin_listesi' %}" class="btn btn-secondary">İptal</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

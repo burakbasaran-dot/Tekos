@@ -1,0 +1,783 @@
+{% extends "stokapp/base.html" %}
+{% load currency_filters %}
+{% block title %}Yeni Satın Alma{% endblock %}
+{% block content %}
+{% include "stokapp/includes/tdk_form_styles.html" %}
+<style>
+.tdk-inline-add { display: flex; gap: 8px; align-items: flex-start; }
+.tdk-inline-add > select,
+.tdk-inline-add > .form-control { flex: 1; }
+.tdk-add-row-btn {
+  margin-top: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+#id_para_birimi {
+  width: 100% !important;
+  min-width: 150px !important;
+}
+</style>
+
+<div class="tdk-page">
+    <div class="tdk-header">
+        <div>
+            <h1>🛒 Satın Alma Oluştur</h1>
+            <p>Tedarikçi, stok kalemleri ve tutar özetini tek ekrandan oluşturun.</p>
+        </div>
+        <a href="{% url 'stokapp:satinalma_listesi' %}" class="btn btn-secondary">← Geri</a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div class="tdk-alert {% if message.tags == 'error' %}tdk-alert-error{% elif message.tags == 'warning' %}tdk-alert-warning{% else %}tdk-alert-success{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post" id="satinalmaForm" class="tdk-form-card">
+        {% csrf_token %}
+        {% if source_siparis_id %}
+        <input type="hidden" name="source_siparis" value="{{ source_siparis_id }}">
+        {% endif %}
+        <input type="hidden" name="kalemler" id="kalemlerInput">
+
+        <section class="tdk-section">
+            <h2 class="tdk-section-title">
+                <span class="tdk-section-icon">📋</span>
+                Genel Bilgiler
+            </h2>
+            <div class="tdk-grid">
+                <div class="tdk-field tdk-has-help" data-help="Satın alma belgesi referans numarası. Boş bırakılırsa sistem otomatik numara atayabilir.">
+                    <label class="tdk-label" for="{{ form.satinalma_numarasi.id_for_label }}">{{ form.satinalma_numarasi.label }}</label>
+                    {{ form.satinalma_numarasi }}
+                    {% if form.satinalma_numarasi.errors %}<div class="tdk-error">{{ form.satinalma_numarasi.errors }}</div>{% endif %}
+                </div>
+                <div class="tdk-field tdk-has-help" data-help="İç takip ve filtreleme için etiketler. Listelerde gruplama yapmayı kolaylaştırır.">
+                    <label class="tdk-label" for="{{ form.etiketler.id_for_label }}">{{ form.etiketler.label }}</label>
+                    {{ form.etiketler }}
+                    {% if form.etiketler.errors %}<div class="tdk-error">{{ form.etiketler.errors }}</div>{% endif %}
+                </div>
+                <div class="tdk-field tdk-has-help" data-help="Siparişin tamamlanması veya teslimin beklenen tarihi.">
+                    <label class="tdk-label" for="{{ form.tamamlanma_tarihi.id_for_label }}">{{ form.tamamlanma_tarihi.label }}</label>
+                    {{ form.tamamlanma_tarihi }}
+                    {% if form.tamamlanma_tarihi.errors %}<div class="tdk-error">{{ form.tamamlanma_tarihi.errors }}</div>{% endif %}
+                </div>
+                <div class="tdk-field tdk-has-help" data-help="Belgenin oluşturulma tarihi. Raporlama ve sıralama için kullanılır.">
+                    <label class="tdk-label" for="{{ form.olusturulma_tarihi.id_for_label }}">{{ form.olusturulma_tarihi.label }}</label>
+                    {{ form.olusturulma_tarihi }}
+                    {% if form.olusturulma_tarihi.errors %}<div class="tdk-error">{{ form.olusturulma_tarihi.errors }}</div>{% endif %}
+                </div>
+            </div>
+        </section>
+
+        <section class="tdk-section">
+            <h2 class="tdk-section-title">
+                <span class="tdk-section-icon">🏪</span>
+                Tedarikçi ve Lokasyon
+            </h2>
+            <div class="tdk-grid">
+                <div class="tdk-field tdk-has-help" data-help="Kayıtlı tedarikçi seçimi. Stok geçmişi ve fiyat takibi için önerilir. + ile manuel ad girebilirsiniz.">
+                    <label class="tdk-label" for="{{ form.tedarikci.id_for_label }}">Tedarikçi</label>
+                    <div class="tdk-inline-add">
+                        {{ form.tedarikci }}
+                        <button type="button" class="btn btn-secondary" title="Manuel tedarikçi adı" onclick="document.getElementById('id_tedarikci_adi_manuel').style.display = document.getElementById('id_tedarikci_adi_manuel').style.display === 'none' ? 'block' : 'none';">+</button>
+                    </div>
+                    <div id="id_tedarikci_adi_manuel" class="tdk-has-help" style="margin-top: 10px; display: none;" data-help="Kayıtlı olmayan tedarikçi için geçici firma adı. Cari kart oluşturulmadan hızlı giriş sağlar.">
+                        <label class="tdk-label" for="{{ form.tedarikci_adi_manuel.id_for_label }}">{{ form.tedarikci_adi_manuel.label }}</label>
+                        {{ form.tedarikci_adi_manuel }}
+                    </div>
+                    {% if form.tedarikci.errors %}<div class="tdk-error">{{ form.tedarikci.errors }}</div>{% endif %}
+                    {% if form.tedarikci_adi_manuel.errors %}<div class="tdk-error">{{ form.tedarikci_adi_manuel.errors }}</div>{% endif %}
+                </div>
+                <div class="tdk-field tdk-has-help" data-help="Malzemenin teslim alınacağı veya depolanacağı lokasyon.">
+                    <label class="tdk-label" for="{{ form.lokasyon.id_for_label }}">{{ form.lokasyon.label }}</label>
+                    {{ form.lokasyon }}
+                    {% if form.lokasyon.errors %}<div class="tdk-error">{{ form.lokasyon.errors }}</div>{% endif %}
+                </div>
+                <div class="tdk-field tdk-has-help" data-help="Belge genel para birimi. Tutar özeti bu birimde gösterilir.">
+                    <label class="tdk-label" for="{{ form.para_birimi.id_for_label }}">{{ form.para_birimi.label }}</label>
+                    {{ form.para_birimi }}
+                    {% if form.para_birimi.errors %}<div class="tdk-error">{{ form.para_birimi.errors }}</div>{% endif %}
+                </div>
+                <div class="tdk-field tdk-has-help" data-help="Tedarik sürecinin mevcut durumu (beklemede, kısmi teslim, tamamlandı vb.).">
+                    <label class="tdk-label" for="{{ form.teslim_durumu.id_for_label }}">{{ form.teslim_durumu.label }}</label>
+                    {{ form.teslim_durumu }}
+                    {% if form.teslim_durumu.errors %}<div class="tdk-error">{{ form.teslim_durumu.errors }}</div>{% endif %}
+                </div>
+            </div>
+        </section>
+
+        <section class="tdk-section">
+            <div class="tdk-section-head">
+                <h2 class="tdk-section-title">
+                    <span class="tdk-section-icon green">📦</span>
+                    Stok Kalemleri
+                </h2>
+                <button type="button" onclick="ekleStok()" class="btn btn-primary">+ Kalem Ekle</button>
+            </div>
+            <div class="tdk-table-wrap">
+                <table id="stokTablosu" class="tdk-table" style="table-layout: fixed;">
+                    <thead>
+                        <tr>
+                            <th class="tdk-has-help" style="width: 20%;" data-help="Stok kartından ürün arayın ve seçin. Alış fiyatı ve birim otomatik gelir.">Stok</th>
+                            <th class="tdk-has-help" style="width: 12%;" data-help="Satıra özel açıklama veya tedarik notu.">Notlar</th>
+                            <th class="tdk-has-help" style="width: 8%;" data-help="Sipariş edilecek miktar. Stok birimi yanında gösterilir.">Miktar</th>
+                            <th class="tdk-has-help" style="width: 10%;" data-help="Birim başına alış fiyatı (KDV hariç).">Birim Fiyatı</th>
+                            <th class="tdk-has-help" style="width: 12%;" data-help="Miktar × birim fiyat. KDV dahil değildir.">Toplam Fiyat</th>
+                            <th class="tdk-has-help" style="width: 6%;" data-help="KDV oranı (%). Genel toplama ayrıca eklenir.">% Vergi</th>
+                            <th style="width: 5%;">İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stokTablosuBody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="tdk-section">
+            <div class="tdk-grid">
+                <div class="tdk-field tdk-has-help" data-help="Satın alma belgesi genel notları. Tedarikçiye veya dahili ekip için açıklama.">
+                    <h2 class="tdk-section-title" style="margin-bottom: 12px;">
+                        <span class="tdk-section-icon amber">📝</span>
+                        Notlar
+                    </h2>
+                    <label class="tdk-label" for="{{ form.notlar.id_for_label }}">{{ form.notlar.label }}</label>
+                    {{ form.notlar }}
+                    {% if form.notlar.errors %}<div class="tdk-error">{{ form.notlar.errors }}</div>{% endif %}
+                </div>
+                <div class="tdk-ozet-box">
+                    <h4>Tutar Özeti</h4>
+                    <div class="tdk-ozet-row">
+                        <span>Ara Toplam</span>
+                        <strong id="araToplam">0,00 <span id="paraBirimiGoster">TRY</span></strong>
+                    </div>
+                    <div class="tdk-ozet-row">
+                        <span>Vergi</span>
+                        <strong id="vergi">0,00 <span id="paraBirimiGoster2">TRY</span></strong>
+                    </div>
+                    <div class="tdk-ozet-row">
+                        <span>Toplam</span>
+                        <strong id="toplam">0,00 <span id="paraBirimiGoster3">TRY</span></strong>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="tdk-footer">
+            <a href="{% url 'stokapp:satinalma_listesi' %}" class="btn btn-secondary">İptal</a>
+            <button type="submit" class="btn btn-primary">💾 Kaydet</button>
+        </div>
+    </form>
+</div>
+
+<script>
+let stokSayaci = 0;
+const stokItems = [
+    {% for item in stok_items %}
+    {
+        id: {{ item.pk }}, 
+        ad: "{{ item.ad|escapejs }}", 
+        birim: {% if item.birim %}"{{ item.birim|escapejs }}"{% else %}"Adet"{% endif %}, 
+        fiyat: {{ item.alis_fiyati|default:0 }},
+        para_birimi: "{{ item.alis_para_birimi|default:'TL' }}"
+    },
+    {% endfor %}
+];
+
+// Para birimi formatı (12.532,40 formatı)
+function formatCurrency(value) {
+    if (value === null || value === undefined || isNaN(value)) return "0,00";
+    
+    const num = Math.abs(parseFloat(value));
+    const isNegative = parseFloat(value) < 0;
+    
+    const formatted = num.toFixed(2);
+    const parts = formatted.split('.');
+    const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    const decimalPart = parts[1];
+    
+    const result = `${integerPart},${decimalPart}`;
+    return isNegative ? `-${result}` : result;
+}
+
+// Türkçe sayı formatını parse eden yardımcı fonksiyon (virgülü noktaya çevirir)
+function parseTurkishNumber(value) {
+    if (!value || value === '') return 0;
+    // String'e çevir, binlik ayırıcıları kaldır ve virgülü noktaya dönüştür
+    const str = String(value).trim().replace(/\./g, '').replace(',', '.');
+    const num = parseFloat(str);
+    return isNaN(num) ? 0 : num;
+}
+
+function getParaBirimi() {
+    const paraBirimiSelect = document.getElementById('id_para_birimi');
+    if (paraBirimiSelect && paraBirimiSelect.value) {
+        const selectedOption = paraBirimiSelect.options[paraBirimiSelect.selectedIndex];
+        const text = selectedOption.text;
+        const match = text.match(/\(([^)]+)\)/);
+        return match ? match[1] : paraBirimiSelect.value;
+    }
+    return 'TRY';
+}
+
+function updateParaBirimiGoster() {
+    const paraBirimi = getParaBirimi();
+    document.querySelectorAll('#paraBirimiGoster, #paraBirimiGoster2, #paraBirimiGoster3').forEach(el => {
+        el.textContent = paraBirimi;
+    });
+    
+    document.querySelectorAll('.fiyat-para-birimi, .toplam-para-birimi').forEach(el => {
+        el.textContent = paraBirimi;
+    });
+}
+
+function ekleStok() {
+    try {
+        const tbody = document.getElementById('stokTablosuBody');
+        if (!tbody) {
+            console.error('stokTablosuBody bulunamadı!');
+            alert('Tablo body bulunamadı. Sayfayı yenileyin.');
+            return;
+        }
+        
+        const row = document.createElement('tr');
+        row.id = `stokRow_${stokSayaci}`;
+        
+        row.innerHTML = `
+        <td class="tdk-has-help" style="padding: 10px; position: relative;" data-help="Stok kartından ürün arayın ve seçin. Alış fiyatı ve birim otomatik gelir.">
+            <div style="position: relative;">
+                <input type="text" 
+                       class="form-control stok-autocomplete-input" 
+                       data-index="${stokSayaci}" 
+                       placeholder="Stok ara..." 
+                       autocomplete="off"
+                       style="width: 100%;">
+                <input type="hidden" 
+                       class="stok-hidden-id" 
+                       data-index="${stokSayaci}" 
+                       value="">
+                <div class="stok-autocomplete-results" 
+                     data-index="${stokSayaci}" 
+                     style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #d1d5db; border-radius: 4px; max-height: 200px; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 2px;">
+                </div>
+            </div>
+        </td>
+        <td class="tdk-has-help" style="padding: 10px;" data-help="Satıra özel açıklama veya tedarik notu.">
+            <textarea class="form-control notlar-input" data-index="${stokSayaci}" rows="2" style="width: 100%;" placeholder="Notlar..."></textarea>
+        </td>
+        <td class="tdk-has-help" style="padding: 10px;" data-help="Sipariş edilecek miktar. Stok birimi yanında gösterilir.">
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <input type="number" class="form-control miktar-input" data-index="${stokSayaci}" step="0.001" min="0" placeholder="0" style="width: 100%;">
+                <span class="birim-span" data-index="${stokSayaci}" style="color: #6b7280; font-size: 14px; white-space: nowrap;">-</span>
+            </div>
+        </td>
+        <td class="tdk-has-help" style="padding: 10px;" data-help="Birim başına alış fiyatı (KDV hariç).">
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <input type="number" class="form-control fiyat-input" data-index="${stokSayaci}" step="0.01" min="0" placeholder="0.00" style="width: 100%;">
+                <span class="fiyat-para-birimi" style="color: #6b7280; font-size: 14px; white-space: nowrap;">${getParaBirimi()}</span>
+            </div>
+        </td>
+        <td class="tdk-has-help" style="padding: 10px;" data-help="Miktar × birim fiyat. KDV dahil değildir.">
+            <div style="display: flex; align-items: center; gap: 5px;">
+                <span class="toplam-fiyat-span" data-index="${stokSayaci}" style="font-weight: 600; font-size: 16px;">0,00</span>
+                <span class="toplam-para-birimi" style="color: #6b7280; font-size: 14px; white-space: nowrap;">${getParaBirimi()}</span>
+            </div>
+        </td>
+        <td class="tdk-has-help" style="padding: 10px;" data-help="KDV oranı (%). Genel toplama ayrıca eklenir.">
+            <div style="display: flex; align-items: center; gap: 2px;">
+                <span style="color: #6b7280; font-size: 14px;">%</span>
+                <input type="number" class="form-control vergi-input" data-index="${stokSayaci}" step="0.01" min="0" max="100" value="20" placeholder="20.00" style="width: 100%;">
+            </div>
+        </td>
+        <td style="padding: 10px;">
+            <button type="button" onclick="silStok(${stokSayaci})" class="btn" style="background-color: #ef4444; color: white; padding: 4px 8px;">🗑️</button>
+        </td>
+        `;
+        
+        tbody.appendChild(row);
+        
+        // Event listener'ları ekle
+        const stokInput = row.querySelector('.stok-autocomplete-input');
+        const stokHidden = row.querySelector('.stok-hidden-id');
+        const stokResults = row.querySelector('.stok-autocomplete-results');
+        const miktar = row.querySelector('.miktar-input');
+        const fiyat = row.querySelector('.fiyat-input');
+        const vergi = row.querySelector('.vergi-input');
+        const birimSpan = row.querySelector('.birim-span');
+        
+        // Autocomplete fonksiyonu
+        function filterStokItems(query) {
+            if (!query || query.length < 1) {
+                return [];
+            }
+            const lowerQuery = query.toLowerCase();
+            return stokItems.filter(item => 
+                item.ad.toLowerCase().includes(lowerQuery) ||
+                item.id.toString().includes(lowerQuery)
+            ).slice(0, 10); // En fazla 10 sonuç göster
+        }
+        
+        function showStokResults(query) {
+            const results = filterStokItems(query);
+            if (results.length === 0) {
+                stokResults.style.display = 'none';
+                return;
+            }
+            
+            stokResults.innerHTML = results.map(item => `
+                <div class="stok-result-item" 
+                     data-id="${item.id}" 
+                     data-fiyat="${item.fiyat || 0}" 
+                     data-birim="${item.birim || 'Adet'}" 
+                     data-para-birimi="${item.para_birimi || 'TL'}"
+                     style="padding: 10px; cursor: pointer; border-bottom: 1px solid #e5e7eb;"
+                     onmouseover="this.style.backgroundColor='#f3f4f6'"
+                     onmouseout="this.style.backgroundColor='white'">
+                    <div style="font-weight: 600;">${item.ad}</div>
+                    <div style="font-size: 12px; color: #6b7280;">Fiyat: ${formatCurrency(item.fiyat || 0)} ${item.para_birimi || 'TL'} | Birim: ${item.birim || 'Adet'}</div>
+                </div>
+            `).join('');
+            
+            stokResults.style.display = 'block';
+            
+            // Result item'lara click event ekle
+            stokResults.querySelectorAll('.stok-result-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    const stokId = parseInt(this.getAttribute('data-id'));
+                    const stokFiyat = parseFloat(this.getAttribute('data-fiyat')) || 0;
+                    const stokBirim = this.getAttribute('data-birim') || 'Adet';
+                    const stokParaBirimi = this.getAttribute('data-para-birimi') || 'TL';
+                    
+                    const selectedStok = stokItems.find(i => i.id === stokId);
+                    
+                    // Input ve hidden field'ı doldur
+                    stokInput.value = selectedStok ? selectedStok.ad : '';
+                    stokHidden.value = stokId;
+                    stokResults.style.display = 'none';
+                    
+                    // Fiyat, birim ve para birimini güncelle
+                    if (stokFiyat > 0) {
+                        fiyat.value = stokFiyat.toFixed(2);
+                    } else {
+                        fiyat.value = '0.00';
+                    }
+                    
+                    if (stokBirim && stokBirim !== '-' && stokBirim !== '' && stokBirim !== 'null') {
+                        birimSpan.textContent = stokBirim;
+                    } else {
+                        birimSpan.textContent = 'Adet';
+                    }
+                    
+                    const paraBirimiSpan = row.querySelector('.fiyat-para-birimi');
+                    const toplamParaBirimiSpan = row.querySelector('.toplam-para-birimi');
+                    if (paraBirimiSpan) {
+                        paraBirimiSpan.textContent = stokParaBirimi;
+                    }
+                    if (toplamParaBirimiSpan) {
+                        toplamParaBirimiSpan.textContent = stokParaBirimi;
+                    }
+                    
+                    // Toplamı güncelle
+                    setTimeout(function() {
+                        hesaplaGenelToplam();
+                        const currentMiktar = miktar.value ? parseFloat(miktar.value) || 0 : 0;
+                        const currentFiyat = fiyat.value ? parseFloat(fiyat.value) || 0 : 0;
+                        
+                        if (currentMiktar > 0 && currentFiyat > 0) {
+                            const toplam = currentMiktar * currentFiyat;
+                            const formattedTotal = formatCurrency(toplam);
+                            const toplamSpan = row.querySelector('.toplam-fiyat-span');
+                            if (toplamSpan) {
+                                toplamSpan.textContent = formattedTotal;
+                            }
+                            hesaplaGenelToplam();
+                        } else {
+                            const toplamSpan = row.querySelector('.toplam-fiyat-span');
+                            if (toplamSpan) {
+                                toplamSpan.textContent = '0,00';
+                            }
+                            hesaplaGenelToplam();
+                        }
+                    }, 100);
+                });
+            });
+        }
+        
+        // Input'a yazıldığında autocomplete göster
+        stokInput.addEventListener('input', function() {
+            const query = this.value.trim();
+            if (query.length > 0) {
+                showStokResults(query);
+            } else {
+                stokResults.style.display = 'none';
+                stokHidden.value = '';
+            }
+        });
+        
+        // Input focus olduğunda sonuçları göster (eğer değer varsa)
+        stokInput.addEventListener('focus', function() {
+            if (this.value.trim().length > 0) {
+                showStokResults(this.value.trim());
+            }
+        });
+        
+        // Dışarı tıklandığında sonuçları gizle - sadece bu satır için
+        const clickHandler = function(e) {
+            if (!stokInput.contains(e.target) && !stokResults.contains(e.target)) {
+                stokResults.style.display = 'none';
+                document.removeEventListener('click', clickHandler);
+            }
+        };
+        // Kısa bir süre sonra event listener ekle (asıl tıklamadan sonra)
+        setTimeout(function() {
+            document.addEventListener('click', clickHandler);
+        }, 100);
+        
+        // Hesaplama fonksiyonu - tüm event'lerden çağrılacak (VERGİ HARİÇ)
+        const hesaplaBuSatir = function() {
+            // Input değerlerini tekrar al (güncel değerleri yakalamak için)
+            const miktarEl = row.querySelector('.miktar-input');
+            const fiyatEl = row.querySelector('.fiyat-input');
+            const toplamSpan = row.querySelector('.toplam-fiyat-span');
+            
+            if (!miktarEl || !fiyatEl || !toplamSpan) return;
+            
+            const currentMiktar = miktarEl.value ? parseFloat(miktarEl.value) || 0 : 0;
+            const currentFiyat = fiyatEl.value ? parseFloat(fiyatEl.value) || 0 : 0;
+            
+            if (currentMiktar > 0 && currentFiyat > 0) {
+                // Toplam Fiyat = Miktar * Birim Fiyatı (VERGİ HARİÇ)
+                const toplam = currentMiktar * currentFiyat;
+                
+                const formattedTotal = formatCurrency(toplam);
+                toplamSpan.textContent = formattedTotal;
+                // Genel toplamı da güncelle (vergi hesaplaması orada yapılacak)
+                hesaplaGenelToplam();
+            } else {
+                toplamSpan.textContent = '0,00';
+                hesaplaGenelToplam();
+            }
+        };
+        
+        // Tüm event türlerini ekle - miktar için
+        miktar.addEventListener('blur', hesaplaBuSatir);
+        miktar.addEventListener('input', hesaplaBuSatir);
+        miktar.addEventListener('change', hesaplaBuSatir);
+        miktar.addEventListener('keyup', function(e) {
+            if (e.key === 'Enter' || e.key === 'Tab') {
+                hesaplaBuSatir();
+            }
+        });
+        
+        // Tüm event türlerini ekle - fiyat için
+        fiyat.addEventListener('blur', hesaplaBuSatir);
+        fiyat.addEventListener('input', hesaplaBuSatir);
+        fiyat.addEventListener('change', hesaplaBuSatir);
+        fiyat.addEventListener('keyup', function(e) {
+            if (e.key === 'Enter' || e.key === 'Tab') {
+                hesaplaBuSatir();
+            }
+        });
+        
+        // Tüm event türlerini ekle - vergi için (sadece genel toplamı güncelle, satır toplamı değişmez)
+        vergi.addEventListener('blur', function() {
+            // Vergi değiştiğinde sadece genel toplamı güncelle (satır toplamı vergi hariç)
+            setTimeout(hesaplaGenelToplam, 50);
+        });
+        vergi.addEventListener('input', function() {
+            // Input event'inde genel toplamı güncelle
+            setTimeout(hesaplaGenelToplam, 10);
+        });
+        vergi.addEventListener('change', hesaplaGenelToplam);
+        vergi.addEventListener('keyup', function(e) {
+            // Her tuşta genel toplamı güncelle
+            setTimeout(hesaplaGenelToplam, 10);
+        });
+        // Vergi input'u değiştiğinde (mouse ile artırma/azaltma için)
+        vergi.addEventListener('wheel', function(e) {
+            setTimeout(hesaplaGenelToplam, 50);
+        });
+        
+        stokSayaci++;
+    } catch (error) {
+        console.error('ekleStok fonksiyonunda hata:', error);
+        alert('Satır eklenirken bir hata oluştu: ' + error.message);
+    }
+}
+
+function silStok(index) {
+    const row = document.getElementById(`stokRow_${index}`);
+    if (row) {
+        row.remove();
+        hesaplaGenelToplam();
+    }
+}
+
+// Türkçe sayı formatını parse eden yardımcı fonksiyon
+function parseTurkishNumber(value) {
+    if (!value || value === '') return 0;
+    // String'e çevir ve virgülü noktaya dönüştür
+    const str = String(value).trim().replace(/\./g, '').replace(',', '.');
+    const num = parseFloat(str);
+    return isNaN(num) ? 0 : num;
+}
+
+function hesaplaToplamFiyat(index) {
+    const row = document.getElementById(`stokRow_${index}`);
+    if (!row) return;
+    
+    const miktarInput = row.querySelector('.miktar-input');
+    const fiyatInput = row.querySelector('.fiyat-input');
+    const toplamFiyatSpan = row.querySelector('.toplam-fiyat-span');
+    
+    if (!miktarInput || !fiyatInput || !toplamFiyatSpan) return;
+    
+    // Input type="number" kullanıldığı için direkt parseFloat kullan (virgül sorunu yok)
+    const miktar = parseFloat(miktarInput.value) || 0;
+    const fiyat = parseFloat(fiyatInput.value) || 0;
+    
+    if (miktar <= 0 || fiyat <= 0) {
+        toplamFiyatSpan.textContent = '0,00';
+        hesaplaGenelToplam();
+        return;
+    }
+    
+    // Toplam Fiyat = Miktar * Birim Fiyatı (VERGİ HARİÇ)
+    const toplamFiyat = miktar * fiyat;
+    
+    const formattedTotal = formatCurrency(Math.max(0, toplamFiyat));
+    toplamFiyatSpan.textContent = formattedTotal;
+    
+    hesaplaGenelToplam();
+}
+
+function hesaplaGenelToplam() {
+    let araToplam = 0;
+    let toplamVergi = 0;
+    const rows = document.querySelectorAll('[id^="stokRow_"]');
+    
+    // Para birimlerini topla
+    const paraBirimleri = [];
+    let kullanilacakParaBirimi = getParaBirimi(); // Varsayılan: genel para birimi
+    
+    rows.forEach(row => {
+        // Satır toplamını al (vergi hariç)
+        const toplamSpan = row.querySelector('.toplam-fiyat-span');
+        if (!toplamSpan) return;
+        
+        // Bu satırın para birimini al
+        const paraBirimiSpan = row.querySelector('.fiyat-para-birimi');
+        if (paraBirimiSpan && paraBirimiSpan.textContent.trim()) {
+            paraBirimleri.push(paraBirimiSpan.textContent.trim());
+        }
+        
+        const toplamText = toplamSpan.textContent.replace(/\./g, '').replace(',', '.');
+        const satirToplami = parseFloat(toplamText) || 0;
+        
+        // Ara toplama ekle (vergi hariç)
+        araToplam += satirToplami;
+        
+        // Bu satırın vergisini hesapla ve ekle
+        const vergiInput = row.querySelector('.vergi-input');
+        if (vergiInput) {
+            const vergiYuzdesi = parseFloat(vergiInput.value) || 0;
+            const satirVergisi = satirToplami * (vergiYuzdesi / 100);
+            toplamVergi += satirVergisi;
+        }
+    });
+    
+    // Para birimini belirle: Eğer tüm ürünler aynı para birimindeyse, o para birimini kullan
+    if (paraBirimleri.length > 0) {
+        // Tüm para birimleri aynı mı kontrol et
+        const ilkParaBirimi = paraBirimleri[0];
+        const hepsiAyni = paraBirimleri.every(pb => pb === ilkParaBirimi);
+        if (hepsiAyni) {
+            kullanilacakParaBirimi = ilkParaBirimi;
+        } else {
+            // Farklı para birimleri varsa, en çok kullanılan para birimini bul
+            const paraBirimiSayilari = {};
+            paraBirimleri.forEach(pb => {
+                paraBirimiSayilari[pb] = (paraBirimiSayilari[pb] || 0) + 1;
+            });
+            let enCokKullanilan = ilkParaBirimi;
+            let enCokSayi = 0;
+            for (const [pb, sayi] of Object.entries(paraBirimiSayilari)) {
+                if (sayi > enCokSayi) {
+                    enCokSayi = sayi;
+                    enCokKullanilan = pb;
+                }
+            }
+            kullanilacakParaBirimi = enCokKullanilan;
+        }
+    }
+    
+    // Genel toplam = Ara Toplam + Toplam Vergi
+    const toplam = araToplam + toplamVergi;
+    
+    document.getElementById('araToplam').innerHTML = formatCurrency(araToplam) + ' <span id="paraBirimiGoster">' + kullanilacakParaBirimi + '</span>';
+    document.getElementById('vergi').innerHTML = formatCurrency(toplamVergi) + ' <span id="paraBirimiGoster2">' + kullanilacakParaBirimi + '</span>';
+    document.getElementById('toplam').innerHTML = formatCurrency(toplam) + ' <span id="paraBirimiGoster3">' + kullanilacakParaBirimi + '</span>';
+}
+
+// Para birimi değiştiğinde güncelle
+document.addEventListener('DOMContentLoaded', function() {
+    const paraBirimiSelect = document.getElementById('id_para_birimi');
+    if (paraBirimiSelect) {
+        paraBirimiSelect.style.width = '100%';
+        paraBirimiSelect.style.minWidth = '150px';
+        paraBirimiSelect.addEventListener('change', function() {
+            updateParaBirimiGoster();
+            hesaplaGenelToplam();
+        });
+    }
+    
+    updateParaBirimiGoster();
+    
+    // Planlamadan gelen malzemeleri otomatik ekle
+    {% if planlama_malzemeler %}
+    const planlamaMalzemeler = [
+        {% for malzeme in planlama_malzemeler %}
+        {
+            stok_item_id: {{ malzeme.stok_item.id }},
+            stok_kodu: '{{ malzeme.stok_item.stok_kodu }}',
+            stok_adi: '{{ malzeme.stok_item.ad|escapejs }}',
+            miktar: {{ malzeme.miktar }},
+            birim_fiyat: {{ malzeme.birim_fiyat }},
+            para_birimi: '{{ malzeme.para_birimi }}',
+            vergi_yuzdesi: {{ malzeme.vergi_yuzdesi }},
+        }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    planlamaMalzemeler.forEach(function(malzeme) {
+        ekleStok();
+        const rows = document.querySelectorAll('[id^="stokRow_"]');
+        const lastRow = rows[rows.length - 1];
+        if (lastRow) {
+            const stokHidden = lastRow.querySelector('.stok-hidden-id');
+            const stokInput = lastRow.querySelector('.stok-autocomplete-input');
+            const miktarInput = lastRow.querySelector('.miktar-input');
+            const fiyatInput = lastRow.querySelector('.fiyat-input');
+            const vergiInput = lastRow.querySelector('.vergi-input');
+            const birimSpan = lastRow.querySelector('.birim-span');
+            
+            // Stok bilgisini bul
+            const stokItem = stokItems.find(item => item.id === malzeme.stok_item_id);
+            if (stokItem) {
+                if (stokHidden) stokHidden.value = malzeme.stok_item_id;
+                if (stokInput) stokInput.value = stokItem.ad;
+            }
+            
+            if (miktarInput) {
+                miktarInput.value = malzeme.miktar;
+                miktarInput.dispatchEvent(new Event('change'));
+            }
+            if (fiyatInput) {
+                fiyatInput.value = malzeme.birim_fiyat;
+                fiyatInput.dispatchEvent(new Event('change'));
+            }
+            if (vergiInput) vergiInput.value = malzeme.vergi_yuzdesi;
+            
+            // Birim ve para birimini güncelle
+            if (stokItem && birimSpan) {
+                birimSpan.textContent = stokItem.birim || 'Adet';
+            }
+            
+            const paraBirimiSpan = lastRow.querySelector('.fiyat-para-birimi');
+            const toplamParaBirimiSpan = lastRow.querySelector('.toplam-para-birimi');
+            if (paraBirimiSpan && malzeme.para_birimi) {
+                paraBirimiSpan.textContent = malzeme.para_birimi;
+            }
+            if (toplamParaBirimiSpan && malzeme.para_birimi) {
+                toplamParaBirimiSpan.textContent = malzeme.para_birimi;
+            }
+            
+            hesaplaToplamFiyat(parseInt(lastRow.id.replace('stokRow_', '')));
+        }
+    });
+    {% endif %}
+});
+
+document.getElementById('satinalmaForm').addEventListener('submit', function(e) {
+    const kalemler = [];
+    const rows = document.querySelectorAll('[id^="stokRow_"]');
+    
+    console.log('Toplam satır sayısı:', rows.length);
+    
+    rows.forEach((row, index) => {
+        const stokHidden = row.querySelector('.stok-hidden-id');
+        const stokInput = row.querySelector('.stok-autocomplete-input');
+        const miktarInput = row.querySelector('.miktar-input');
+        const fiyatInput = row.querySelector('.fiyat-input');
+        const vergiInput = row.querySelector('.vergi-input');
+        const notlarInput = row.querySelector('.notlar-input');
+        
+        console.log(`Satır ${index}:`, {
+            stokHidden: stokHidden ? stokHidden.value : 'YOK',
+            miktar: miktarInput ? miktarInput.value : 'YOK',
+            fiyat: fiyatInput ? fiyatInput.value : 'YOK'
+        });
+        
+        if (!stokHidden || !miktarInput || !fiyatInput) {
+            console.log(`Satır ${index}: Eksik element var`);
+            return;
+        }
+        
+        const stokItem = stokHidden.value;
+        const miktar = parseFloat(miktarInput.value) || 0;
+        const fiyat = parseFloat(fiyatInput.value) || 0;
+        const vergi = parseFloat(vergiInput ? vergiInput.value : 20) || 20;
+        const notlar = notlarInput ? notlarInput.value : '';
+        
+        console.log(`Satır ${index} değerleri:`, {
+            stokItem,
+            miktar,
+            fiyat,
+            vergi,
+            notlar
+        });
+        
+        // Stok seçilmiş ve miktar 0'dan büyük olmalı (fiyat 0 olabilir)
+        if (stokItem && miktar > 0) {
+            kalemler.push({
+                stok_item: stokItem,
+                miktar: miktar.toString(),
+                birim_fiyat: fiyat.toString(),
+                vergi_yuzdesi: vergi.toString(),
+                notlar: notlar
+            });
+            console.log(`Satır ${index} kalemlere eklendi`);
+        } else {
+            console.log(`Satır ${index} eklenmedi - koşullar:`, {
+                stokItem: !!stokItem,
+                miktar_gt_0: miktar > 0,
+                fiyat_gte_0: fiyat >= 0
+            });
+        }
+    });
+    
+    console.log('Toplanan kalemler:', kalemler);
+    console.log('Kalemler sayısı:', kalemler.length);
+    
+    if (kalemler.length === 0) {
+        e.preventDefault();
+        alert('Lütfen en az bir ürün ekleyin ve miktar ile birim fiyat bilgilerini girin.');
+        return false;
+    }
+    
+    // Kalemleri JSON string olarak hidden input'a yaz
+    const kalemlerInput = document.getElementById('kalemlerInput');
+    if (!kalemlerInput) {
+        console.error('kalemlerInput bulunamadı!');
+        e.preventDefault();
+        alert('Form hatası: kalemlerInput bulunamadı.');
+        return false;
+    }
+    
+    const kalemlerJSON = JSON.stringify(kalemler);
+    kalemlerInput.value = kalemlerJSON;
+    console.log('kalemlerInput değeri:', kalemlerInput.value);
+});
+</script>
+{% endblock %}

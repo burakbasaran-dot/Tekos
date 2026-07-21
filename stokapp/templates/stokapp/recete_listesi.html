@@ -1,0 +1,241 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Üretim Reçeteleri{% endblock %}
+{% block content %}
+<form style="display:none;">{% csrf_token %}</form>
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>📋 Üretim Reçeteleri</h2>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <button type="button" id="receteKopyalaButonu" class="btn"
+                    style="background: #0d6efd; color: white; padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; display: none;">
+                📋 Reçeteyi Kopyala
+            </button>
+            <a href="{% url 'stokapp:recete_ekle' %}" class="btn btn-primary">➕ Yeni Reçete Oluştur</a>
+        </div>
+    </div>
+    
+    <!-- Arama ve Filtreler -->
+    <div style="margin-bottom: 20px; padding: 15px; background: #f9fafb; border-radius: 8px;">
+        <form method="get" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <input type="text" 
+                   name="search" 
+                   value="{{ search_query }}" 
+                   placeholder="Stok kodu, ad veya versiyon ara..."
+                   style="flex: 1; min-width: 200px; padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
+            
+            <select name="aktif" style="padding: 10px; border-radius: 8px; border: 1px solid #ddd;">
+                <option value="">Tümü</option>
+                <option value="aktif" {% if aktif_filter == 'aktif' %}selected{% endif %}>Aktif</option>
+                <option value="pasif" {% if aktif_filter == 'pasif' %}selected{% endif %}>Pasif</option>
+            </select>
+            
+            <button type="submit" class="btn btn-secondary">🔍 Ara</button>
+            <a href="{% url 'stokapp:recete_listesi' %}" class="btn btn-secondary">Temizle</a>
+        </form>
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 36px;">
+                    <input type="checkbox" id="receteSelectAll" title="Tümünü seç/kaldır">
+                </th>
+                <th>Ürün/Yarı Mamül</th>
+                <th>Stok Kodu</th>
+                <th>Versiyon</th>
+                <th>Durum</th>
+                <th>Oluşturulma</th>
+                <th>İşlemler</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for recete in page_obj %}
+            <tr>
+                <td onclick="event.stopPropagation();">
+                    <input type="checkbox" class="recete-checkbox"
+                           value="{{ recete.pk }}"
+                           data-recete-ad="{{ recete.urun.stok_kodu }} v{{ recete.versiyon }}"
+                           onclick="event.stopPropagation();">
+                </td>
+                <td>
+                    <strong>{{ recete.urun.ad }}</strong>
+                </td>
+                <td>
+                    <code style="background: #f3f4f6; padding: 4px 8px; border-radius: 4px;">
+                        {{ recete.urun.stok_kodu }}
+                    </code>
+                </td>
+                <td>
+                    <span style="background: #e0e7ff; color: #4338ca; padding: 4px 10px; border-radius: 12px; font-weight: 600;">
+                        v{{ recete.versiyon }}
+                    </span>
+                </td>
+                <td>
+                    {% if recete.aktif %}
+                    <span style="padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; background: #d4edda; color: #155724;">
+                        ✅ Aktif
+                    </span>
+                    {% else %}
+                    <span style="padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; background: #f8d7da; color: #721c24;">
+                        ❌ Pasif
+                    </span>
+                    {% endif %}
+                </td>
+                <td>{{ recete.created_at|date:"d.m.Y H:i" }}</td>
+                <td>
+                    <div style="display: flex; gap: 6px;">
+                        <a href="{% url 'stokapp:recete_detay' recete.pk %}" 
+                           class="btn btn-secondary" 
+                           style="padding: 6px 12px; font-size: 13px;">
+                            👁️ Detay
+                        </a>
+                        <a href="{% url 'stokapp:recete_duzenle' recete.pk %}" 
+                           class="btn btn-secondary" 
+                           style="padding: 6px 12px; font-size: 13px;">
+                            ✏️ Düzenle
+                        </a>
+                        <a href="{% url 'stokapp:recete_sil' recete.pk %}" 
+                           class="btn" 
+                           style="padding: 6px 12px; font-size: 13px; background: #dc3545; color: white;"
+                           onclick="return confirm('Bu reçeteyi silmek istediğinizden emin misiniz?');">
+                            🗑️ Sil
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" style="text-align: center; padding: 40px; color: #6b7280;">
+                    Henüz reçete bulunmuyor. <a href="{% url 'stokapp:recete_ekle' %}">Yeni reçete oluştur</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div style="margin-top: 20px; display: flex; justify-content: center; gap: 10px;">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if aktif_filter %}&aktif={{ aktif_filter }}{% endif %}" 
+           class="btn btn-secondary">← Önceki</a>
+        {% endif %}
+        
+        <span style="padding: 10px 15px; background: #f3f4f6; border-radius: 8px;">
+            Sayfa {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+        </span>
+        
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if aktif_filter %}&aktif={{ aktif_filter }}{% endif %}" 
+           class="btn btn-secondary">Sonraki →</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<script>
+(function() {
+    const kopyalaButonu = document.getElementById('receteKopyalaButonu');
+    const selectAll = document.getElementById('receteSelectAll');
+
+    function getCheckboxes() {
+        return document.querySelectorAll('.recete-checkbox');
+    }
+
+    function getCheckedCheckboxes() {
+        return document.querySelectorAll('.recete-checkbox:checked');
+    }
+
+    function getCsrfToken() {
+        const csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (csrfInput) return csrfInput.value;
+        const cookies = document.cookie.split(';');
+        for (const c of cookies) {
+            const [name, value] = c.trim().split('=');
+            if (name === 'csrftoken') return value;
+        }
+        return null;
+    }
+
+    function updateButtonVisibility() {
+        if (!kopyalaButonu) return;
+        const count = getCheckedCheckboxes().length;
+        kopyalaButonu.style.display = count === 1 ? 'inline-block' : 'none';
+    }
+
+    function updateSelectAllState() {
+        if (!selectAll) return;
+        const all = getCheckboxes();
+        const checked = getCheckedCheckboxes();
+        if (all.length === 0) {
+            selectAll.checked = false;
+            selectAll.indeterminate = false;
+            return;
+        }
+        if (checked.length === 0) {
+            selectAll.checked = false;
+            selectAll.indeterminate = false;
+        } else if (checked.length === all.length) {
+            selectAll.checked = true;
+            selectAll.indeterminate = false;
+        } else {
+            selectAll.checked = false;
+            selectAll.indeterminate = true;
+        }
+    }
+
+    getCheckboxes().forEach(function(cb) {
+        cb.addEventListener('change', function() {
+            updateButtonVisibility();
+            updateSelectAllState();
+        });
+    });
+
+    if (selectAll) {
+        selectAll.addEventListener('change', function() {
+            const checked = selectAll.checked;
+            getCheckboxes().forEach(function(cb) { cb.checked = checked; });
+            updateButtonVisibility();
+        });
+    }
+
+    if (kopyalaButonu) {
+        kopyalaButonu.addEventListener('click', function(e) {
+            e.preventDefault();
+            const checked = getCheckedCheckboxes();
+            if (checked.length === 0) {
+                alert('Lütfen kopyalamak istediğiniz reçeteyi seçin.');
+                return;
+            }
+            if (checked.length > 1) {
+                alert('Lütfen sadece bir reçete seçin.');
+                return;
+            }
+            const receteId = checked[0].value;
+            const receteAd = checked[0].dataset.receteAd || '';
+            const onayMsg = `"${receteAd}" reçetesini tüm bilgileri ile kopyalamak istediğinizden emin misiniz?\n\n` +
+                `Yeni reçete versiyonu sonuna "_kopya" eki eklenerek oluşturulacak.`;
+            if (!confirm(onayMsg)) return;
+
+            const csrfToken = getCsrfToken();
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = "{% url 'stokapp:recete_kopyala' 0 %}".replace('/0/', '/' + receteId + '/');
+            if (csrfToken) {
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrfmiddlewaretoken';
+                csrfInput.value = csrfToken;
+                form.appendChild(csrfInput);
+            }
+            document.body.appendChild(form);
+            form.submit();
+        });
+    }
+
+    updateButtonVisibility();
+    updateSelectAllState();
+})();
+</script>
+{% endblock %}
+

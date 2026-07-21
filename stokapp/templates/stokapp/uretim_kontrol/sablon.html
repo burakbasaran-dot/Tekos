@@ -1,0 +1,80 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Kontrol Şablonu — {{ bilesen.stok_kodu }}{% endblock %}
+{% block content %}
+<style>
+.uk-wrap { max-width: 1100px; margin: 0 auto; }
+.uk-bc { font-size: 13px; color: #64748b; margin-bottom: 16px; }
+.uk-bc a { color: #2563eb; text-decoration: none; }
+.uk-card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,.08); margin-bottom: 20px; }
+.uk-table { width: 100%; border-collapse: collapse; }
+.uk-table th { background: #1e293b; color: #fff; padding: 10px 12px; text-align: left; font-size: 12px; }
+.uk-table td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+.uk-thumb { width: 48px; height: 48px; object-fit: cover; border-radius: 6px; }
+</style>
+<div class="uk-wrap">
+  <p class="uk-bc">
+    <a href="{% url 'stokapp:uretim_kontrol_ana' %}">Üretim Kontrol</a> /
+    <a href="{% url 'stokapp:uretim_kontrol_urun' product.pk %}">{{ product.stok_kodu }}</a> /
+    {{ bilesen.stok_kodu }}
+  </p>
+  <div class="uk-card">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+      <div>
+        <h2 style="margin:0;">Kontrol şablonu: {{ bilesen.stok_kodu }}</h2>
+        <p style="color:#64748b;margin:8px 0 0;">{{ bilesen.ad }} · Rev. {{ plan.revision_no }}</p>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <a href="{% url 'stokapp:uretim_kontrol_baslat' %}?plan={{ plan.pk }}" class="btn btn-primary">▶ Kontrol Başlat</a>
+        <a href="{% url 'stokapp:uretim_kontrol_plan_duzenle' plan.pk %}" class="btn btn-secondary btn-sm">✏️ Şablonu Değiştir</a>
+        <a href="{% url 'stokapp:uretim_kontrol_adim_ekle' plan.pk %}" class="btn btn-primary btn-sm">➕ Adım Ekle</a>
+        <form method="post" action="{% url 'stokapp:uretim_kontrol_plan_sil' plan.pk %}" style="display:inline;" onsubmit="return ukSablonSilOnay({{ has_sessions|yesno:'true,false' }}, '{{ bilesen.stok_kodu|escapejs }}');">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-sm" style="background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;">🗑️ Sil</button>
+        </form>
+      </div>
+    </div>
+    {% if revisions %}
+    <p style="font-size:13px;color:#64748b;margin-top:12px;">Revizyonlar: {% for r in revisions %}{{ r.revision_no }}{% if not forloop.last %}, {% endif %}{% endfor %}</p>
+    {% endif %}
+  </div>
+  <div class="uk-card">
+    <h3 style="margin:0 0 16px;">Kontrol adımları</h3>
+    {% if steps %}
+    <table class="uk-table">
+      <thead>
+        <tr><th>Sıra</th><th>Foto</th><th>Başlık</th><th>Nominal</th><th>+Tol</th><th>-Tol</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for s in steps %}
+        <tr>
+          <td>{{ s.step_no }}</td>
+          <td>{% if s.photo %}<img src="{{ s.photo.url }}" class="uk-thumb" alt="">{% else %}—{% endif %}</td>
+          <td><strong>{{ s.title }}</strong></td>
+          <td>{{ s.nominal_value|default:"—" }}</td>
+          <td>{{ s.plus_tolerance|default:"—" }}</td>
+          <td>{{ s.minus_tolerance|default:"—" }}</td>
+          <td>
+            <a href="{% url 'stokapp:uretim_kontrol_adim_duzenle' s.pk %}" class="btn btn-secondary btn-sm">Düzenle</a>
+            <form method="post" action="{% url 'stokapp:uretim_kontrol_adim_sil' s.pk %}" style="display:inline;" onsubmit="return confirm('Silinsin mi?');">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm" style="background:#dc3545;color:#fff;">Sil</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p style="color:#64748b;">Henüz adım yok. <a href="{% url 'stokapp:uretim_kontrol_adim_ekle' plan.pk %}">İlk adımı ekleyin</a>.</p>
+    {% endif %}
+  </div>
+</div>
+<script>
+function ukSablonSilOnay(hasSessions, kod) {
+  if (hasSessions) {
+    return confirm('"' + kod + '" şablonunda kayıtlı kontroller var.\n\nŞablon arşivlenecek (ölçüm geçmişi korunur). Devam edilsin mi?');
+  }
+  return confirm('"' + kod + '" kontrol şablonu ve tüm adımları kalıcı olarak silinecek.\n\nDevam edilsin mi?');
+}
+</script>
+{% endblock %}

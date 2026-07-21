@@ -1,0 +1,14 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Sayım Sil{% endblock %}
+{% block content %}
+<div class="card" style="max-width:480px;margin:0 auto;background:#fff;border-radius:14px;padding:22px;border:1px solid #fecaca;">
+  <h1 style="margin:0 0 12px;font-size:1.2rem;color:#991b1b;">Sayımı sil</h1>
+  <p style="color:#64748b;font-size:14px;">Sayım #{{ sayim.pk }} — {{ sayim.baslik|truncatechars:60 }}</p>
+  <p style="font-size:14px;color:#334155;">Bu sayım henüz başlatılmadı. Silinirse sayım kaydı ve tüm satırlar kalıcı olarak kaldırılır; stok hareketi oluşmaz.</p>
+  <form method="post" style="margin-top:18px;display:flex;gap:10px;">
+    {% csrf_token %}
+    <button type="submit" style="padding:10px 18px;background:#b91c1c;color:#fff;border:none;border-radius:10px;font-weight:600;cursor:pointer;">Sil</button>
+    <a href="{% url 'stokapp:stok_sayim_listesi' %}" style="padding:10px 18px;border:1px solid #cbd5e1;border-radius:10px;text-decoration:none;color:#334155;">Vazgeç</a>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,125 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Tedarikçi Yönetimi{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>🏪 Tedarikçi Yönetimi</h2>
+        <div style="display:flex; gap:8px; align-items:center;">
+            <form method="get" style="display:flex; gap:8px; align-items:center;">
+                <select name="sort" style="padding:8px; border:1px solid #e5e7eb; border-radius:8px;">
+                    <option value="ad" {% if sort_field == 'ad' %}selected{% endif %}>Tedarikçi Adı</option>
+                    <option value="stok_sayisi" {% if sort_field == 'stok_sayisi' %}selected{% endif %}>Stok Sayısı</option>
+                    <option value="created_at" {% if sort_field == 'created_at' %}selected{% endif %}>Kayıt Tarihi</option>
+                </select>
+                <select name="dir" style="padding:8px; border:1px solid #e5e7eb; border-radius:8px;">
+                    <option value="asc" {% if sort_dir == 'asc' %}selected{% endif %}>Artan</option>
+                    <option value="desc" {% if sort_dir == 'desc' %}selected{% endif %}>Azalan</option>
+                </select>
+                <button type="submit" class="btn btn-secondary">Sırala</button>
+            </form>
+            <a href="{% url 'stokapp:tedarikci_performans' %}" class="btn btn-secondary" style="background:#3b82f6; color:white;">📈 Performans Raporu</a>
+            <a href="{% url 'stokapp:tedarikci_ekle' %}" class="btn btn-primary">➕ Yeni Tedarikçi Ekle</a>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 15px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background: #fff3cd; color: #856404; border-left: 4px solid #ffc107;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <table>
+        <thead>
+            <tr>
+                <th>
+                    <a href="?sort=ad&dir={% if sort_field == 'ad' and sort_dir == 'desc' %}asc{% else %}desc{% endif %}" style="color:inherit; text-decoration:none;">
+                        Tedarikçi Adı
+                        {% if sort_field == 'ad' %}
+                            <span style="font-size:11px; opacity:.8;">{% if sort_dir == 'asc' %}▲{% else %}▼{% endif %}</span>
+                        {% endif %}
+                    </a>
+                </th>
+                <th>Telefon</th>
+                <th>E-posta</th>
+                <th>Etiketler</th>
+                <th>
+                    <a href="?sort=stok_sayisi&dir={% if sort_field == 'stok_sayisi' and sort_dir == 'desc' %}asc{% else %}desc{% endif %}" style="color:inherit; text-decoration:none;">
+                        Stok Sayısı
+                        {% if sort_field == 'stok_sayisi' %}
+                            <span style="font-size:11px; opacity:.8;">{% if sort_dir == 'asc' %}▲{% else %}▼{% endif %}</span>
+                        {% endif %}
+                    </a>
+                </th>
+                <th>
+                    <a href="?sort=acik_satinalma_sayisi&dir={% if sort_field == 'acik_satinalma_sayisi' and sort_dir == 'desc' %}asc{% else %}desc{% endif %}" style="color:inherit; text-decoration:none;">
+                        Açık Satınalmalar
+                        {% if sort_field == 'acik_satinalma_sayisi' %}
+                            <span style="font-size:11px; opacity:.8;">{% if sort_dir == 'asc' %}▲{% else %}▼{% endif %}</span>
+                        {% endif %}
+                    </a>
+                </th>
+                <th>
+                    <a href="?sort=kapali_satinalma_sayisi&dir={% if sort_field == 'kapali_satinalma_sayisi' and sort_dir == 'desc' %}asc{% else %}desc{% endif %}" style="color:inherit; text-decoration:none;">
+                        Kapalı Satınalmalar
+                        {% if sort_field == 'kapali_satinalma_sayisi' %}
+                            <span style="font-size:11px; opacity:.8;">{% if sort_dir == 'asc' %}▲{% else %}▼{% endif %}</span>
+                        {% endif %}
+                    </a>
+                </th>
+                <th>İşlemler</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for bilgi in tedarikci_bilgileri %}
+            <tr>
+                <td>
+                    <strong>{{ bilgi.tedarikci.ad }}</strong>
+                </td>
+                <td>{{ bilgi.tedarikci.telefon|default:"-" }}</td>
+                <td>{{ bilgi.tedarikci.email|default:"-" }}</td>
+                <td>
+                    {% for kat in bilgi.tedarikci.kategoriler.all %}
+                        <span style="display:inline-block; padding:2px 10px; background:#eef2ff; color:#3730a3; border-radius:12px; font-size:11px; font-weight:600; margin:1px 2px;">{{ kat.ad }}</span>
+                    {% empty %}
+                        <span style="color:#9ca3af; font-size:12px;">-</span>
+                    {% endfor %}
+                </td>
+                <td>
+                    <a href="{% url 'stokapp:tedarikci_stoklari' bilgi.tedarikci.pk %}" 
+                       style="padding: 4px 12px; background: #d4edda; color: #155724; border-radius: 12px; font-weight: 600; text-decoration: none; cursor: pointer; display: inline-block;">
+                        {{ bilgi.stok_sayisi }} ürün
+                    </a>
+                </td>
+                <td>
+                    <a href="{% url 'stokapp:satinalma_listesi' %}?tab=satin_alma&tedarikci={{ bilgi.tedarikci.pk }}"
+                       style="padding: 4px 12px; background: #dbeafe; color: #1e40af; border-radius: 12px; font-weight: 600; text-decoration: none; cursor: pointer; display: inline-block;">
+                        {{ bilgi.acik_satinalma_sayisi }} adet
+                    </a>
+                </td>
+                <td>
+                    <a href="{% url 'stokapp:satinalma_listesi' %}?tab=teslimat_tamamlanan&tedarikci={{ bilgi.tedarikci.pk }}"
+                       style="padding: 4px 12px; background: #f3f4f6; color: #374151; border-radius: 12px; font-weight: 600; text-decoration: none; cursor: pointer; display: inline-block;">
+                        {{ bilgi.kapali_satinalma_sayisi }} adet
+                    </a>
+                </td>
+                <td>
+                    <a href="{% url 'stokapp:tedarikci_duzenle' bilgi.tedarikci.pk %}" class="btn btn-secondary" style="padding: 6px 12px; font-size: 13px; margin-right: 5px;">✏️ Düzenle</a>
+                    <a href="{% url 'stokapp:tedarikci_sil' bilgi.tedarikci.pk %}" class="btn btn-secondary" style="background: #dc3545; color: white; padding: 6px 12px; font-size: 13px;">🗑️ Sil</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="8" style="text-align: center; padding: 40px; color: #6b7280;">
+                    Henüz tedarikçi bulunmuyor. <a href="{% url 'stokapp:tedarikci_ekle' %}">İlk tedarikçiyi oluşturun</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

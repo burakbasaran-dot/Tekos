@@ -1,0 +1,113 @@
+{% extends 'stokapp/base.html' %}
+{% load static %}
+
+{% block title %}Şikayet/Uygunsuzluk Düzenle{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h1 style="margin: 0;">⚠️ Şikayet/Uygunsuzluk Düzenle</h1>
+        <a href="{% url 'stokapp:complaint_detay' complaint.pk %}" class="btn btn-secondary">← Geri</a>
+    </div>
+    
+    <form method="post">
+        {% csrf_token %}
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.type.label }} <span style="color: red;">*</span></label>
+                {{ form.type }}
+                {% if form.type.errors %}
+                    <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.type.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.customer.label }} <span style="color: red;">*</span></label>
+                {{ form.customer }}
+                {% if form.customer.errors %}
+                    <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.customer.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.related_order.label }}</label>
+                {{ form.related_order }}
+                {% if form.related_order.errors %}
+                    <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.related_order.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.product.label }} <span style="color: red;">*</span></label>
+                {{ form.product }}
+                {% if form.product.errors %}
+                    <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.product.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.product_revision.label }}</label>
+                {{ form.product_revision }}
+                {% if form.product_revision.errors %}
+                    <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.product_revision.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.lot_serial.label }}</label>
+                {{ form.lot_serial }}
+                {% if form.lot_serial.errors %}
+                    <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.lot_serial.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.category.label }} <span style="color: red;">*</span></label>
+                {{ form.category }}
+                {% if form.category.errors %}
+                    <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.category.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.severity.label }} <span style="color: red;">*</span></label>
+                {{ form.severity }}
+                {% if form.severity.errors %}
+                    <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.severity.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.affected_qty.label }}</label>
+                {{ form.affected_qty }}
+                {% if form.affected_qty.errors %}
+                    <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.affected_qty.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.status.label }} <span style="color: red;">*</span></label>
+                {{ form.status }}
+                {% if form.status.errors %}
+                    <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.status.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.description.label }} <span style="color: red;">*</span></label>
+            {{ form.description }}
+            {% if form.description.errors %}
+                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.description.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div style="margin-top: 20px; display: flex; gap: 10px;">
+            <button type="submit" class="btn btn-primary">Kaydet</button>
+            <a href="{% url 'stokapp:complaint_detay' complaint.pk %}" class="btn btn-secondary">İptal</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

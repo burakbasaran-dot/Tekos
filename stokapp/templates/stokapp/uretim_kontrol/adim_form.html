@@ -1,0 +1,93 @@
+{% extends "stokapp/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+{% include "stokapp/uretim_kontrol/_uk_form_shell.html" %}
+<div class="card uk-page">
+  <p class="uk-breadcrumb">
+    <a href="{% url 'stokapp:uretim_kontrol_sablon' plan.pk %}">← {{ plan.sub_part.stok_kodu }} şablonu</a>
+  </p>
+  <div class="uk-page-header">
+    <h2>{{ title }}</h2>
+    <p class="uk-subtitle">Plan: <strong>{{ plan.product.stok_kodu }}</strong> / {{ plan.sub_part.stok_kodu }} — Rev. {{ plan.revision_no }}</p>
+  </div>
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+
+    {% if require_revision and revision_form %}
+    <div class="uk-rev-banner">
+      <strong>Revizyon açıklaması zorunlu</strong>
+      <div class="uk-field uk-field-full">{{ revision_form.change_note.label_tag }}{{ revision_form.change_note }}</div>
+    </div>
+    {% endif %}
+
+    <section class="uk-section">
+      <div class="uk-section-head">Genel bilgiler</div>
+      <div class="uk-section-body uk-grid-2">
+        <div class="uk-field">{{ form.step_no.label_tag }}{{ form.step_no }}{% if form.step_no.errors %}<ul class="uk-errors">{% for e in form.step_no.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}</div>
+        <div class="uk-field">{{ form.title.label_tag }}{{ form.title }}</div>
+        <div class="uk-field uk-field-full">{{ form.description.label_tag }}{{ form.description }}</div>
+      </div>
+    </section>
+
+    <section class="uk-section">
+      <div class="uk-section-head">Görsel</div>
+      <div class="uk-section-body">
+        <div class="uk-field uk-field-full">
+          {{ form.photo.label_tag }}
+          {{ form.photo }}
+          {% if step and step.photo %}
+          <div class="uk-photo-preview"><img src="{{ step.photo.url }}" alt="Mevcut fotoğraf"></div>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+
+    <section class="uk-section">
+      <div class="uk-section-head">Ölçü parametreleri</div>
+      <div class="uk-section-body uk-grid-2">
+        <div class="uk-field">{{ form.nominal_value.label_tag }}{{ form.nominal_value }}</div>
+        <div class="uk-field">{{ form.nominal_unit.label_tag }}{{ form.nominal_unit }}</div>
+        <div class="uk-field">{{ form.plus_tolerance.label_tag }}{{ form.plus_tolerance }}</div>
+        <div class="uk-field">{{ form.plus_tolerance_unit.label_tag }}{{ form.plus_tolerance_unit }}</div>
+        <div class="uk-field">{{ form.minus_tolerance.label_tag }}{{ form.minus_tolerance }}</div>
+        <div class="uk-field">{{ form.minus_tolerance_unit.label_tag }}{{ form.minus_tolerance_unit }}</div>
+      </div>
+    </section>
+
+    <section class="uk-section">
+      <div class="uk-section-head">Ölçüm yöntemi</div>
+      <div class="uk-section-body uk-grid-2">
+        <div class="uk-field">{{ form.measurement_method.label_tag }}{{ form.measurement_method }}</div>
+        <div class="uk-field">{{ form.measurement_method_other.label_tag }}{{ form.measurement_method_other }}</div>
+      </div>
+    </section>
+
+    <section class="uk-section">
+      <div class="uk-section-head">Kontrol bayrakları</div>
+      <div class="uk-section-body uk-grid-2">
+        <label class="uk-check-row">
+          {{ form.is_required }}
+          <span><span class="uk-check-label">Zorunlu kontrol</span><br><span class="uk-check-hint">Bu adım atlanamaz</span></span>
+        </label>
+        <label class="uk-check-row">
+          {{ form.is_critical }}
+          <span><span class="uk-check-label">Kritik ölçü</span><br><span class="uk-check-hint">Sapma üretimi durdurabilir</span></span>
+        </label>
+      </div>
+    </section>
+
+    <section class="uk-section">
+      <div class="uk-section-head">Not</div>
+      <div class="uk-section-body">
+        <div class="uk-field uk-field-full">{{ form.note.label_tag }}{{ form.note }}</div>
+      </div>
+    </section>
+
+    <div class="uk-form-actions">
+      <button type="submit" class="btn btn-primary">Kaydet</button>
+      <a href="{% url 'stokapp:uretim_kontrol_sablon' plan.pk %}" class="btn btn-secondary">İptal</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

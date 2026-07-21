@@ -1,0 +1,662 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Genel Ayarlar{% endblock %}
+{% block content %}
+<style>
+    .settings-container {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+    .settings-content {
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .form-group {
+        margin-bottom: 24px;
+    }
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+        color: #374151;
+        font-size: 14px;
+    }
+    .form-group label .info-icon {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #e5e7eb;
+        color: #6b7280;
+        text-align: center;
+        line-height: 16px;
+        font-size: 12px;
+        margin-left: 6px;
+        cursor: help;
+    }
+    .form-control, .form-select {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 14px;
+        background: white;
+    }
+    .form-control:focus, .form-select:focus {
+        outline: none;
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+    .form-row {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+    }
+    .form-row-3 {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    .save-btn {
+        background: #2563eb;
+        color: white;
+        padding: 12px 24px;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 500;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 20px;
+    }
+    .save-btn:hover {
+        background: #1d4ed8;
+    }
+    .test-btn {
+        margin-top: 8px;
+        background: #0ea5e9;
+        color: white;
+        padding: 8px 12px;
+        border: none;
+        border-radius: 8px;
+        font-size: 13px;
+        cursor: pointer;
+    }
+    .test-btn:hover {
+        background: #0284c7;
+    }
+    .section-title {
+        font-size: 18px;
+        font-weight: 600;
+        color: #111827;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    .subsection-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: #374151;
+        margin: 24px 0 16px;
+    }
+    .secret-wrap {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+    .secret-wrap input {
+        flex: 1;
+    }
+    .toggle-secret-btn {
+        background: #f3f4f6;
+        color: #374151;
+        border: 1px solid #d1d5db;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 13px;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+    .toggle-secret-btn:hover {
+        background: #e5e7eb;
+    }
+    .form-check-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 8px;
+    }
+    .form-check-row label {
+        margin-bottom: 0;
+        font-weight: 400;
+    }
+    .mail-hint {
+        font-size: 12px;
+        color: #6b7280;
+        margin-top: 6px;
+    }
+    textarea.form-control {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 13px;
+    }
+</style>
+
+<div class="settings-container">
+    <h1 style="margin-bottom: 30px;">⚙️ Ayarlar</h1>
+    
+    <div class="tekos-tab-buttons">
+        <button type="button" class="tekos-tab-btn tab-blue settings-tab active" onclick="showTab('genel')">
+            <span class="tab-icon" aria-hidden="true">⚙️</span>
+            <span>Genel Ayarlar</span>
+        </button>
+        <a href="{% url 'stokapp:stok_tamamlanma_ayarlari' %}" class="tekos-tab-btn tab-delivery settings-tab">
+            <span class="tab-icon" aria-hidden="true">📦</span>
+            <span>Stok Tamamlanma</span>
+        </a>
+    </div>
+    
+    <div class="settings-content" id="genel-tab">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <div class="section-title">Firma Bilgileri</div>
+            <div class="form-group">
+                <label for="{{ form.firma_ismi.id_for_label }}">Firma İsmi</label>
+                {{ form.firma_ismi }}
+                {% if form.firma_ismi.errors %}
+                    <div class="form-error">{{ form.firma_ismi.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.firma_logo.id_for_label }}">Firma Logosu</label>
+                {% if ayarlar.firma_logo %}
+                <div style="margin-bottom:12px; padding:12px; background:#f9fafb; border:1px solid #e5e7eb; border-radius:8px; display:inline-block;">
+                    <img src="{{ ayarlar.firma_logo.url }}" alt="Mevcut logo" style="max-height:64px; max-width:200px; object-fit:contain;">
+                </div>
+                {% endif %}
+                {{ form.firma_logo }}
+                <p style="font-size:12px; color:#6b7280; margin-top:6px;">Sidebar marka alanında görünür. Önerilen: yatay logo, şeffaf arka plan.</p>
+                {% if form.firma_logo.errors %}
+                    <div class="form-error">{{ form.firma_logo.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.telefon.id_for_label }}">Telefon Numarası</label>
+                    {{ form.telefon }}
+                    {% if form.telefon.errors %}
+                        <div class="form-error">{{ form.telefon.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.email.id_for_label }}">E-Posta</label>
+                    {{ form.email }}
+                    {% if form.email.errors %}
+                        <div class="form-error">{{ form.email.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="section-title" style="margin-top: 32px;">Sipariş Formu Firma Bilgileri</div>
+            <p class="mail-hint" style="margin-bottom: 16px;">
+                Bu bilgiler satınalma sipariş formu, PDF çıktısı ve tedarikçiye gönderilen sipariş e-postasının PDF ekinde kullanılır.
+            </p>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.teslimat_adresi.id_for_label }}">Teslimat Adresi</label>
+                    {{ form.teslimat_adresi }}
+                    {% if form.teslimat_adresi.errors %}
+                        <div class="form-error">{{ form.teslimat_adresi.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.fatura_adresi.id_for_label }}">Fatura Adresi</label>
+                    {{ form.fatura_adresi }}
+                    {% if form.fatura_adresi.errors %}
+                        <div class="form-error">{{ form.fatura_adresi.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.vergi_dairesi.id_for_label }}">Vergi Dairesi</label>
+                    {{ form.vergi_dairesi }}
+                    {% if form.vergi_dairesi.errors %}
+                        <div class="form-error">{{ form.vergi_dairesi.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.vergi_no.id_for_label }}">Vergi Numarası</label>
+                    {{ form.vergi_no }}
+                    {% if form.vergi_no.errors %}
+                        <div class="form-error">{{ form.vergi_no.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="section-title" style="margin-top: 40px;">E-Posta CC Ayarları</div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.musteri_mail_cc_adresi.id_for_label }}">
+                        Müşteri Gönderimleri CC
+                        <span class="info-icon" title="Teklif gönderimi ve sipariş onay teyit e-postalarında otomatik CC adresi">i</span>
+                    </label>
+                    {{ form.musteri_mail_cc_adresi }}
+                    <button type="button" class="test-btn" onclick="testCcMail('musteri')">Test mail gönder</button>
+                    {% if form.musteri_mail_cc_adresi.errors %}
+                        <div class="form-error">{{ form.musteri_mail_cc_adresi.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    <label for="{{ form.satinalma_mail_cc_adresi.id_for_label }}">
+                        Satınalma Gönderimleri CC
+                        <span class="info-icon" title="Tedarikçilere giden teklif/sipariş/RFQ e-postalarında otomatik CC adresi">i</span>
+                    </label>
+                    {{ form.satinalma_mail_cc_adresi }}
+                    <button type="button" class="test-btn" onclick="testCcMail('satinalma')">Test mail gönder</button>
+                    {% if form.satinalma_mail_cc_adresi.errors %}
+                        <div class="form-error">{{ form.satinalma_mail_cc_adresi.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="section-title" style="margin-top: 40px;">E-Posta Sunucu Ayarları</div>
+            <p class="mail-hint" style="margin-bottom: 20px;">
+                Giden (SMTP), gelen (IMAP/POP) ve TEKORA mail takibi için tüm parametreler buradan yönetilir.
+                Şifre alanları maskelenir; değiştirmek istemiyorsanız olduğu gibi bırakın.
+            </p>
+
+            <div class="form-group">
+                <div class="form-check-row">
+                    {{ form.tekora_aktif }}
+                    <label for="{{ form.tekora_aktif.id_for_label }}">TEKORA IMAP mail takibi aktif</label>
+                </div>
+                {% if form.tekora_aktif.errors %}
+                    <div class="form-error">{{ form.tekora_aktif.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div class="subsection-title">SMTP — Giden Posta</div>
+            <div class="form-group">
+                <label for="{{ form.email_backend.id_for_label }}">Giden posta backend</label>
+                {{ form.email_backend }}
+                {% if form.email_backend.errors %}
+                    <div class="form-error">{{ form.email_backend.errors }}</div>
+                {% endif %}
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.smtp_host.id_for_label }}">SMTP sunucu</label>
+                    {{ form.smtp_host }}
+                    {% if form.smtp_host.errors %}<div class="form-error">{{ form.smtp_host.errors }}</div>{% endif %}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.smtp_port.id_for_label }}">SMTP port</label>
+                    {{ form.smtp_port }}
+                    {% if form.smtp_port.errors %}<div class="form-error">{{ form.smtp_port.errors }}</div>{% endif %}
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <div class="form-check-row">
+                        {{ form.smtp_use_tls }}
+                        <label for="{{ form.smtp_use_tls.id_for_label }}">STARTTLS kullan</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="form-check-row">
+                        {{ form.smtp_use_ssl }}
+                        <label for="{{ form.smtp_use_ssl.id_for_label }}">SSL kullan (465 vb.)</label>
+                    </div>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.smtp_username.id_for_label }}">SMTP kullanıcı</label>
+                    {{ form.smtp_username }}
+                    {% if form.smtp_username.errors %}<div class="form-error">{{ form.smtp_username.errors }}</div>{% endif %}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.smtp_password.id_for_label }}">SMTP şifre</label>
+                    <div class="secret-wrap">
+                        {{ form.smtp_password }}
+                        <button type="button" class="toggle-secret-btn" onclick="toggleSecret(this)">Göster</button>
+                    </div>
+                    {% if form.smtp_password.errors %}<div class="form-error">{{ form.smtp_password.errors }}</div>{% endif %}
+                </div>
+            </div>
+            <div class="form-row form-row-3">
+                <div class="form-group">
+                    <label for="{{ form.default_from_email.id_for_label }}">Gönderen (From)</label>
+                    {{ form.default_from_email }}
+                    {% if form.default_from_email.errors %}<div class="form-error">{{ form.default_from_email.errors }}</div>{% endif %}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.server_email.id_for_label }}">Sunucu e-postası</label>
+                    {{ form.server_email }}
+                    {% if form.server_email.errors %}<div class="form-error">{{ form.server_email.errors }}</div>{% endif %}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.smtp_timeout.id_for_label }}">Zaman aşımı (sn)</label>
+                    {{ form.smtp_timeout }}
+                    {% if form.smtp_timeout.errors %}<div class="form-error">{{ form.smtp_timeout.errors }}</div>{% endif %}
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="{{ form.email_subject_prefix.id_for_label }}">Konu öneki</label>
+                {{ form.email_subject_prefix }}
+                {% if form.email_subject_prefix.errors %}<div class="form-error">{{ form.email_subject_prefix.errors }}</div>{% endif %}
+            </div>
+            <button type="button" class="test-btn" onclick="testSmtpMail()">SMTP test mail gönder</button>
+
+            <div class="subsection-title">IMAP — Gelen Posta (TEKORA)</div>
+            <div class="form-row form-row-3">
+                <div class="form-group">
+                    <label for="{{ form.imap_server.id_for_label }}">IMAP sunucu</label>
+                    {{ form.imap_server }}
+                    {% if form.imap_server.errors %}<div class="form-error">{{ form.imap_server.errors }}</div>{% endif %}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.imap_port.id_for_label }}">IMAP port</label>
+                    {{ form.imap_port }}
+                    {% if form.imap_port.errors %}<div class="form-error">{{ form.imap_port.errors }}</div>{% endif %}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.imap_mailbox.id_for_label }}">Klasör</label>
+                    {{ form.imap_mailbox }}
+                    {% if form.imap_mailbox.errors %}<div class="form-error">{{ form.imap_mailbox.errors }}</div>{% endif %}
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <div class="form-check-row">
+                        {{ form.imap_use_ssl }}
+                        <label for="{{ form.imap_use_ssl.id_for_label }}">IMAP SSL</label>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.imap_body_max_chars.id_for_label }}">Gövde max karakter</label>
+                    {{ form.imap_body_max_chars }}
+                    {% if form.imap_body_max_chars.errors %}<div class="form-error">{{ form.imap_body_max_chars.errors }}</div>{% endif %}
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="{{ form.imap_hesaplari_json.id_for_label }}">IMAP hesapları (JSON)</label>
+                {{ form.imap_hesaplari_json }}
+                <p class="mail-hint">Her hesap için e-posta ve şifre. Maskeli şifreleri değiştirmek için yeni değer yazın.</p>
+                {% if form.imap_hesaplari_json.errors %}<div class="form-error">{{ form.imap_hesaplari_json.errors }}</div>{% endif %}
+            </div>
+            <button type="button" class="test-btn" onclick="testImapConnection()">IMAP bağlantı testi</button>
+
+            <div class="subsection-title">POP — Gelen Posta (Alternatif)</div>
+            <div class="form-row form-row-3">
+                <div class="form-group">
+                    <label for="{{ form.pop_server.id_for_label }}">POP sunucu</label>
+                    {{ form.pop_server }}
+                    {% if form.pop_server.errors %}<div class="form-error">{{ form.pop_server.errors }}</div>{% endif %}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.pop_port.id_for_label }}">POP port</label>
+                    {{ form.pop_port }}
+                    {% if form.pop_port.errors %}<div class="form-error">{{ form.pop_port.errors }}</div>{% endif %}
+                </div>
+                <div class="form-group">
+                    <div class="form-check-row" style="margin-top: 28px;">
+                        {{ form.pop_use_ssl }}
+                        <label for="{{ form.pop_use_ssl.id_for_label }}">POP SSL</label>
+                    </div>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="{{ form.pop_username.id_for_label }}">POP kullanıcı</label>
+                    {{ form.pop_username }}
+                    {% if form.pop_username.errors %}<div class="form-error">{{ form.pop_username.errors }}</div>{% endif %}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.pop_password.id_for_label }}">POP şifre</label>
+                    <div class="secret-wrap">
+                        {{ form.pop_password }}
+                        <button type="button" class="toggle-secret-btn" onclick="toggleSecret(this)">Göster</button>
+                    </div>
+                    {% if form.pop_password.errors %}<div class="form-error">{{ form.pop_password.errors }}</div>{% endif %}
+                </div>
+            </div>
+            
+            <div class="section-title" style="margin-top: 40px;">Para Birimi ve Lokasyonlar</div>
+            <div class="form-group">
+                <label for="{{ form.para_birimi.id_for_label }}">
+                    Para Birimi
+                    <span class="info-icon" title="Varsayılan para birimi">i</span>
+                </label>
+                {{ form.para_birimi }}
+                {% if form.para_birimi.errors %}
+                    <div class="form-error">{{ form.para_birimi.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="form-row form-row-3">
+                <div class="form-group">
+                    <label for="{{ form.on_tanimli_satis_lokasyonu.id_for_label }}">
+                        Ön Tanımlı Satış Lokasyonu
+                        <span class="info-icon" title="Varsayılan satış lokasyonu">i</span>
+                    </label>
+                    {{ form.on_tanimli_satis_lokasyonu }}
+                    {% if form.on_tanimli_satis_lokasyonu.errors %}
+                        <div class="form-error">{{ form.on_tanimli_satis_lokasyonu.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.on_tanimli_satin_alma_lokasyonu.id_for_label }}">
+                        Ön Tanımlı Satın Alma Lokasyonu
+                        <span class="info-icon" title="Varsayılan satın alma lokasyonu">i</span>
+                    </label>
+                    {{ form.on_tanimli_satin_alma_lokasyonu }}
+                    {% if form.on_tanimli_satin_alma_lokasyonu.errors %}
+                        <div class="form-error">{{ form.on_tanimli_satin_alma_lokasyonu.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.on_tanimli_uretim_lokasyonu.id_for_label }}">
+                        Ön Tanımlı Üretim Lokasyonu
+                        <span class="info-icon" title="Varsayılan üretim lokasyonu">i</span>
+                    </label>
+                    {{ form.on_tanimli_uretim_lokasyonu }}
+                    {% if form.on_tanimli_uretim_lokasyonu.errors %}
+                        <div class="form-error">{{ form.on_tanimli_uretim_lokasyonu.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="section-title" style="margin-top: 40px;">Varsayılan Teslimat Süreleri</div>
+            <div class="form-row form-row-3">
+                <div class="form-group">
+                    <label for="{{ form.varsayilan_satis_teslimat_suresi.id_for_label }}">
+                        Varsayılan Satış Siparişi Teslimat Süresi
+                        <span class="info-icon" title="Gün cinsinden">i</span>
+                    </label>
+                    {{ form.varsayilan_satis_teslimat_suresi }}
+                    {% if form.varsayilan_satis_teslimat_suresi.errors %}
+                        <div class="form-error">{{ form.varsayilan_satis_teslimat_suresi.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.varsayilan_satin_alma_teslimat_suresi.id_for_label }}">
+                        Varsayılan Satın Alma Teslimat Süresi
+                        <span class="info-icon" title="Gün cinsinden">i</span>
+                    </label>
+                    {{ form.varsayilan_satin_alma_teslimat_suresi }}
+                    {% if form.varsayilan_satin_alma_teslimat_suresi.errors %}
+                        <div class="form-error">{{ form.varsayilan_satin_alma_teslimat_suresi.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.varsayilan_uretim_suresi.id_for_label }}">
+                        Varsayılan Üretim Süresi
+                        <span class="info-icon" title="Gün cinsinden">i</span>
+                    </label>
+                    {{ form.varsayilan_uretim_suresi }}
+                    {% if form.varsayilan_uretim_suresi.errors %}
+                        <div class="form-error">{{ form.varsayilan_uretim_suresi.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="section-title" style="margin-top: 40px;">Önekler</div>
+            <div class="form-row form-row-3">
+                <div class="form-group">
+                    <label for="{{ form.satis_irsaliyesi_oneki.id_for_label }}">
+                        Satış İrsaliyesi Öneki
+                        <span class="info-icon" title="Satış irsaliyeleri için önek">i</span>
+                    </label>
+                    {{ form.satis_irsaliyesi_oneki }}
+                    {% if form.satis_irsaliyesi_oneki.errors %}
+                        <div class="form-error">{{ form.satis_irsaliyesi_oneki.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.satin_alma_irsaliyesi_oneki.id_for_label }}">
+                        Satın Alma İrsaliyesi Öneki
+                        <span class="info-icon" title="Satın alma irsaliyeleri için önek">i</span>
+                    </label>
+                    {{ form.satin_alma_irsaliyesi_oneki }}
+                    {% if form.satin_alma_irsaliyesi_oneki.errors %}
+                        <div class="form-error">{{ form.satin_alma_irsaliyesi_oneki.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.is_emri_oneki.id_for_label }}">
+                        İş Emri Öneki
+                        <span class="info-icon" title="İş emirleri için önek">i</span>
+                    </label>
+                    {{ form.is_emri_oneki }}
+                    {% if form.is_emri_oneki.errors %}
+                        <div class="form-error">{{ form.is_emri_oneki.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <button type="submit" class="save-btn">
+                <span>✓</span> Kaydet
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+function showTab(tabName) {
+    // Tab butonlarını güncelle
+    document.querySelectorAll('.settings-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    event.target.classList.add('active');
+    
+    // Tab içeriklerini göster/gizle
+    document.querySelectorAll('.settings-content').forEach(content => {
+        content.style.display = 'none';
+    });
+    document.getElementById(tabName + '-tab').style.display = 'block';
+}
+
+function getCsrfToken() {
+    const el = document.querySelector('input[name="csrfmiddlewaretoken"]');
+    return el ? el.value : '';
+}
+
+function toggleSecret(btn) {
+    const wrap = btn.closest('.secret-wrap');
+    const input = wrap ? wrap.querySelector('input') : null;
+    if (!input) return;
+    if (input.type === 'password') {
+        input.type = 'text';
+        btn.textContent = 'Gizle';
+    } else {
+        input.type = 'password';
+        btn.textContent = 'Göster';
+    }
+}
+
+async function testCcMail(kind) {
+    const inputId = kind === 'musteri'
+        ? '{{ form.musteri_mail_cc_adresi.id_for_label }}'
+        : '{{ form.satinalma_mail_cc_adresi.id_for_label }}';
+    const emailInput = document.getElementById(inputId);
+    const email = emailInput ? emailInput.value.trim() : '';
+
+    const formData = new FormData();
+    formData.append('kind', kind);
+    formData.append('email', email);
+    formData.append('csrfmiddlewaretoken', getCsrfToken());
+
+    try {
+        const res = await fetch('{% url "stokapp:genel_ayarlar_cc_test_mail" %}', {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            alert(data.message || 'Test maili gönderildi.');
+        } else {
+            alert(data.error || 'Test maili gönderilemedi.');
+        }
+    } catch (e) {
+        alert('Test maili gönderilemedi.');
+    }
+}
+
+async function testSmtpMail() {
+    const emailInput = document.getElementById('{{ form.default_from_email.id_for_label }}');
+    const email = emailInput ? emailInput.value.trim() : '';
+    const formData = new FormData();
+    formData.append('email', email);
+    formData.append('csrfmiddlewaretoken', getCsrfToken());
+    try {
+        const res = await fetch('{% url "stokapp:genel_ayarlar_smtp_test_mail" %}', {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            alert(data.message || 'SMTP test maili gönderildi.');
+        } else {
+            alert(data.error || 'SMTP test maili gönderilemedi.');
+        }
+    } catch (e) {
+        alert('SMTP test maili gönderilemedi.');
+    }
+}
+
+async function testImapConnection() {
+    const formData = new FormData();
+    formData.append('csrfmiddlewaretoken', getCsrfToken());
+    try {
+        const res = await fetch('{% url "stokapp:genel_ayarlar_imap_test" %}', {
+            method: 'POST',
+            body: formData,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            alert(data.message || 'IMAP bağlantısı başarılı.');
+        } else {
+            alert(data.error || 'IMAP bağlantı testi başarısız.');
+        }
+    } catch (e) {
+        alert('IMAP bağlantı testi yapılamadı.');
+    }
+}
+</script>
+{% endblock %}

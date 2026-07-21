@@ -1,0 +1,89 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Yeni Kullanıcı Ekle{% endblock %}
+{% block content %}
+<div class="card">
+    <h2>Yeni Kullanıcı Ekle</h2>
+    
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 15px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background: #fff3cd; color: #856404; border-left: 4px solid #ffc107;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+    
+    <form method="post" style="max-width: 600px;">
+        {% csrf_token %}
+        
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.username.label }}</label>
+            {{ form.username }}
+            {% if form.username.errors %}
+                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.username.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.first_name.label }}</label>
+            {{ form.first_name }}
+            {% if form.first_name.errors %}
+                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.first_name.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.last_name.label }}</label>
+            {{ form.last_name }}
+            {% if form.last_name.errors %}
+                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.last_name.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.email.label }}</label>
+            {{ form.email }}
+            {% if form.email.errors %}
+                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.email.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.telefon.label }}</label>
+            {{ form.telefon }}
+            {% if form.telefon.errors %}
+                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.telefon.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.password.label }}</label>
+            {{ form.password }}
+            {% if form.password.errors %}
+                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.password.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label style="display: flex; align-items: center; gap: 8px;">
+                {{ form.is_staff }}
+                <span>{{ form.is_staff.label }}</span>
+            </label>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+            <label style="display: flex; align-items: center; gap: 8px;">
+                {{ form.is_active }}
+                <span>{{ form.is_active.label }}</span>
+            </label>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <button type="submit" class="btn btn-primary" style="background-color: #22c55e; border-color: #22c55e; padding: 10px 20px;">Kaydet</button>
+            <a href="{% url 'stokapp:kullanici_listesi' %}" class="btn" style="background-color: #6b7280; color: white; padding: 10px 20px; text-decoration: none; margin-left: 10px;">İptal</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

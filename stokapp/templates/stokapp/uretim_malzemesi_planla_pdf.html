@@ -1,0 +1,67 @@
+{% load custom_filters %}
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Üretim Malzemesi Planı</title>
+</head>
+<body>
+    <h1>Üretim Malzemesi Planı</h1>
+    <p class="meta">
+        Oluşturulma: {{ olusturma_tarihi|date:"d.m.Y H:i" }}
+        {% if kalem_sayisi %} · {{ kalem_sayisi }} kalem{% endif %}
+    </p>
+    <p class="meta">
+        Kalan stok (mevcut − üretimde kullanılacak) minimum stok altına düşen malzemeler.
+        Önerilen miktar, stoğu maksimum stok seviyesine tamamlayacak şekilde hesaplanır.
+    </p>
+
+    {% if malzemeler %}
+    <table>
+        <thead>
+            <tr>
+                <th>Stok Kodu</th>
+                <th>Ürün Adı</th>
+                <th class="num">Üretimde Kullanılacak</th>
+                <th class="num">Mevcut Stok</th>
+                <th class="num">Kalan Stok</th>
+                <th class="num">Min Stok</th>
+                <th class="num">Max Stok</th>
+                <th class="num">Önerilen Satınalma</th>
+                <th>Birim</th>
+                <th>Üretim Emirleri</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for malzeme in malzemeler %}
+            <tr>
+                <td>{{ malzeme.stok_item.stok_kodu }}</td>
+                <td>
+                    {{ malzeme.stok_item.ad }}
+                    {% if malzeme.rfq_acik_nolar %}
+                    <span class="rfq">Teklif istendi</span>
+                    {% endif %}
+                </td>
+                <td class="num">{{ malzeme.kullanilacak_miktar|format_miktar }}</td>
+                <td class="num">{{ malzeme.mevcut_miktar|format_miktar }}</td>
+                <td class="num">{{ malzeme.kalan_stok|format_miktar }}</td>
+                <td class="num">{{ malzeme.min_stok|format_miktar }}</td>
+                <td class="num">
+                    {% if malzeme.max_stok is not None %}
+                        {{ malzeme.max_stok|format_miktar }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td class="num eksik">{{ malzeme.eksik_miktar|format_miktar }}</td>
+                <td>{{ malzeme.birim }}</td>
+                <td>{{ malzeme.emir_no_list|join:", " }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty">Kalan stok minimum stok altına düşen malzeme bulunmamaktadır.</p>
+    {% endif %}
+</body>
+</html>

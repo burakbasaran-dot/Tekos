@@ -1,0 +1,275 @@
+<style>
+  .tdk-select-with-add {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+  }
+  .tdk-select-with-add select {
+    flex: 1;
+    min-width: 0;
+  }
+  .tdk-inline-add-btn {
+    width: 44px;
+    min-width: 44px;
+    padding: 0;
+    border: none;
+    border-radius: 10px;
+    background: var(--primary);
+    color: #fff;
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.15s;
+  }
+  .tdk-inline-add-btn:hover { background: var(--primary-d); }
+  .tdk-inline-add-btn:active { transform: scale(0.98); }
+  .tdk-checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid #bfdbfe;
+    background: #eff6ff;
+    cursor: pointer;
+  }
+  .tdk-checkbox-row input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+  }
+  .tdk-checkbox-row span {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e40af;
+  }
+  .tdk-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    z-index: 1200;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .tdk-modal.show { display: flex; }
+  .tdk-modal-box {
+    width: 100%;
+    max-width: 420px;
+    background: #fff;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 24px 48px rgba(15, 23, 42, 0.18);
+  }
+  .tdk-modal-box h3 {
+    margin: 0 0 6px;
+    font-size: 18px;
+    color: var(--ink);
+  }
+  .tdk-modal-box p {
+    margin: 0 0 16px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .tdk-modal-input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 14px;
+    box-sizing: border-box;
+  }
+  .tdk-modal-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.12);
+  }
+  .tdk-modal-error {
+    display: none;
+    margin-top: 8px;
+    font-size: 12px;
+    color: #dc3545;
+  }
+  .tdk-modal-error.show { display: block; }
+  .tdk-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 18px;
+  }
+</style>
+
+<section class="tdk-section">
+  <h2 class="tdk-section-title">
+    <span class="tdk-section-icon">📋</span>
+    Temel Bilgiler
+  </h2>
+  <div class="tdk-grid">
+    <div class="tdk-field tdk-has-help" data-help="Belge türü için benzersiz sistem kodu. Örn: ISO9001, CE, SGK.">
+      <label class="tdk-label required" for="{{ form.code.id_for_label }}">{{ form.code.label }}</label>
+      {{ form.code }}
+      {% if form.code.errors %}<div class="tdk-error">{{ form.code.errors }}</div>{% endif %}
+    </div>
+    <div class="tdk-field tdk-has-help" data-help="Belge türünün görünen adı. Listelerde ve seçim kutularında kullanılır.">
+      <label class="tdk-label required" for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+      {{ form.name }}
+      {% if form.name.errors %}<div class="tdk-error">{{ form.name.errors }}</div>{% endif %}
+    </div>
+    <div class="tdk-field tdk-has-help" data-help="Belge türünün sınıflandırma grubu. Ruhsat, İzin, Sertifika vb.">
+      <label class="tdk-label required" for="{{ form.category.id_for_label }}">{{ form.category.label }}</label>
+      <div class="tdk-select-with-add">
+        {{ form.category }}
+        <button type="button" class="tdk-inline-add-btn" id="btnKategoriEkle" title="Yeni kategori ekle">+</button>
+      </div>
+      {% if form.category.errors %}<div class="tdk-error">{{ form.category.errors }}</div>{% endif %}
+    </div>
+    <div class="tdk-field tdk-has-help" data-help="Bu türdeki belgeler için varsayılan risk seviyesi.">
+      <label class="tdk-label required" for="{{ form.default_risk_level.id_for_label }}">{{ form.default_risk_level.label }}</label>
+      {{ form.default_risk_level }}
+      {% if form.default_risk_level.errors %}<div class="tdk-error">{{ form.default_risk_level.errors }}</div>{% endif %}
+    </div>
+  </div>
+</section>
+
+<section class="tdk-section">
+  <h2 class="tdk-section-title">
+    <span class="tdk-section-icon amber">⏰</span>
+    Hatırlatma ve Durum
+  </h2>
+  <div class="tdk-grid">
+    <div class="tdk-field tdk-has-help full" data-help="Geçerlilik bitişinden kaç gün önce hatırlatma gönderileceğini belirler. JSON liste: [90,60,30,7]">
+      <label class="tdk-label" for="{{ form.default_reminder_days.id_for_label }}">{{ form.default_reminder_days.label }}</label>
+      {{ form.default_reminder_days }}
+      <div class="tdk-help">JSON format: [90,60,30,7]</div>
+      {% if form.default_reminder_days.errors %}<div class="tdk-error">{{ form.default_reminder_days.errors }}</div>{% endif %}
+    </div>
+    <div class="tdk-field tdk-has-help full" data-help="Pasif türler yeni belge kayıtlarında seçilemez.">
+      <label class="tdk-checkbox-row" for="{{ form.is_active.id_for_label }}">
+        {{ form.is_active }}
+        <span>{{ form.is_active.label }}</span>
+      </label>
+      {% if form.is_active.errors %}<div class="tdk-error">{{ form.is_active.errors }}</div>{% endif %}
+    </div>
+  </div>
+</section>
+
+<div class="tdk-modal" id="kategoriModal" role="dialog" aria-modal="true" aria-labelledby="kategoriModalTitle">
+  <div class="tdk-modal-box">
+    <h3 id="kategoriModalTitle">Yeni Kategori Ekle</h3>
+    <p>Belge türleri için yeni bir kategori tanımlayın. Kaydettikten sonra listede otomatik seçilir.</p>
+    <div class="tdk-has-help" data-help="Kategori adı. Örn: Ruhsat, İzin, Sertifika, Denetim.">
+      <input type="text" id="kategoriModalInput" class="tdk-modal-input" placeholder="Örn: Denetim, Ruhsat, İzin..." autocomplete="off">
+    </div>
+    <div class="tdk-modal-error" id="kategoriModalError">Bu kategori zaten mevcut.</div>
+    <div class="tdk-modal-actions">
+      <button type="button" class="btn btn-secondary" id="kategoriModalCancel">İptal</button>
+      <button type="button" class="btn btn-primary" id="kategoriModalSave">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var categorySelect = document.getElementById('{{ form.category.id_for_label }}');
+  var modal = document.getElementById('kategoriModal');
+  var modalInput = document.getElementById('kategoriModalInput');
+  var modalError = document.getElementById('kategoriModalError');
+  var modalSave = document.getElementById('kategoriModalSave');
+  var apiUrl = "{% url 'stokapp:api_document_type_category_ekle' %}";
+
+  if (!categorySelect || !modal) return;
+
+  function csrfToken() {
+    var el = document.querySelector('[name=csrfmiddlewaretoken]');
+    return el ? el.value : '';
+  }
+
+  function categoryExists(name) {
+    var lower = name.trim().toLowerCase();
+    return Array.from(categorySelect.options).some(function (opt) {
+      return opt.value && opt.value.toLowerCase() === lower;
+    });
+  }
+
+  function addCategoryOption(value, label, selected) {
+    var option = Array.from(categorySelect.options).find(function (opt) {
+      return opt.value === value;
+    });
+    if (!option) {
+      option = document.createElement('option');
+      option.value = value;
+      option.textContent = label;
+      categorySelect.appendChild(option);
+    } else {
+      option.textContent = label;
+    }
+    if (selected) {
+      categorySelect.value = value;
+    }
+  }
+
+  function openModal() {
+    modalInput.value = '';
+    modalError.classList.remove('show');
+    modal.classList.add('show');
+    modalInput.focus();
+  }
+
+  function closeModal() {
+    modal.classList.remove('show');
+    modalInput.value = '';
+    modalError.classList.remove('show');
+  }
+
+  async function saveKategori() {
+    var ad = modalInput.value.trim();
+    if (!ad) {
+      modalInput.focus();
+      return;
+    }
+    if (categoryExists(ad)) {
+      modalError.classList.add('show');
+      modalInput.focus();
+      modalInput.select();
+      return;
+    }
+
+    modalSave.disabled = true;
+    modalSave.textContent = 'Kaydediliyor...';
+    try {
+      var resp = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken()
+        },
+        body: JSON.stringify({ ad: ad })
+      });
+      var data = await resp.json();
+      if (!resp.ok || !data.ok) {
+        throw new Error((data && data.error) || 'Kategori kaydedilemedi');
+      }
+      addCategoryOption(data.category, data.ad || data.category, true);
+      closeModal();
+    } catch (err) {
+      alert(err.message || 'Kategori eklenirken hata oluştu.');
+    } finally {
+      modalSave.disabled = false;
+      modalSave.textContent = 'Kaydet';
+    }
+  }
+
+  document.getElementById('btnKategoriEkle').addEventListener('click', openModal);
+  document.getElementById('kategoriModalCancel').addEventListener('click', closeModal);
+  modalSave.addEventListener('click', saveKategori);
+  modal.addEventListener('click', function (e) {
+    if (e.target === modal) closeModal();
+  });
+  modalInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); saveKategori(); }
+    if (e.key === 'Escape') closeModal();
+  });
+})();
+</script>

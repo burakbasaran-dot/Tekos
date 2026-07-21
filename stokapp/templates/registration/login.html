@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Giriş — TEKOS Üretim Yönetim Sistemi</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --ink: #111827;
+      --muted: #6b7280;
+      --card: #ffffff;
+      --border: #e5e7eb;
+      --nav: #1f2937;
+      --primary: #2ecc71;
+      --primary-d: #27ae60;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--ink);
+    }
+    .login-shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: minmax(320px, 1.15fr) minmax(360px, 480px);
+    }
+    .login-hero {
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(160deg, #0f172a 0%, #1f2937 52%, #111827 100%);
+      color: #f9fafb;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 48px;
+    }
+    .login-hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(46, 204, 113, 0.16), transparent 34%),
+        radial-gradient(circle at 80% 10%, rgba(56, 189, 248, 0.12), transparent 28%);
+      pointer-events: none;
+    }
+    .login-hero-art {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+    .login-hero-art svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+    }
+    .login-hero-content {
+      position: relative;
+      z-index: 1;
+      max-width: 620px;
+      padding: 28px;
+      border-radius: 24px;
+      background: linear-gradient(180deg, rgba(15, 23, 42, 0.72), rgba(15, 23, 42, 0.88));
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(8px);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
+    }
+    .login-hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: rgba(46, 204, 113, 0.14);
+      border: 1px solid rgba(46, 204, 113, 0.35);
+      color: #bbf7d0;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 18px;
+    }
+    .login-hero h1 {
+      margin: 0;
+      font-size: clamp(34px, 4vw, 52px);
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+    }
+    .login-hero h1 span {
+      display: block;
+      margin-top: 8px;
+      font-size: clamp(18px, 2vw, 24px);
+      font-weight: 600;
+      color: #86efac;
+      letter-spacing: 0.02em;
+    }
+    .login-hero-lead {
+      margin: 18px 0 0;
+      font-size: 17px;
+      line-height: 1.65;
+      color: #cbd5e1;
+    }
+    .login-hero-points {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 24px;
+      padding: 0;
+      list-style: none;
+    }
+    .login-hero-points li {
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: 13px;
+      color: #e5e7eb;
+      line-height: 1.45;
+    }
+    .login-hero-points strong {
+      display: block;
+      color: #fff;
+      margin-bottom: 4px;
+      font-size: 14px;
+    }
+    .login-panel {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 24px;
+      background: linear-gradient(145deg, #eef2ff 0%, var(--bg) 45%, #ecfdf5 100%);
+    }
+    .login-card {
+      width: 100%;
+      max-width: 420px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: 0 20px 50px rgba(17, 24, 39, 0.08);
+      padding: 32px 28px;
+    }
+    .login-brand {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .login-brand h2 {
+      margin: 0;
+      font-size: 28px;
+      letter-spacing: 0.14em;
+      color: var(--nav);
+    }
+    .login-brand p {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .field { margin-bottom: 16px; }
+    .field label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+    }
+    .field input {
+      width: 100%;
+      padding: 11px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 15px;
+      font-family: inherit;
+    }
+    .field input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.18);
+    }
+    .login-error {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #991b1b;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 13px;
+      margin-bottom: 16px;
+    }
+    .login-btn {
+      width: 100%;
+      margin-top: 8px;
+      padding: 12px 16px;
+      border: none;
+      border-radius: 10px;
+      background: linear-gradient(180deg, var(--primary) 0%, var(--primary-d) 100%);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .login-btn:hover { filter: brightness(0.97); }
+    @media (max-width: 960px) {
+      .login-shell { grid-template-columns: 1fr; }
+      .login-hero { min-height: 360px; padding: 28px 20px; }
+      .login-hero-content { padding: 22px; }
+      .login-hero-points { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="login-shell">
+    <section class="login-hero" aria-label="TEKOS tanıtım">
+      <div class="login-hero-art">{% include "registration/includes/login_hero_art.html" %}</div>
+      <div class="login-hero-content">
+        <div class="login-hero-badge">Entegre Üretim Yönetim Sistemi</div>
+        <h1>
+          TEKOS
+          <span>Üretiminizi uçtan uca yönetin</span>
+        </h1>
+        <p class="login-hero-lead">
+          Stoktan reçeteye, iş emrinden kaliteye, satınalmadan sevkiyata kadar tüm üretim süreçlerinizi
+          tek platformda planlayın, izleyin ve optimize edin.
+        </p>
+        <ul class="login-hero-points">
+          <li><strong>Reçete &amp; iş emri</strong>Üretim planı, malzeme ihtiyacı ve operasyon akışı</li>
+          <li><strong>Stok &amp; malzeme</strong>Kritik stok, transfer ve tedarik zinciri</li>
+          <li><strong>Kalite &amp; kontrol</strong>Üretim standartları ve süreç denetimi</li>
+          <li><strong>Akıllı karar desteği</strong>Raporlar, dashboard ve operasyonel görünürlük</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="login-panel">
+      <div class="login-card">
+        <div class="login-brand">
+          <h2>TEKOS</h2>
+          <p>Üretim yönetim paneline giriş yapın</p>
+        </div>
+
+        {% if form.errors %}
+        <div class="login-error">Kullanıcı adı veya şifre hatalı. Lütfen tekrar deneyin.</div>
+        {% endif %}
+
+        <form method="post" action="{% url 'login' %}">
+          {% csrf_token %}
+          <input type="hidden" name="next" value="{{ next }}">
+          <div class="field">
+            <label for="id_username">Kullanıcı adı</label>
+            <input type="text" name="username" id="id_username" autofocus autocapitalize="none" autocomplete="username" required>
+          </div>
+          <div class="field">
+            <label for="id_password">Şifre</label>
+            <input type="password" name="password" id="id_password" autocomplete="current-password" required>
+          </div>
+          <button type="submit" class="login-btn">Giriş Yap</button>
+        </form>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

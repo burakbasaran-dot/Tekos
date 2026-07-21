@@ -1,0 +1,94 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Kontrol Sonuç Raporu{% endblock %}
+{% block content %}
+<style>
+.uk-sum { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:24px; }
+.uk-sum-card { background:#fff; border-radius:10px; padding:16px; box-shadow:0 1px 3px rgba(0,0,0,.08); text-align:center; }
+.uk-sum-card strong { display:block; font-size:28px; }
+.uk-sum-card span { font-size:12px; color:#64748b; }
+.uk-final { font-size:20px; font-weight:700; padding:12px 20px; border-radius:10px; display:inline-block; margin-bottom:20px; }
+.uk-final.KABUL { background:#dcfce7; color:#166534; }
+.uk-final.RED { background:#fef2f2; color:#b91c1c; }
+.uk-final.SARTLI { background:#fef9c3; color:#854d0e; }
+.uk-tbl { width:100%; border-collapse:collapse; background:#fff; border-radius:12px; overflow:hidden; }
+.uk-tbl th { background:#1e293b; color:#fff; padding:10px; font-size:12px; text-align:left; }
+.uk-tbl td { padding:10px; border-bottom:1px solid #f1f5f9; vertical-align:top; font-size:13px; }
+.uk-mini-bar { height:24px; background:#e2e8f0; border-radius:4px; position:relative; min-width:120px; }
+.uk-mini-zone { position:absolute; top:3px; bottom:3px; background:#bbf7d0; border-radius:2px; }
+.uk-mini-pin { position:absolute; top:2px; width:8px; height:20px; border-radius:2px; transform:translateX(-50%); }
+</style>
+<div style="max-width:1200px;margin:0 auto;">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+    <div>
+      <h1 style="margin:0;">Kontrol Sonuç Raporu</h1>
+      <p style="color:#64748b;margin:8px 0 0;">
+        {{ session.product.stok_kodu }} — Rev. {{ session.control_plan_revision_no }}
+        {% if session.order %} | Sipariş: {{ session.order.siparis_numarasi }}{% endif %}
+        {% if session.work_order %} | İE: {{ session.work_order.emir_no }}{% endif %}
+      </p>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <a href="{% url 'stokapp:uretim_kontrol_pdf' session.pk %}" class="btn btn-primary" target="_blank">📄 PDF Al</a>
+      <a href="{% url 'stokapp:uretim_kontrol_ana' %}?tab=gecmis" class="btn btn-secondary">Tamamlanan kontroller</a>
+    </div>
+  </div>
+
+  {% if session.final_result %}
+  <div class="uk-final {{ session.final_result }}">Genel sonuç: {{ session.get_final_result_display }}</div>
+  {% endif %}
+
+  <div class="uk-sum">
+    <div class="uk-sum-card"><strong>{{ total }}</strong><span>Toplam adım</span></div>
+    <div class="uk-sum-card"><strong style="color:#16a34a;">{{ ok_count }}</strong><span>Uygun</span></div>
+    <div class="uk-sum-card"><strong style="color:#dc2626;">{{ nok_count }}</strong><span>Uygun değil</span></div>
+    <div class="uk-sum-card"><strong style="color:#b91c1c;">{{ critical_nok }}</strong><span>Kritik uygunsuzluk</span></div>
+  </div>
+
+  <table class="uk-tbl">
+    <thead>
+      <tr>
+        <th>No</th><th>Foto</th><th>Nokta</th><th>Nom.</th><th>Alt</th><th>Üst</th>
+        <th>Ölçülen</th><th>Sapma</th><th>Durum</th><th>Grafik</th><th>Not</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in results %}
+      <tr>
+        <td>{{ r.step.step_no }}</td>
+        <td>{% if r.step.photo %}<img src="{{ r.step.photo.url }}" style="width:40px;height:40px;object-fit:cover;border-radius:4px;">{% else %}—{% endif %}</td>
+        <td><strong>{{ r.step.title }}</strong>{% if r.step.is_critical %} ⚠️{% endif %}</td>
+        <td>{{ r.step.nominal_value }}</td>
+        <td>{{ r.lower_limit }}</td>
+        <td>{{ r.upper_limit }}</td>
+        <td>{{ r.measured_value|default:"—" }}</td>
+        <td>{{ r.deviation|default:"—" }}</td>
+        <td>{% if r.status == 'OK' %}<span style="color:#16a34a;">Uygun</span>{% elif r.status == 'NOK' %}<span style="color:#dc2626;">Uygun Değil</span>{% else %}{{ r.get_status_display }}{% endif %}</td>
+        <td>
+          {% if r.lower_limit is not None and r.upper_limit is not None and r.measured_value is not None %}
+          <canvas class="uk-mini-canvas" width="140" height="28"
+            data-lo="{{ r.lower_limit }}" data-hi="{{ r.upper_limit }}"
+            data-nom="{{ r.step.nominal_value }}" data-val="{{ r.measured_value }}"
+            data-ok="{% if r.status == 'OK' %}1{% else %}0{% endif %}"></canvas>
+          {% else %}—{% endif %}
+        </td>
+        <td>{{ r.measurement_note|default:"—"|truncatechars:40 }}</td>
+        <td><a href="{% url 'stokapp:uretim_kontrol_sonuc_duzenle' r.pk %}" class="btn btn-secondary btn-sm">Düzenle</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+<script>
+document.querySelectorAll('.uk-mini-canvas').forEach(function(cv){
+  const lo=+cv.dataset.lo, hi=+cv.dataset.hi, nom=+cv.dataset.nom, val=+cv.dataset.val;
+  const ok=cv.dataset.ok==='1';
+  const ctx=cv.getContext('2d'), w=cv.width, h=cv.height;
+  const pad=(hi-lo)*0.2||1, min=lo-pad, max=hi+pad, span=max-min;
+  function x(v){ return ((v-min)/span)*w; }
+  ctx.fillStyle='#e2e8f0'; ctx.fillRect(0,0,w,h);
+  ctx.fillStyle='#bbf7d0'; ctx.fillRect(x(lo),4,x(hi)-x(lo),h-8);
+  ctx.fillStyle='#1d4ed8'; ctx.fillRect(x(nom)-1,0,2,h);
+  ctx.fillStyle=ok?'#16a34a':'#dc2626'; ctx.fillRect(x(val)-4,2,8,h-4);
+});
+</script>
+{% endblock %}

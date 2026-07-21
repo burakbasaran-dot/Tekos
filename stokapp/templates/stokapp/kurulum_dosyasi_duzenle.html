@@ -1,0 +1,313 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Kurulum Dosyası Düzenle - {{ dosya.urun.stok_kodu }}{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <h2>✏️ Kurulum Dosyası Düzenle</h2>
+        <a href="{% url 'stokapp:kurulum_dosyasi_detay' dosya.pk %}" class="btn btn-secondary">← Geri</a>
+    </div>
+    
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 15px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background: #fff3cd; color: #856404; border-left: 4px solid #ffc107;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+    
+    <form method="post" enctype="multipart/form-data" style="max-width: 800px;">
+        {% csrf_token %}
+        
+        <!-- Ürün Seçimi (Sadece göster, değiştirilemez) -->
+        <div style="margin-bottom: 25px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 10px; color: #111827;">
+                Ürün
+            </label>
+            <div style="padding: 15px; background: #f9fafb; border-radius: 8px; border: 2px solid #e5e7eb;">
+                <strong style="color: #111827;">{{ dosya.urun.stok_kodu }}</strong>
+                <span style="color: #6b7280; margin-left: 10px;">{{ dosya.urun.ad }}</span>
+            </div>
+            <small style="color: #6b7280; margin-top: 5px; display: block;">
+                Ürün değiştirilemez. Yeni bir kurulum dosyası oluşturun.
+            </small>
+            <input type="hidden" id="id_urun" name="urun" value="{{ dosya.urun.pk }}">
+        </div>
+        
+        <!-- Ürün Parçası -->
+        <div style="margin-bottom: 25px;">
+            <label for="id_urun_parcasi" style="display: block; font-weight: 600; margin-bottom: 10px; color: #111827;">
+                Ürün Parçası (Reçete Bileşeni) <span style="color: #dc3545;">*</span>
+            </label>
+            <select id="id_urun_parcasi" 
+                    name="urun_parcasi" 
+                    style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #e5e7eb; font-size: 14px;"
+                    required>
+                <option value="">Yükleniyor...</option>
+            </select>
+            <small style="color: #6b7280; margin-top: 5px; display: block;">
+                Seçilen ürünün reçete bileşenleri burada görünecektir.
+            </small>
+            {% if form.urun_parcasi.errors %}
+                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.urun_parcasi.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <!-- İstasyon -->
+        <div style="margin-bottom: 25px;">
+            <label for="id_istasyon" style="display: block; font-weight: 600; margin-bottom: 10px; color: #111827;">
+                İstasyon
+            </label>
+            <select id="id_istasyon" name="istasyon" style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #e5e7eb; font-size: 14px;">
+                <option value="">Seçiniz...</option>
+                {% for istasyon in istasyonlar %}
+                    <option value="{{ istasyon.pk }}" {% if dosya.istasyon and dosya.istasyon.pk == istasyon.pk %}selected{% endif %}>{{ istasyon.ad }}</option>
+                {% endfor %}
+            </select>
+            {% if form.istasyon.errors %}
+                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.istasyon.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <!-- CNC ekipmanları (istasyon + ortak liste) -->
+        <div style="margin-bottom: 25px;">
+            <label style="display: block; font-weight: 600; margin-bottom: 10px; color: #111827;">
+                CNC ekipmanları
+            </label>
+            <p id="cncEkipmanHint" style="color: #6b7280; font-size: 13px; margin: 0 0 10px 0;">
+                İstasyon seçtikten sonra bu istasyonun CNC grubuna uygun ve ortak ekipmanlar listelenir. İstasyonda CNC grubu tanımlı değilse yalnızca ortak ekipmanlar gösterilir.
+            </p>
+            <div id="cncEkipmanCheckboxList" style="max-height: 280px; overflow-y: auto; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; background: #fafafa;">
+                <span style="color: #6b7280;">Liste yükleniyor…</span>
+            </div>
+        </div>
+        
+        <!-- Açıklama -->
+        <div style="margin-bottom: 25px;">
+            <label for="id_aciklama" style="display: block; font-weight: 600; margin-bottom: 10px; color: #111827;">
+                Açıklama
+            </label>
+            <textarea id="id_aciklama" 
+                      name="aciklama" 
+                      rows="4"
+                      placeholder="Kurulum dosyası açıklaması..."
+                      style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #e5e7eb; font-size: 14px; resize: vertical;">{{ form.aciklama.value|default:dosya.aciklama }}</textarea>
+            {% if form.aciklama.errors %}
+                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.aciklama.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <!-- Versiyon -->
+        <div style="margin-bottom: 25px;">
+            <label for="id_versiyon" style="display: block; font-weight: 600; margin-bottom: 10px; color: #111827;">
+                Versiyon <span style="color: #dc3545;">*</span>
+            </label>
+            <input type="text" 
+                   id="id_versiyon" 
+                   name="versiyon" 
+                   value="{{ form.versiyon.value|default:dosya.versiyon }}"
+                   placeholder="Örn: 1.0, 1.1, 2.0"
+                   style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #e5e7eb; font-size: 14px;"
+                   required>
+            {% if form.versiyon.errors %}
+                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.versiyon.errors }}</div>
+            {% endif %}
+            <small style="color: #f59e0b; margin-top: 5px; display: block; font-weight: 500;">
+                ⚠️ Versiyon değiştirilirse eski dosya otomatik olarak arşive alınacaktır.
+            </small>
+        </div>
+        
+        <!-- PDF Dosyası -->
+        <div style="margin-bottom: 25px;">
+            <label for="id_pdf_dosya" style="display: block; font-weight: 600; margin-bottom: 10px; color: #111827;">
+                PDF Dosyası
+            </label>
+            {% if dosya.pdf_dosya %}
+                <div style="margin-bottom: 10px; padding: 15px; background-color: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <div>
+                            <span style="color: #6b7280; font-size: 13px; font-weight: 600;">Mevcut dosya:</span>
+                            <a href="{% url 'stokapp:kurulum_dosyasi_pdf_indir' dosya.pk %}" 
+                               style="color: #3b82f6; text-decoration: none; font-weight: 500; margin-left: 10px;">
+                                📄 {{ dosya.pdf_dosya.name|slice:"-50:" }}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+            <input type="file" 
+                   id="id_pdf_dosya" 
+                   name="pdf_dosya" 
+                   accept=".pdf"
+                   style="width: 100%; padding: 12px; border-radius: 8px; border: 2px solid #e5e7eb; font-size: 14px;">
+            {% if form.pdf_dosya.errors %}
+                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.pdf_dosya.errors }}</div>
+            {% endif %}
+            <small style="color: #6b7280; margin-top: 5px; display: block;">
+                Yeni PDF yüklemek için seçin. Boş bırakırsanız mevcut dosya korunur.
+            </small>
+        </div>
+        
+        <!-- Aktif -->
+        <div style="margin-bottom: 25px;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                <input type="checkbox" 
+                       id="id_aktif" 
+                       name="aktif" 
+                       {% if dosya.aktif %}checked{% endif %}
+                       style="width: 18px; height: 18px; cursor: pointer;">
+                <span style="font-weight: 600; color: #111827;">Aktif</span>
+            </label>
+        </div>
+        
+        <!-- Butonlar -->
+        <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 30px; padding-top: 20px; border-top: 2px solid #e5e7eb;">
+            <a href="{% url 'stokapp:kurulum_dosyasi_detay' dosya.pk %}" class="btn btn-secondary">İptal</a>
+            <button type="submit" class="btn btn-primary" style="background-color: #3b82f6; border-color: #3b82f6; padding: 10px 20px;">
+                💾 Güncelle
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+const CNC_EKIPMAN_API = "{% url 'stokapp:kurulum_dosyasi_cnc_ekipman_secenekleri' %}";
+const initialCncSecim = {{ secili_cnc_ekipman_ids_json|safe }};
+
+function getCheckedCncEkipmanIds() {
+    const box = document.getElementById('cncEkipmanCheckboxList');
+    if (!box) return [];
+    return Array.from(box.querySelectorAll('input[name="cnc_ekipmanlar"]:checked')).map(function (c) {
+        return parseInt(c.value, 10);
+    }).filter(function (n) { return !isNaN(n); });
+}
+
+function loadCncEkipmanlari(preserveIds) {
+    const istasyonEl = document.getElementById('id_istasyon');
+    const container = document.getElementById('cncEkipmanCheckboxList');
+    const hint = document.getElementById('cncEkipmanHint');
+    if (!container) return;
+    const sid = istasyonEl && istasyonEl.value ? istasyonEl.value : '';
+    const params = new URLSearchParams();
+    if (sid) params.set('istasyon_id', sid);
+    container.innerHTML = '<span style="color:#6b7280;">Yükleniyor…</span>';
+    fetch(CNC_EKIPMAN_API + '?' + params.toString())
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (!data.success) {
+                container.innerHTML = '<span style="color:#dc3545;">Liste yüklenemedi.</span>';
+                return;
+            }
+            var effective = data.effective_cnc_grubu || '';
+            var fromName = !!data.grup_from_name;
+            if (hint) {
+                if (!sid) {
+                    hint.textContent = 'İstasyon seçilmedi; yalnızca ortak CNC ekipmanları seçilebilir.';
+                } else if (!effective) {
+                    hint.textContent = 'Bu istasyon için CNC grubu kayıtta yok ve adında torna/freze geçmiyor; yalnızca ortak ekipmanlar listeleniyor. İstasyon düzenlemede CNC makine grubunu seçebilirsiniz.';
+                } else if (fromName) {
+                    hint.textContent = 'İstasyon adına göre CNC grubu tahmin edildi; ortak + ilgili tür gösteriliyor. Kalıcı olması için istasyonda CNC makine grubunu da seçin.';
+                } else {
+                    hint.textContent = 'Bu istasyon için ortak + kayıtlı makine grubuna uygun ekipmanlar gösteriliyor.';
+                }
+            }
+            var items = data.items || [];
+            if (items.length === 0) {
+                var emptyMsg;
+                if (!sid) {
+                    emptyMsg = 'Ortak kapsamda aktif CNC ekipmanı yok. Katalogda Ortak veya istasyon türüne uygun aktif kayıt ekleyin.';
+                } else if (!effective) {
+                    emptyMsg = 'Bu istasyon için uygun aktif ekipman yok. İstasyonda CNC makine grubunu seçin veya istasyon adına torna/freze ekleyin; ekipmanların kapsamı ve Aktif işaretini kontrol edin.';
+                } else {
+                    emptyMsg = 'Bu filtrede aktif CNC ekipmanı yok. Katalogda bu makine türü (Torna/Freze) veya Ortak kapsamda aktif kayıt olduğundan emin olun.';
+                }
+                container.innerHTML = '<span style="color:#6b7280;">' + emptyMsg + '</span>';
+                return;
+            }
+            var preserve = new Set((preserveIds || []).map(Number));
+            container.innerHTML = '';
+            items.forEach(function (it) {
+                var row = document.createElement('div');
+                row.style.cssText = 'display:flex;align-items:flex-start;gap:10px;padding:8px 4px;border-bottom:1px solid #eee;';
+                var cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.name = 'cnc_ekipmanlar';
+                cb.value = String(it.id);
+                cb.id = 'cnc_eq_' + it.id;
+                cb.style.marginTop = '3px';
+                if (preserve.has(it.id)) cb.checked = true;
+                var lab = document.createElement('label');
+                lab.htmlFor = cb.id;
+                lab.style.cssText = 'cursor:pointer;flex:1;font-size:14px;color:#111827;';
+                var strong = document.createElement('strong');
+                strong.textContent = it.label || '';
+                var span = document.createElement('span');
+                span.style.cssText = 'color:#6b7280;font-size:12px;';
+                span.textContent = ' (' + (it.scope_label || '') + ')';
+                lab.appendChild(strong);
+                lab.appendChild(span);
+                row.appendChild(cb);
+                row.appendChild(lab);
+                container.appendChild(row);
+            });
+        })
+        .catch(function () {
+            container.innerHTML = '<span style="color:#dc3545;">Yükleme hatası.</span>';
+        });
+}
+
+// Sayfa yüklendiğinde mevcut ürünün reçete bileşenlerini yükle
+document.addEventListener('DOMContentLoaded', function() {
+    const urunId = {{ dosya.urun.pk }};
+    const mevcutParcasi = '{{ dosya.urun_parcasi|escapejs }}';
+    
+    if (urunId) {
+        loadReceteBilesenleri(urunId, mevcutParcasi);
+    }
+    var istasyonEl = document.getElementById('id_istasyon');
+    if (istasyonEl) {
+        istasyonEl.addEventListener('change', function () {
+            loadCncEkipmanlari(getCheckedCncEkipmanIds());
+        });
+    }
+    loadCncEkipmanlari(initialCncSecim && initialCncSecim.length ? initialCncSecim : getCheckedCncEkipmanIds());
+});
+
+// Reçete bileşenlerini yükle
+function loadReceteBilesenleri(urunId, mevcutParcasi = '') {
+    const parcasiSelect = document.getElementById('id_urun_parcasi');
+    
+    fetch(`{% url 'stokapp:kurulum_dosyasi_recete_bilesenleri' 0 %}`.replace('0', urunId))
+        .then(response => response.json())
+        .then(data => {
+            parcasiSelect.innerHTML = '<option value="">Seçiniz...</option>';
+            
+            if (data.success && data.bilesenler.length > 0) {
+                data.bilesenler.forEach(bilesen => {
+                    const option = document.createElement('option');
+                    const optionValue = bilesen.stok_kodu + ' - ' + bilesen.ad;
+                    option.value = optionValue;
+                    option.textContent = `${bilesen.stok_kodu} - ${bilesen.ad} (${bilesen.miktar} ${bilesen.birim})`;
+                    option.dataset.stokId = bilesen.id;
+                    
+                    // Mevcut parça ile eşleşirse seçili yap
+                    if (mevcutParcasi && optionValue === mevcutParcasi) {
+                        option.selected = true;
+                    }
+                    
+                    parcasiSelect.appendChild(option);
+                });
+            } else {
+                parcasiSelect.innerHTML = '<option value="">Bu ürün için reçete bileşeni bulunamadı.</option>';
+            }
+        })
+        .catch(error => {
+            console.error('Hata:', error);
+            parcasiSelect.innerHTML = '<option value="">Yükleme hatası oluştu.</option>';
+        });
+}
+</script>
+{% endblock %}
+

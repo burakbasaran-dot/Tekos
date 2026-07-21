@@ -1,0 +1,2847 @@
+{% extends "stokapp/base.html" %}
+{% load static %}
+{% load currency_filters %}
+
+{% block title %}{% if stok %}Stok Detay - {{ stok.stok_kodu }}{% else %}Yeni Stok Ekle{% endif %}{% endblock %}
+
+{% block content %}
+<style>
+  .form-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+  .form-header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--ink);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .form-actions {
+    display: flex;
+    gap: 10px;
+  }
+
+  .tamamlanma-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 14px 18px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    border: 1px solid #e5e7eb;
+    background: #f9fafb;
+  }
+  .tamamlanma-banner.tam {
+    background: #ecfdf5;
+    border-color: #a7f3d0;
+  }
+  .tamamlanma-banner.orta {
+    background: #fffbeb;
+    border-color: #fde68a;
+  }
+  .tamamlanma-banner.dusuk {
+    background: #fef2f2;
+    border-color: #fecaca;
+  }
+  .tamamlanma-banner-title {
+    font-weight: 700;
+    font-size: 14px;
+    color: #111827;
+  }
+  .tamamlanma-banner-meta {
+    font-size: 13px;
+    color: #4b5563;
+    margin-top: 4px;
+  }
+  .tamamlanma-banner-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .tamamlanma-eksik-panel {
+    display: none;
+    margin-bottom: 20px;
+    padding: 12px 16px;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 10px;
+  }
+  .tamamlanma-eksik-panel.open { display: block; }
+  .tamamlanma-eksik-panel h3 {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    color: #92400e;
+  }
+  .tamamlanma-eksik-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .tamamlanma-eksik-list button {
+    border: 1px solid #fbbf24;
+    background: #fff;
+    color: #92400e;
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .tamamlanma-eksik-list button:hover {
+    background: #fef3c7;
+  }
+  [data-tamamlanma].tamamlanma-eksik-field {
+    border-left: 4px solid #f59e0b !important;
+    background: #fffbeb !important;
+    border-radius: 8px;
+    padding-left: 10px !important;
+    margin-left: -10px;
+    box-shadow: inset 0 0 0 1px #fde68a;
+  }
+  [data-tamamlanma].tamamlanma-eksik-field .form-label::after,
+  [data-tamamlanma].tamamlanma-eksik-field.form-section .form-section-title::after {
+    content: 'Eksik';
+    display: inline-block;
+    margin-left: 8px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: #fef3c7;
+    color: #b45309;
+    font-size: 10px;
+    font-weight: 700;
+    vertical-align: middle;
+  }
+  .tamamlanma-pulse {
+    animation: tamamlanmaPulse 1.2s ease-out 2;
+  }
+  @keyframes tamamlanmaPulse {
+    0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.45); }
+    70% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+  }
+  
+  /* Ana layout - fotoğraf için */
+  .main-content-wrapper {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+  }
+  .main-form-content {
+    flex: 1;
+  }
+  .photo-sidebar {
+    width: 300px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .photo-sidebar .form-section {
+    margin-bottom: 0;
+  }
+  
+  .form-section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+  .form-section-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+  .form-grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .form-grid-4 {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+  }
+  @media (max-width: 1200px) {
+    .form-grid-4 {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  @media (max-width: 768px) {
+    .form-grid, .form-grid-3, .form-grid-4 {
+      grid-template-columns: 1fr;
+    }
+    .main-content-wrapper {
+      flex-direction: column;
+    }
+    .photo-sidebar {
+      width: 100%;
+      position: static;
+    }
+  }
+  
+  .form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .form-field.full-width {
+    grid-column: 1 / -1;
+  }
+  .form-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+  .form-label.required::after {
+    content: " *";
+    color: #e74c3c;
+  }
+  
+  /* Form input stilleri */
+  .form-section input[type="text"],
+  .form-section input[type="number"],
+  .form-section input[type="email"],
+  .form-section select,
+  .form-section textarea {
+    width: 100% !important;
+    padding: 12px 14px !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 8px !important;
+    font-size: 14px !important;
+    background: #fff !important;
+    color: var(--ink) !important;
+    transition: all 0.2s;
+    box-sizing: border-box;
+  }
+  
+  .form-section input[type="text"]:focus,
+  .form-section input[type="number"]:focus,
+  .form-section input[type="email"]:focus,
+  .form-section select:focus,
+  .form-section textarea:focus {
+    outline: none !important;
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.1) !important;
+  }
+  
+  .form-section textarea {
+    resize: vertical;
+    min-height: 100px;
+    font-family: inherit;
+  }
+  
+  .form-help {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .form-error {
+    font-size: 12px;
+    color: #e74c3c;
+    margin-top: 4px;
+  }
+  
+  .input-group-inline {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+  }
+  .input-group-inline .form-field {
+    flex: 1;
+  }
+  
+  /* Select + Ekle butonu yan yana */
+  .select-with-add {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  
+  .select-with-add select {
+    flex: 1;
+  }
+  
+  .add-btn {
+    padding: 12px 16px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  
+  .add-btn:hover {
+    background: var(--primary-d);
+  }
+  
+  .add-btn:active {
+    transform: scale(0.98);
+  }
+  
+  /* Modal/Prompt stili */
+  .add-modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .add-modal.show {
+    display: flex;
+  }
+  
+  .add-modal-content {
+    background: white;
+    padding: 24px;
+    border-radius: 12px;
+    min-width: 400px;
+    max-width: 90%;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+  }
+  
+  .add-modal-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: var(--ink);
+  }
+  
+  .add-modal-input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    margin-bottom: 12px;
+    box-sizing: border-box;
+  }
+  
+  .add-modal-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.1);
+  }
+  
+  .add-modal-error {
+    color: #e74c3c;
+    font-size: 13px;
+    margin-bottom: 12px;
+    display: none;
+  }
+  
+  .add-modal-error.show {
+    display: block;
+  }
+  
+  .add-modal-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+  
+  .add-modal-btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+  }
+  
+  .add-modal-btn-cancel {
+    background: #f3f4f6;
+    color: var(--ink);
+  }
+  
+  .add-modal-btn-cancel:hover {
+    background: #e5e7eb;
+  }
+  
+  .add-modal-btn-save {
+    background: var(--primary);
+    color: white;
+  }
+  
+  .add-modal-btn-save:hover {
+    background: var(--primary-d);
+  }
+  
+  .image-upload-area {
+    width: 100%;
+    aspect-ratio: 16/9;
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f9fafb;
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .image-upload-area:hover {
+    border-color: var(--primary);
+    background: #f0fdf4;
+  }
+  .image-upload-area img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+  }
+  .image-upload-area .upload-placeholder {
+    text-align: center;
+    color: var(--muted);
+    padding: 20px;
+  }
+  .image-upload-area .upload-placeholder-icon {
+    font-size: 48px;
+    margin-bottom: 8px;
+  }
+  .image-upload-area.photo-view-only {
+    cursor: zoom-in;
+  }
+  .image-upload-area.photo-view-only:hover {
+    border-color: #93c5fd;
+    background: #eff6ff;
+  }
+  .image-upload-area.photo-edit-mode:hover {
+    border-color: var(--primary);
+    background: #f0fdf4;
+  }
+
+  .stok-foto-lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .stok-foto-lightbox.open {
+    display: flex;
+  }
+  .stok-foto-lightbox-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.72);
+    cursor: zoom-out;
+  }
+  .stok-foto-lightbox-content {
+    position: relative;
+    z-index: 1;
+    max-width: min(92vw, 960px);
+    max-height: 88vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .stok-foto-lightbox-content img {
+    max-width: 100%;
+    max-height: 88vh;
+    object-fit: contain;
+    border-radius: 10px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+    background: #fff;
+  }
+  .stok-foto-lightbox-close {
+    position: absolute;
+    top: -12px;
+    right: -12px;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 50%;
+    background: #fff;
+    color: #111827;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+  .stok-foto-lightbox-close:hover {
+    background: #f3f4f6;
+  }
+  .stok-foto-lightbox-toolbar {
+    position: absolute;
+    left: 50%;
+    bottom: -52px;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 10px;
+    z-index: 2;
+  }
+  .stok-foto-lightbox-print {
+    padding: 10px 18px;
+    border: none;
+    border-radius: 8px;
+    background: #2563eb;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+    white-space: nowrap;
+  }
+  .stok-foto-lightbox-print:hover {
+    background: #1d4ed8;
+  }
+  
+  .checkbox-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .checkbox-field input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+  }
+  
+  .form-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    margin-top: 20px;
+  }
+  
+  .info-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    background: #e0f2fe;
+    color: #0369a1;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    margin-top: 8px;
+  }
+  
+  .form-section input[type="file"] {
+    padding: 8px !important;
+    background: #fff !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 8px !important;
+    cursor: pointer;
+  }
+
+  .readonly-field {
+    background-color: #f3f4f6 !important;
+    cursor: not-allowed !important;
+    opacity: 0.7;
+  }
+
+  .readonly-field:focus {
+    outline: none;
+    border-color: #d1d5db;
+  }
+
+  .stok-minmax-pasif {
+    background-color: #f1f5f9 !important;
+    border-color: #e2e8f0 !important;
+    color: #94a3b8 !important;
+    cursor: not-allowed !important;
+    opacity: 1 !important;
+    box-shadow: none !important;
+  }
+
+  .stok-minmax-pasif:focus {
+    outline: none !important;
+    border-color: #e2e8f0 !important;
+    box-shadow: none !important;
+  }
+
+  .form-field.stok-minmax-pasif-field {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
+
+  .form-field.stok-minmax-pasif-field .form-label {
+    color: #94a3b8;
+  }
+</style>
+
+<div class="form-header">
+  <h1 style="display:flex; align-items:center; gap:10px; margin:0;">
+    {% if stok %}📦 Stok Detay Bilgisi{% else %}+ Yeni Stok Ekle{% endif %}
+    {% if stok and urun_recetesi %}
+      <a href="{% url 'stokapp:recete_detay' urun_recetesi.pk %}"
+         style="display:inline-flex; align-items:center; gap:8px; padding:8px 16px; border-radius:8px; background:#4f46e5; color:#ffffff; text-decoration:none; font-size:14px; font-weight:700; box-shadow:0 1px 2px rgba(0,0,0,.12);">
+        <span>🧾</span><span>Reçete</span>
+      </a>
+    {% endif %}
+  </h1>
+  <div class="form-actions">
+    {% if stok %}
+      <button type="button" id="fiyatAnaliziBtn" class="btn" style="padding: 8px 16px; border: none; border-radius: 5px; background: #10b981; color: white; cursor: pointer;" onclick="showFiyatAnalizi()">📊 Fiyat Analizi</button>
+      <button type="button" id="kullanildigiUrunlerBtn" class="btn" style="padding: 8px 16px; border: none; border-radius: 5px; background: #f59e0b; color: white; cursor: pointer;" onclick="showKullanildigiUrunler()">🧾 Kullanıldığı Ürünler</button>
+      <a class="btn" href="{% url 'stokapp:stok_listesi' %}" style="padding: 8px 16px; text-decoration: none; border-radius: 5px; background: #6c757d; color: white;">‹ Geri</a>
+      <button type="button" id="editBtn" class="btn" style="padding: 8px 16px; border: none; border-radius: 5px; background: #2563eb; color: white; cursor: pointer;">✏️ Düzenle</button>
+    {% endif %}
+  </div>
+</div>
+
+{% if messages %}
+<div style="margin-bottom: 16px;">
+  {% for message in messages %}
+  <div style="padding: 12px 16px; border-radius: 8px; margin-bottom: 8px; font-weight: 500;
+    {% if message.tags == 'error' %}background:#fef2f2; color:#b91c1c; border:1px solid #fecaca;
+    {% elif message.tags == 'success' %}background:#ecfdf5; color:#047857; border:1px solid #a7f3d0;
+    {% elif message.tags == 'warning' %}background:#fffbeb; color:#b45309; border:1px solid #fde68a;
+    {% else %}background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;{% endif %}">
+    {{ message }}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if stok and tamamlanma_durum %}
+<div class="tamamlanma-banner {% if tamamlanma_durum.tamam %}tam{% elif tamamlanma_durum.yuzde >= 50 %}orta{% else %}dusuk{% endif %}" id="tamamlanmaBanner">
+  <div>
+    <div class="tamamlanma-banner-title">
+      {% if tamamlanma_durum.tamam %}
+        ✅ Stok kartı tamamlanmış (%{{ tamamlanma_durum.yuzde }})
+      {% else %}
+        ⚠ Stok kartı %{{ tamamlanma_durum.yuzde }} tamamlanmış
+      {% endif %}
+    </div>
+    <div class="tamamlanma-banner-meta">
+      {% if tamamlanma_durum.tamam %}
+        Tamamlanma kurallarına göre gerekli tüm alanlar dolu.
+      {% else %}
+        {{ tamamlanma_eksik_liste|length }} alan doldurulmayı bekliyor ({{ tamamlanma_durum.stok_tipi }} kuralları).
+      {% endif %}
+    </div>
+  </div>
+  <div class="tamamlanma-banner-actions">
+    {% if tamamlanma_eksik_liste %}
+    <button type="button" class="btn btn-secondary" id="tamamlanmaEksikToggle" style="padding:8px 14px;">Eksikleri göster</button>
+    {% endif %}
+    <a href="{% url 'stokapp:stok_tamamlanma_raporu' %}?q={{ stok.stok_kodu }}" class="btn btn-secondary" style="padding:8px 14px; text-decoration:none;">Tamamlanma raporu</a>
+  </div>
+</div>
+{% if tamamlanma_eksik_liste %}
+<div class="tamamlanma-eksik-panel" id="tamamlanmaEksikPanel">
+  <h3>Doldurulması beklenen alanlar</h3>
+  <ul class="tamamlanma-eksik-list">
+    {% for eksik in tamamlanma_eksik_liste %}
+    <li><button type="button" class="tamamlanma-goto" data-tamamlanma-key="{{ eksik.key }}">{{ eksik.label }}</button></li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+{% endif %}
+
+<form method="post" enctype="multipart/form-data" id="stokForm">
+  {% csrf_token %}
+  
+  <div class="main-content-wrapper">
+    <div class="main-form-content">
+    <!-- Kimlik Bilgileri -->
+    <div class="form-section">
+      <div class="form-section-title">�� Kimlik Bilgileri</div>
+      
+        <div class="form-grid form-grid-4">
+        <div class="form-field">
+          <label class="form-label required" for="{{ form.stok_kodu.id_for_label }}">Stok Kodu</label>
+          <input type="text" 
+                 name="{{ form.stok_kodu.name }}" 
+                 id="{{ form.stok_kodu.id_for_label }}" 
+                 value="{{ form.stok_kodu.value|default:'' }}"
+                 class="form-input"
+                 placeholder="Örn: M8X12-SS"
+                 required>
+          {% if form.stok_kodu.errors %}
+            <div class="form-error">{{ form.stok_kodu.errors }}</div>
+          {% endif %}
+          <div class="form-help">Yazarken otomatik kontrol edilir</div>
+          <div id="kod-uyari" class="form-error" style="display:none">Bu stok kodu zaten kayıtlı</div>
+        </div>
+        
+        <div class="form-field">
+            <label class="form-label required" for="{{ form.stok_tipi.id_for_label }}">Stok Tipi</label>
+            {{ form.stok_tipi }}
+            {% if form.stok_tipi.errors %}
+              <div class="form-error">{{ form.stok_tipi.errors }}</div>
+          {% endif %}
+            <div class="form-help">Ham Madde, Yarı Mamül veya Ürün</div>
+        </div>
+          
+          <div class="form-field">
+            <label class="form-label required" for="id_kategori">Kategori</label>
+            <div class="select-with-add">
+              <select name="kategori" id="id_kategori" class="form-select" required>
+                <option value="">Seçiniz...</option>
+                {% for kategori in kategoriler %}
+                  <option value="{{ kategori.pk }}" {% if stok and stok.kategori.pk == kategori.pk or form.kategori.value|stringformat:"s" == kategori.pk|stringformat:"s" %}selected{% endif %}>{{ kategori.ad }}</option>
+                {% endfor %}
+              </select>
+              <button type="button" class="add-btn" data-field="kategori" data-api="/stok/api/quick-add/category/" data-label="Kategori">+ Ekle</button>
+            </div>
+            {% if form.kategori.errors %}
+              <div class="form-error">{{ form.kategori.errors }}</div>
+            {% endif %}
+          </div>
+      
+        <!-- Malzeme Hesaplama Bölümü (Boyutlu Çelik Malzeme için) -->
+        <div id="malzeme-hesaplama-bolumu" style="display: none; grid-column: span 4; margin-top: 20px; padding: 20px; background: #f8f9fa; border: 2px solid #2ecc71; border-radius: 12px;">
+          <h3 style="margin-top: 0; color: #2c3e50; font-size: 18px; margin-bottom: 20px;">📐 Malzeme Hesaplama</h3>
+          
+          <div class="form-grid form-grid-4" style="gap: 15px;">
+            <div class="form-field">
+              <label class="form-label" for="malzeme_en">En (mm)</label>
+              <input type="number" 
+                     id="malzeme_en" 
+                     step="0.01"
+                     min="0"
+                     class="form-control"
+                     placeholder="0.00">
+            </div>
+            
+            <div class="form-field">
+              <label class="form-label" for="malzeme_kalinlik">Kalınlık (mm)</label>
+              <input type="number" 
+                     id="malzeme_kalinlik" 
+                     step="0.01"
+                     min="0"
+                     class="form-control"
+                     placeholder="0.00">
+            </div>
+            
+            <div class="form-field">
+              <label class="form-label" for="malzeme_boy">Boy (mm)</label>
+              <input type="number" 
+                     id="malzeme_boy" 
+                     step="0.01"
+                     min="0"
+                     class="form-control"
+                     placeholder="0.00">
+            </div>
+            
+            <div class="form-field">
+              <label class="form-label" for="malzeme_kg_fiyat">Malzeme Kg Fiyat ({{ form.alis_para_birimi.value|default:"TL" }})</label>
+              <input type="number" 
+                     id="malzeme_kg_fiyat" 
+                     step="0.01"
+                     min="0"
+                     class="form-control"
+                     placeholder="0.00">
+            </div>
+          </div>
+          
+          <div class="form-grid form-grid-3" style="gap: 15px; margin-top: 15px;">
+            <div class="form-field">
+              <label class="form-label" style="color: #2c3e50; font-weight: 600;">Hesaplanan Ağırlık:</label>
+              <div style="padding: 12px; background: white; border: 2px solid #3498db; border-radius: 8px; font-size: 16px; font-weight: 600; color: #2c3e50;">
+                <span id="hesaplanan_agirlik">0.00</span> kg
+              </div>
+            </div>
+            
+            <div class="form-field" style="display: flex; align-items: flex-end;">
+              <button type="button" 
+                      id="malzeme_aktar_btn" 
+                      class="btn btn-primary" 
+                      style="padding: 12px 24px; font-size: 16px; width: 100%;">
+                🔄 Aktar
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="form-field">
+            <label class="form-label" for="{{ form.birim.id_for_label }}">Birim</label>
+            <div class="select-with-add">
+              <select name="{{ form.birim.name }}" id="{{ form.birim.id_for_label }}" class="form-select">
+                <option value="">Seçiniz...</option>
+                {% for birim in birimler %}
+                  {% if stok %}
+                    <!-- Mevcut kayıt için: stok.birim string değeri ile birim.ad karşılaştır -->
+                    <option value="{{ birim.pk }}" {% if stok.birim == birim.ad %}selected{% endif %}>{{ birim.ad }}</option>
+                  {% else %}
+                    <!-- Yeni kayıt için: form.birim.value (ID) ile birim.pk karşılaştır -->
+                    <option value="{{ birim.pk }}" {% if form.birim.value|stringformat:"s" == birim.pk|stringformat:"s" %}selected{% endif %}>{{ birim.ad }}</option>
+                  {% endif %}
+                {% endfor %}
+              </select>
+              <button type="button" class="add-btn" data-field="birim" data-api="/stok/api/quick-add/unit/" data-label="Birim">+ Ekle</button>
+            </div>
+            {% if form.birim.errors %}
+              <div class="form-error">{{ form.birim.errors }}</div>
+          {% endif %}
+          </div>
+        </div>
+        
+        <div class="form-grid form-grid-4">
+        <div class="form-field" data-tamamlanma="barkod">
+          <label class="form-label" for="{{ form.barkod.id_for_label }}">Barkod</label>
+          <input type="text" 
+                 name="{{ form.barkod.name }}"
+                 id="{{ form.barkod.id_for_label }}"
+                 data-tamamlanma-field
+                 value="{{ form.barkod.value|default:'' }}"
+                 class="form-input"
+                 placeholder="Barkod numarası"
+                 autocomplete="off">
+          {% if form.barkod.errors %}
+            <div class="form-error">{{ form.barkod.errors }}</div>
+        {% endif %}
+    </div>
+    
+        <div class="form-field" style="grid-column: span 3;">
+          <label class="form-label required" for="{{ form.ad.id_for_label }}">Ürün Adı</label>
+          <input type="text" 
+                 name="{{ form.ad.name }}" 
+                 id="{{ form.ad.id_for_label }}" 
+                 value="{{ form.ad.value|default:'' }}"
+                 class="form-input"
+                 placeholder="Ürün adını giriniz"
+                 required>
+          {% if form.ad.errors %}
+            <div class="form-error">{{ form.ad.errors }}</div>
+        {% endif %}
+        </div>
+      </div>
+      
+      <div class="form-grid form-grid-3" style="grid-template-columns: minmax(200px, 260px) minmax(200px, 260px) minmax(420px, 1fr);">
+        <div class="form-field">
+          <label class="form-label" for="{{ form.urun_rolu.id_for_label }}">Ürün Rolü</label>
+          <select name="{{ form.urun_rolu.name }}" id="{{ form.urun_rolu.id_for_label }}" class="form-select">
+            {% for code, label in form.fields.urun_rolu.choices %}
+              <option value="{{ code }}"
+                {% if form.urun_rolu.value == code %}selected
+                {% elif not form.urun_rolu.value and stok and stok.urun_rolu == code %}selected
+                {% elif not form.urun_rolu.value and not stok and code == 'AL_SAT' %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+          {% if form.urun_rolu.errors %}
+            <div class="form-error">{{ form.urun_rolu.errors }}</div>
+          {% endif %}
+        </div>
+        <div class="form-field">
+          <label class="form-label" for="id_urun_tipi">Ürün Kaynağı</label>
+          <select name="urun_tipi" id="id_urun_tipi" class="form-select">
+            <option value="SATINAL" {% if stok and stok.urun_tipi == 'SATINAL' or not stok %}selected{% endif %}>Ürünü satın alıyoruz</option>
+            <option value="URETIM" {% if stok and stok.urun_tipi == 'URETIM' %}selected{% endif %}>Ürünü üretiyoruz</option>
+          </select>
+        </div>
+        {% if stok and stok.urun_tipi == 'URETIM' %}
+        <div class="form-field" data-tamamlanma="aktif_recete">
+          <label class="form-label">Aktif Reçete</label>
+          {% if urun_recetesi and urun_recetesi.aktif %}
+          <div style="font-size:13px; color:#059669; font-weight:600;">
+            ✓ Tanımlı —
+            <a href="{% url 'stokapp:recete_detay' urun_recetesi.pk %}" style="color:#2563eb;">Reçeteyi aç</a>
+          </div>
+          {% else %}
+          <div style="font-size:13px; color:#92400e;">
+            Aktif reçete tanımlı değil.
+            <a href="{% url 'stokapp:recete_ekle' %}?urun={{ stok.pk }}" style="color:#2563eb; font-weight:600;">Reçete oluştur</a>
+          </div>
+          {% endif %}
+        </div>
+        {% endif %}
+        <div class="form-field" data-tamamlanma="tedarikci">
+          <label class="form-label" for="{{ form.tedarikci.id_for_label }}">Tedarikçi</label>
+          <div class="select-with-add">
+              <select name="{{ form.tedarikci.name }}" id="{{ form.tedarikci.id_for_label }}" data-tamamlanma-field class="form-select">
+                <option value="">Seçiniz...</option>
+                {% for tedarikci in tedarikciler %}
+                  <option value="{{ tedarikci.pk }}" {% if stok and stok.tedarikci and stok.tedarikci.pk == tedarikci.pk or form.tedarikci.value|stringformat:"s" == tedarikci.pk|stringformat:"s" %}selected{% endif %}>{{ tedarikci.ad }}</option>
+                {% endfor %}
+              </select>
+            <button type="button" id="tedarikciAddBtn" class="add-btn" data-field="tedarikci" data-api="/stok/api/quick-add/supplier/" data-label="Tedarikçi">+ Ekle</button>
+          </div>
+          {% if form.tedarikci.errors %}
+            <div class="form-error">{{ form.tedarikci.errors }}</div>
+          {% endif %}
+        </div>
+      </div>
+    
+    <div class="form-field full-width" data-tamamlanma="aciklama">
+      <label class="form-label" for="{{ form.aciklama.id_for_label }}">Açıklama</label>
+      <textarea name="{{ form.aciklama.name }}"
+                id="{{ form.aciklama.id_for_label }}"
+                data-tamamlanma-field
+                class="form-textarea"
+                placeholder="Ürün hakkında açıklama..."
+                rows="4">{{ form.aciklama.value|default:'' }}</textarea>
+      {% if form.aciklama.errors %}
+        <div class="form-error">{{ form.aciklama.errors }}</div>
+      {% endif %}
+    </div>
+
+    <div class="form-grid form-grid-2">
+    <div class="form-field" data-tamamlanma="urun_agirligi">
+      <label class="form-label" for="{{ form.urun_agirligi.id_for_label }}">Ürün / Bileşen Ağırlığı</label>
+      <div class="input-group-inline">
+        <div class="form-field" style="flex: 1;">
+          <input type="number"
+                 name="{{ form.urun_agirligi.name }}"
+                 id="{{ form.urun_agirligi.id_for_label }}"
+                 data-tamamlanma-field
+                 value="{% if form.urun_agirligi.value != None %}{{ form.urun_agirligi.value }}{% elif stok and stok.urun_agirligi != None %}{{ stok.urun_agirligi }}{% endif %}"
+                 step="0.0001"
+                 min="0"
+                 class="form-control"
+                 placeholder="0.00">
+        </div>
+        <div class="form-field" style="width: 120px;">
+          <select name="{{ form.urun_agirlik_birimi.name }}"
+                  id="{{ form.urun_agirlik_birimi.id_for_label }}"
+                  data-tamamlanma-field
+                  class="form-select">
+            {% for code, label in form.fields.urun_agirlik_birimi.choices %}
+              <option value="{{ code }}"
+                {% if form.urun_agirlik_birimi.value == code %}selected
+                {% elif not form.urun_agirlik_birimi.value and stok and stok.urun_agirlik_birimi == code %}selected
+                {% elif not form.urun_agirlik_birimi.value and not stok and code == 'kg' %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      {% if form.urun_agirligi.errors %}
+        <div class="form-error">{{ form.urun_agirligi.errors }}</div>
+      {% endif %}
+      {% if form.urun_agirlik_birimi.errors %}
+        <div class="form-error">{{ form.urun_agirlik_birimi.errors }}</div>
+      {% endif %}
+    </div>
+    </div>
+  </div>
+  
+    <!-- Diğer bölümler (Stok ve Depolama, Fiyatlar vs.) -->
+  <!-- Stok ve Depolama -->
+  <div class="form-section">
+      <div class="form-section-title">📦 Stok ve Depolama</div>
+    
+    <div class="form-grid">
+      <div class="form-field">
+        <label class="form-label" for="id_stok_takip">Stok Takibi</label>
+        <select name="{{ form.stok_takip.name }}" 
+                id="id_stok_takip" 
+                class="form-select">
+          <option value="True" {% if form.stok_takip.value %}selected{% endif %}>Yapılsın</option>
+          <option value="False" {% if not form.stok_takip.value %}selected{% endif %}>Yapılmasın</option>
+        </select>
+        {% if form.stok_takip.errors %}
+          <div class="form-error">{{ form.stok_takip.errors }}</div>
+        {% endif %}
+      </div>
+      
+      <div class="form-field">
+        <label class="form-label" for="id_acilis_miktari">Açılış Miktarı</label>
+        <input type="number" 
+               name="{{ form.acilis_miktari.name }}" 
+               id="id_acilis_miktari" 
+               value="{{ form.acilis_miktari.value|default:'' }}"
+               step="0.01"
+               min="0"
+               class="form-control"
+               placeholder="0.00">
+        {% if form.acilis_miktari.errors %}
+          <div class="form-error">{{ form.acilis_miktari.errors }}</div>
+        {% endif %}
+      </div>
+    </div>
+    
+    <div class="form-grid">
+      <div class="form-field">
+        <label class="form-label" for="id_minimum_stok">Min. Stok</label>
+        <input type="number" 
+               name="{{ form.minimum_stok.name }}" 
+               id="id_minimum_stok" 
+               value="{{ form.minimum_stok.value|default:'' }}"
+               step="0.01"
+               min="0"
+               class="form-control"
+               placeholder="0.00">
+        {% if form.minimum_stok.errors %}
+          <div class="form-error">{{ form.minimum_stok.errors }}</div>
+        {% endif %}
+      </div>
+      
+      <div class="form-field">
+        <label class="form-label" for="id_maximum_stok">Max. Stok</label>
+        <input type="number" 
+               name="{{ form.maximum_stok.name }}" 
+               id="id_maximum_stok" 
+               value="{{ form.maximum_stok.value|default:'' }}"
+               step="0.01"
+               min="0"
+               class="form-control"
+               placeholder="0.00">
+        {% if form.maximum_stok.errors %}
+          <div class="form-error">{{ form.maximum_stok.errors }}</div>
+        {% endif %}
+      </div>
+    </div>
+    
+    <div class="form-grid">
+      <div class="form-field" data-tamamlanma="depo">
+        <label class="form-label" for="{{ form.depo.id_for_label }}">Depo</label>
+        <div class="select-with-add">
+            <select name="{{ form.depo.name }}" id="{{ form.depo.id_for_label }}" data-tamamlanma-field class="form-select">
+              <option value="">Seçiniz...</option>
+              {% for depo in depolar %}
+                <option value="{{ depo.pk }}" {% if stok and stok.depo and stok.depo.pk == depo.pk or form.depo.value|stringformat:"s" == depo.pk|stringformat:"s" %}selected{% endif %}>{{ depo.ad }}</option>
+              {% endfor %}
+            </select>
+          <button type="button" class="add-btn" data-field="depo" data-api="/stok/api/quick-add/warehouse/" data-label="Depo">+ Ekle</button>
+        </div>
+        {% if form.depo.errors %}
+          <div class="form-error">{{ form.depo.errors }}</div>
+        {% endif %}
+      </div>
+      
+      <div class="form-field" data-tamamlanma="raf">
+          <label class="form-label" for="{% if form.raf %}{{ form.raf.id_for_label }}{% else %}id_raf{% endif %}">Raf</label>
+        <div class="select-with-add">
+            <select name="{% if form.raf %}{{ form.raf.name }}{% else %}raf{% endif %}" id="{% if form.raf %}{{ form.raf.id_for_label }}{% else %}id_raf{% endif %}" data-tamamlanma-field class="form-select" data-initial-raf="{% if stok and stok.raf %}{{ stok.raf.pk }}{% elif form.raf and form.raf.value %}{{ form.raf.value }}{% endif %}">
+              <option value="">Seçiniz...</option>
+              {% for raf in raflar %}
+                <option value="{{ raf.pk }}" {% if stok and stok.raf and stok.raf.pk == raf.pk or form.raf and form.raf.value|stringformat:"s" == raf.pk|stringformat:"s" %}selected{% endif %}>{{ raf.ad }}</option>
+              {% endfor %}
+            </select>
+          <button type="button" class="add-btn" data-field="raf" data-api="/stok/api/quick-add/shelf/" data-label="Raf" data-requires-depo="true">+ Ekle</button>
+        </div>
+          {% if form.raf and form.raf.errors %}
+          <div class="form-error">{{ form.raf.errors }}</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  
+  <!-- Fiyatlar -->
+  <div class="form-section">
+    <div class="form-section-title">💰 Fiyat Bilgileri</div>
+    
+    <!-- Satın Alma Modu -->
+    <div id="satin-alma-modu" class="form-grid form-grid-2">
+      <div class="form-field" id="alis-fiyati-field" data-tamamlanma="alis_fiyati">
+        <label class="form-label" for="{{ form.alis_fiyati.id_for_label }}">Alış Fiyatı</label>
+        <div class="input-group-inline">
+          <div class="form-field" style="flex: 1;">
+            <input type="number" 
+                   name="{{ form.alis_fiyati.name }}" 
+                   id="{{ form.alis_fiyati.id_for_label }}" 
+                   value="{{ form.alis_fiyati.value|default:'' }}"
+                   step="0.01"
+                   min="0"
+                   class="form-control"
+                   placeholder="0.00">
+          </div>
+          <div class="form-field" style="width: 120px;">
+            <select name="{{ form.alis_para_birimi.name }}" 
+                    id="{{ form.alis_para_birimi.id_for_label }}" 
+                    class="form-select">
+              {% for para_birimi in para_birimleri %}
+                <option value="{{ para_birimi.kod }}" 
+                        {% if form.alis_para_birimi.value == para_birimi.kod %}selected{% endif %}>
+                  {{ para_birimi.sembol }} {{ para_birimi.kod }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        {% if form.alis_fiyati.errors %}
+          <div class="form-error">{{ form.alis_fiyati.errors }}</div>
+        {% endif %}
+      </div>
+      
+      <div class="form-field" id="satis-fiyati-field-satinalma" data-tamamlanma="satis_fiyati">
+        <label class="form-label" for="{{ form.satis_fiyati.id_for_label }}">Satış Fiyatı</label>
+        <div class="input-group-inline">
+          <div class="form-field" style="flex: 1;">
+            <input type="number" 
+                   name="{{ form.satis_fiyati.name }}" 
+                   id="{{ form.satis_fiyati.id_for_label }}" 
+                   value="{{ form.satis_fiyati.value|default:'' }}"
+                   step="0.01"
+                   min="0"
+                   class="form-control"
+                   placeholder="0.00">
+          </div>
+          <div class="form-field" style="width: 120px;">
+            <select name="satis_para_birimi" 
+                    id="id_satis_para_birimi" 
+                    class="form-select">
+              {% for para_birimi in para_birimleri %}
+                <option value="{{ para_birimi.kod }}" 
+                        {% if stok and stok.satis_para_birimi == para_birimi.kod %}selected
+                        {% elif not stok and not form.instance.pk and para_birimi.kod == 'TL' %}selected{% endif %}>
+                  {{ para_birimi.sembol }} {{ para_birimi.kod }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        {% if form.satis_fiyati.errors %}
+          <div class="form-error">{{ form.satis_fiyati.errors }}</div>
+        {% endif %}
+      </div>
+    </div>
+    
+    <!-- Üretim Modu -->
+    <div id="uretim-modu" style="display: none;" class="form-grid form-grid-3">
+      <div class="form-field" id="hammadde-maliyeti-field">
+        <label class="form-label" for="id_hammadde_maliyeti">Ham Madde Maliyeti</label>
+        <div class="input-group-inline">
+          <div class="form-field" style="flex: 1;">
+            <input type="text" 
+                   id="id_hammadde_maliyeti" 
+                   value="{{ ham_madde_maliyeti|floatformat:2|default:'0.00' }}"
+                   class="form-control"
+                   readonly
+                   style="background-color: #f3f4f6; cursor: not-allowed;"
+                   placeholder="0,00">
+          </div>
+          <div class="form-field" style="width: 50px; display: flex; align-items: center; justify-content: center;">
+            <span style="font-weight: 600; color: #64748b;">{{ para_sembol }}</span>
+          </div>
+        </div>
+        <div class="form-help" style="font-size: 12px; color: var(--muted); margin-top: 4px;">Reçete bileşenleri toplamından alınır</div>
+      </div>
+      
+      <div class="form-field">
+        <label class="form-label" for="id_operasyon_maliyeti">Operasyonel Maliyetler</label>
+        <div class="input-group-inline">
+          <div class="form-field" style="flex: 1;">
+            <input type="text" 
+                   id="id_operasyon_maliyeti" 
+                   value="{{ operasyonel_maliyetler_toplami|floatformat:2|default:'0.00' }}"
+                   class="form-control"
+                   readonly
+                   style="background-color: #f3f4f6; cursor: not-allowed;"
+                   placeholder="0,00">
+          </div>
+          <div class="form-field" style="width: 50px; display: flex; align-items: center; justify-content: center;">
+            <span style="font-weight: 600; color: #64748b;">{{ para_sembol }}</span>
+          </div>
+        </div>
+        <div class="form-help" style="font-size: 12px; color: var(--muted); margin-top: 4px;">Reçete operasyonları toplamından alınır</div>
+      </div>
+      
+      <div class="form-field">
+        <label class="form-label" for="id_toplam_uretim_maliyeti">Toplam Üretim Maliyeti</label>
+        <div class="input-group-inline">
+          <div class="form-field" style="flex: 1;">
+            <input type="text" 
+                   id="id_toplam_uretim_maliyeti_display" 
+                   value="{{ toplam_uretim_maliyeti|floatformat:2|default:'0.00' }}"
+                   class="form-control"
+                   readonly
+                   style="background-color: #f3f4f6; cursor: not-allowed;"
+                   placeholder="0,00">
+          </div>
+          <div class="form-field" style="width: 50px; display: flex; align-items: center; justify-content: center;">
+            <span style="font-weight: 600; color: #64748b;">{{ para_sembol }}</span>
+          </div>
+        </div>
+        <input type="hidden" 
+               name="{{ form.uretim_maliyeti.name }}" 
+               id="id_toplam_uretim_maliyeti" 
+               value="{% if toplam_uretim_maliyeti is not None %}{{ toplam_uretim_maliyeti|floatformat:2 }}{% elif stok %}{{ stok.uretim_maliyeti|floatformat:2|default:'0.00' }}{% else %}0.00{% endif %}">
+        <div class="form-help" style="font-size: 12px; color: var(--muted); margin-top: 4px;">Ham Madde Maliyeti + Operasyonel Maliyetler</div>
+      </div>
+      
+      <div class="form-field" id="satis-fiyati-field-uretim" data-tamamlanma="satis_fiyati">
+        <label class="form-label" for="id_satis_fiyati_uretim">Satış Fiyatı</label>
+        <div class="input-group-inline">
+          <div class="form-field" style="flex: 1;">
+            <input type="number" 
+                   name="{{ form.satis_fiyati.name }}" 
+                   id="id_satis_fiyati_uretim" 
+                   value="{{ form.satis_fiyati.value|default:'' }}"
+                   step="0.01"
+                   min="0"
+                   class="form-control"
+                   data-tamamlanma-field
+                   placeholder="0.00">
+          </div>
+          <div class="form-field" style="width: 120px;">
+            <select name="satis_para_birimi" 
+                    id="id_satis_para_birimi_uretim" 
+                    class="form-select">
+              {% for para_birimi in para_birimleri %}
+                <option value="{{ para_birimi.kod }}" 
+                        {% if stok and stok.satis_para_birimi == para_birimi.kod %}selected
+                        {% elif not stok and not form.instance.pk and para_birimi.kod == 'TL' %}selected{% endif %}>
+                  {{ para_birimi.sembol }} {{ para_birimi.kod }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        {% if form.satis_fiyati.errors %}
+          <div class="form-error">{{ form.satis_fiyati.errors }}</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  
+  <!-- Form Hataları -->
+  {% if form.non_field_errors %}
+    <div class="form-section" style="background: #fef2f2; border-color: #fecaca;">
+      <div class="form-error">
+        {{ form.non_field_errors }}
+      </div>
+    </div>
+  {% endif %}
+  
+  <!-- Footer -->
+  <div class="form-section">
+    <div class="form-footer">
+      <a href="{% url 'stokapp:stok_listesi' %}" class="btn btn-secondary">İptal</a>
+      <button type="submit" class="btn btn-primary">💾 Kaydet</button>
+    </div>
+  </div>
+  </div>
+  </form>
+  
+  <!-- Fotoğraf Sidebar -->
+  <div class="photo-sidebar">
+    <div class="form-section" data-tamamlanma="fotograf">
+      <div class="form-section-title">📷 Ürün Fotoğrafı</div>
+      
+      <div class="form-field">
+        <input type="file" 
+               name="{{ form.fotograf.name }}" 
+               id="id_fotograf" 
+               form="stokForm"
+               accept="image/*"
+               style="display: none;">
+        {% if form.fotograf.errors %}
+          <div class="form-error">{{ form.fotograf.errors }}</div>
+        {% endif %}
+        <div class="image-upload-area" id="foto-thumb">
+          {% if form.instance.fotograf %}
+            <img src="{{ form.instance.fotograf.url }}" alt="Mevcut fotoğraf">
+          {% else %}
+            <div class="upload-placeholder">
+              <div class="upload-placeholder-icon">📷</div>
+              <div>Fotoğraf yüklemek için tıklayın</div>
+              <div style="font-size: 11px; margin-top: 4px; color: var(--muted);">JPEG veya PNG, max 5MB</div>
+            </div>
+          {% endif %}
+        </div>
+        <div class="form-help" id="foto-thumb-help">Maksimum 5MB, JPEG veya PNG formatında</div>
+      </div>
+    </div>
+
+    <div id="stokFotoLightbox" class="stok-foto-lightbox" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Fotoğraf önizleme">
+      <div class="stok-foto-lightbox-backdrop" id="stokFotoLightboxBackdrop"></div>
+      <div class="stok-foto-lightbox-content">
+        <button type="button" class="stok-foto-lightbox-close" id="stokFotoLightboxClose" aria-label="Kapat">×</button>
+        <img id="stokFotoLightboxImg" src="" alt="Ürün fotoğrafı önizleme">
+        <div class="stok-foto-lightbox-toolbar">
+          <button type="button" class="stok-foto-lightbox-print" id="stokFotoLightboxPrint">🖨️ Yazdır (A4)</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- QR Code -->
+    {% if stok and stok.ad %}
+    <div class="form-section" style="flex: 1;">
+      <div class="form-section-title">📱 Karekod</div>
+      <div class="form-field" style="display: flex; justify-content: center; align-items: center; padding: 20px;">
+        <div id="qrcode-container" style="text-align: center; min-height: 220px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+          <img id="qrcode-image" src="{% url 'stokapp:stok_qrcode' stok.pk %}" alt="QR Code" style="max-width: 200px; height: auto; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px; background: white;">
+          <div class="form-help" style="text-align: center; margin-top: 10px;">Ürün: {{ stok.ad }}</div>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="form-section" style="flex: 1;">
+      <div class="form-section-title">📱 Karekod</div>
+      <div class="form-field" style="display: flex; justify-content: center; align-items: center; padding: 20px;">
+        <div id="qrcode-container" style="text-align: center; min-height: 220px; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+          <div style="color: #9ca3af; font-size: 14px; padding: 40px 20px;">Ürün adı bilgisi girildiğinde karekod otomatik oluşturulur</div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    
+    <!-- Ek Dosyalar -->
+    <div class="form-section" style="flex: 1;" data-tamamlanma="ek_dosya">
+      <div class="form-section-title">📎 Ek Dosyalar</div>
+      
+      <div class="form-field">
+        <label class="form-label">Ek Dosyalar</label>
+        <input type="file" name="ek_dosyalar" form="stokForm" multiple class="form-input" style="padding: 8px;">
+        <div class="form-help">Birden fazla dosya seçebilirsiniz (fotoğraf, PDF, DXF, STEP vb. her türlü dosya)</div>
+      </div>
+
+      {% if ek_dosyalar %}
+      <div class="form-field" style="margin-top: 12px;">
+        <label class="form-label">Yüklenmiş Dosyalar</label>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          {% for ek in ek_dosyalar %}
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px;">
+            <a href="{{ ek.dosya.url }}" target="_blank" download style="color: #2563eb; text-decoration: none; font-weight: 500; word-break: break-all; flex: 1;">
+              📎 {{ ek.ad|default:ek.dosya.name }}
+            </a>
+            <span style="font-size: 11px; color: #9ca3af; white-space: nowrap;">{{ ek.uploaded_at|date:"d.m.Y H:i" }}</span>
+            {% if stok %}
+            <form method="post" action="{% url 'stokapp:stok_ek_dosya_sil' stok.pk ek.pk %}" style="display: inline; margin: 0;"
+                  onsubmit="return confirm('Bu dosyayı silmek istediğinizden emin misiniz?');">
+              {% csrf_token %}
+              <button type="submit" title="Dosyayı sil"
+                      style="background: #fee2e2; color: #dc2626; border: 1px solid #fecaca; border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer; white-space: nowrap;">
+                🗑️ Sil
+              </button>
+            </form>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    
+    <!-- Teknik Resim -->
+    <div class="form-section" style="flex: 1;" data-tamamlanma="teknik_resim">
+      <div class="form-section-title">📐 Teknik Resim</div>
+      
+      <div class="form-field">
+        <label class="form-label">Teknik Resim (DXF/DWG)</label>
+        <input type="file" 
+               name="{{ form.teknik_resim.name }}" 
+               id="id_teknik_resim" 
+               form="stokForm"
+               accept=".dxf,.dwg"
+               class="form-input" 
+               style="padding: 8px;">
+        {% if form.teknik_resim.errors %}
+          <div class="form-error">{{ form.teknik_resim.errors }}</div>
+        {% endif %}
+        {% if form.instance and form.instance.teknik_resim %}
+          <div style="margin-top: 10px; padding: 10px; background: #f0f0f0; border-radius: 4px;">
+            <div style="font-size: 12px; color: #666; margin-bottom: 5px;">Mevcut Teknik Resim:</div>
+            <a href="{{ form.instance.teknik_resim.url }}" target="_blank" style="color: #2563eb; text-decoration: none; font-weight: 500; display: inline-block; margin-bottom: 5px; font-size: 13px; word-break: break-all;">
+              📐 {% if teknik_resim_dosya_adi %}{{ teknik_resim_dosya_adi }}{% else %}{{ form.instance.teknik_resim.name|slice:"-50:" }}{% endif %}
+            </a>
+            <div style="margin-top: 5px;">
+              <label style="font-size: 12px; color: #666; cursor: pointer; display: flex; align-items: center;">
+                <input type="checkbox" name="teknik_resim-clear" style="margin-right: 5px;">
+                Mevcut dosyayı sil
+              </label>
+            </div>
+          </div>
+        {% endif %}
+        <div class="form-help">DXF veya DWG formatında teknik resim yükleyebilirsiniz</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Ekle Modal -->
+<div class="add-modal" id="addModal">
+  <div class="add-modal-content">
+    <div class="add-modal-title" id="addModalTitle">Yeni Ekle</div>
+    <input type="text" 
+           id="addModalInput" 
+           class="add-modal-input" 
+           placeholder="Ad giriniz..."
+           autocomplete="off">
+    <div class="add-modal-error" id="addModalError">Bu kayıt zaten mevcut!</div>
+    <div class="add-modal-buttons">
+      <button type="button" class="add-modal-btn add-modal-btn-cancel" id="addModalCancel">İptal</button>
+      <button type="button" class="add-modal-btn add-modal-btn-save" id="addModalSave">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Form alanlarına stil uygula - Select'leri de dahil et
+(function() {
+  const styleInputs = () => {
+    // Tüm input'ları bul ve stil uygula
+    document.querySelectorAll('#stokForm input[type="text"], #stokForm input[type="number"], #stokForm input[type="email"]').forEach(el => {
+      if (!el.classList.contains('form-input')) {
+        el.classList.add('form-input');
+      }
+      el.style.display = 'block';
+      el.style.visibility = 'visible';
+      el.style.opacity = '1';
+    });
+    
+    // Tüm select'leri bul ve stil uygula
+    document.querySelectorAll('#stokForm select').forEach(el => {
+      if (!el.classList.contains('form-select')) {
+        el.classList.add('form-select');
+      }
+      el.style.display = 'block';
+      el.style.visibility = 'visible';
+      el.style.opacity = '1';
+    });
+    
+    document.querySelectorAll('#stokForm textarea').forEach(el => {
+      if (!el.classList.contains('form-textarea')) {
+        el.classList.add('form-textarea');
+      }
+    });
+    
+    document.querySelectorAll('#stokForm input[type="file"]').forEach(el => {
+      if (!el.classList.contains('form-input')) {
+        el.classList.add('form-input');
+      }
+    });
+  };
+  
+  // Sayfa yüklendiğinde ve DOM hazır olduğunda çalıştır
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', styleInputs);
+  } else {
+    styleInputs();
+  }
+  
+  // Biraz gecikmeyle tekrar uygula (form yüklenene kadar bekle)
+  setTimeout(styleInputs, 100);
+  setTimeout(styleInputs, 500);
+})();
+
+// Modal kontrolü
+const modal = document.getElementById('addModal');
+const modalInput = document.getElementById('addModalInput');
+const modalError = document.getElementById('addModalError');
+const modalCancel = document.getElementById('addModalCancel');
+const modalSave = document.getElementById('addModalSave');
+const modalTitle = document.getElementById('addModalTitle');
+
+let currentField = null;
+let currentSelect = null;
+let currentApi = null;
+let currentRequiresDepo = false;
+
+// Ekle butonlarına event listener ekle
+document.querySelectorAll('.add-btn').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const field = this.getAttribute('data-field');
+    const api = this.getAttribute('data-api');
+    const label = this.getAttribute('data-label');
+    const requiresDepo = this.getAttribute('data-requires-depo') === 'true';
+    
+    // Raf için depo kontrolü
+    if (requiresDepo) {
+      const depoSelect = document.getElementById('id_depo');
+      if (!depoSelect || !depoSelect.value) {
+        alert('Önce bir depo seçiniz!');
+        return;
+      }
+    }
+    
+    currentField = field;
+    // Select'i butonun parent container'ından bul (select-with-add div'i içinde)
+    const container = this.closest('.select-with-add');
+    currentSelect = container ? container.querySelector('select') : null;
+    
+    // Eğer bulunamazsa, ID ile dene
+    if (!currentSelect) {
+      const selectId = `id_${field}`;
+      currentSelect = document.getElementById(selectId);
+    }
+    
+    currentApi = api;
+    currentRequiresDepo = requiresDepo;
+    
+    // Select bulunamazsa hata ver
+    if (!currentSelect) {
+      console.error('Select bulunamadı!', field, container);
+      alert(`Select alanı bulunamadı. Lütfen sayfayı yenileyin.`);
+      return;
+    }
+    
+    console.log('Select bulundu:', currentSelect, currentSelect.id); // Debug için
+    
+    modalTitle.textContent = `Yeni ${label} Ekle`;
+    modalInput.value = '';
+    modalError.classList.remove('show');
+    modal.classList.add('show');
+    modalInput.focus();
+  });
+});
+
+// Modal kapat
+function closeModal() {
+  modal.classList.remove('show');
+  modalInput.value = '';
+  modalError.classList.remove('show');
+  currentField = null;
+  currentSelect = null;
+  currentApi = null;
+}
+
+modalCancel.addEventListener('click', closeModal);
+
+// Modal dışına tıklayınca kapat
+modal.addEventListener('click', function(e) {
+  if (e.target === modal) {
+    closeModal();
+  }
+});
+
+// Enter tuşu ile kaydet
+modalInput.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    saveNewItem();
+  } else if (e.key === 'Escape') {
+    closeModal();
+  }
+});
+
+// Kaydet butonu
+modalSave.addEventListener('click', saveNewItem);
+
+// Yeni kayıt ekle
+async function saveNewItem() {
+  const ad = modalInput.value.trim();
+  
+  if (!ad) {
+    alert('Lütfen bir ad giriniz');
+    return;
+  }
+  
+  // currentSelect kontrolü
+  if (!currentSelect) {
+    console.error('currentSelect bulunamadı!', currentField);
+    alert('Bir hata oluştu. Lütfen sayfayı yenileyin.');
+    return;
+  }
+  
+  // Aynı isimde kayıt var mı kontrol et
+  const options = Array.from(currentSelect.options);
+  const exists = options.some(opt => {
+    const optText = opt.textContent.trim().toLowerCase();
+    return optText === ad.toLowerCase();
+  });
+  
+  if (exists) {
+    modalError.classList.add('show');
+    modalInput.focus();
+    modalInput.select();
+    return;
+  }
+  
+  // Kaydet butonunu devre dışı bırak (çift tıklamayı önle)
+  modalSave.disabled = true;
+  modalSave.textContent = 'Kaydediliyor...';
+  
+  // API'ye gönder
+  try {
+    const body = { ad: ad };
+    
+    // Raf için depo ID ekle
+    if (currentRequiresDepo) {
+      const depoId = document.getElementById('id_depo').value;
+      if (!depoId) {
+        alert('Depo seçilmedi!');
+        modalSave.disabled = false;
+        modalSave.textContent = 'Kaydet';
+        return;
+      }
+      body.depo_id = parseInt(depoId);
+    }
+    
+    console.log('API çağrısı:', currentApi, body);
+    console.log('currentSelect:', currentSelect);
+    
+    const resp = await fetch(currentApi, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+      },
+      body: JSON.stringify(body)
+    });
+    
+    console.log('API yanıtı:', resp.status, resp.statusText);
+    
+    if (!resp.ok) {
+      const errorData = await resp.json().catch(() => ({ error: 'Bilinmeyen hata' }));
+      throw new Error(errorData.error || `HTTP ${resp.status}: ${resp.statusText}`);
+    }
+    
+    const data = await resp.json();
+    console.log('API verisi:', data);
+    
+    if (data.ok) {
+      // Yeni seçeneği select'e ekle
+      const option = document.createElement('option');
+      option.value = data.id;
+      option.textContent = data.ad;
+      option.selected = true;
+      currentSelect.appendChild(option);
+      
+      // Modal'ı kapat
+      closeModal();
+      
+      // Başarı mesajı
+      alert(`${data.ad} başarıyla eklendi!`);
+    } else {
+      alert('Hata: ' + (data.error || 'Bilinmeyen hata'));
+    }
+  } catch(e) {
+    console.error('Hata:', e);
+    alert('Hata oluştu: ' + e.message);
+  } finally {
+    // Butonu tekrar aktif et
+    modalSave.disabled = false;
+    modalSave.textContent = 'Kaydet';
+  }
+}
+
+// Depo değiştiğinde rafları güncelle
+(function() {
+  function loadShelvesForDepo(depoId, selectedRafId) {
+    let rafSelect = document.getElementById('id_raf');
+    if (!rafSelect) {
+      rafSelect = document.querySelector('select[name="raf"]');
+    }
+    if (!rafSelect) {
+      return;
+    }
+
+    if (selectedRafId === undefined || selectedRafId === null) {
+      selectedRafId = rafSelect.getAttribute('data-initial-raf') || rafSelect.value || '';
+    }
+
+    rafSelect.innerHTML = '<option value="">Seçiniz...</option>';
+
+    if (!depoId) {
+      return;
+    }
+
+    const loadingOption = document.createElement('option');
+    loadingOption.value = '';
+    loadingOption.textContent = 'Yükleniyor...';
+    loadingOption.disabled = true;
+    rafSelect.appendChild(loadingOption);
+
+    fetch(`/stok/api/shelves/?depo_id=${depoId}`)
+      .then(resp => {
+        if (!resp.ok) {
+          throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+        }
+        return resp.json();
+      })
+      .then(data => {
+        rafSelect.innerHTML = '<option value="">Seçiniz...</option>';
+        let selectedFound = false;
+
+        if (Array.isArray(data) && data.length > 0) {
+          data.forEach(raf => {
+            const option = document.createElement('option');
+            option.value = raf.id;
+            option.textContent = raf.ad;
+            if (selectedRafId && String(raf.id) === String(selectedRafId)) {
+              option.selected = true;
+              selectedFound = true;
+            }
+            rafSelect.appendChild(option);
+          });
+        }
+
+        if (selectedRafId && !selectedFound) {
+          rafSelect.value = String(selectedRafId);
+        }
+      })
+      .catch(error => {
+        console.error('Raf yükleme hatası:', error);
+        rafSelect.innerHTML = '<option value="">Hata oluştu</option>';
+        alert('Raflar yüklenirken bir hata oluştu: ' + error.message);
+      });
+  }
+  
+  // Sayfa yüklendiğinde çalıştır
+  function initDepoShelfHandler() {
+    console.log('initDepoShelfHandler çağrıldı');
+    
+    // Depo select'i bul - önce ID ile, sonra name ile, sonra label'dan dene
+    let depoSelect = document.getElementById('id_depo');
+    
+    if (!depoSelect) {
+      // Name attribute ile dene
+      depoSelect = document.querySelector('select[name="depo"]');
+    }
+    
+    if (!depoSelect) {
+      // Label'ın for attribute'undan ID'yi al - "depo" içeren for attribute'u olan label'ı bul
+      const labels = Array.from(document.querySelectorAll('label[for*="depo"]'));
+      for (const label of labels) {
+        const forAttr = label.getAttribute('for');
+        if (forAttr) {
+          depoSelect = document.getElementById(forAttr);
+          if (depoSelect) break;
+        }
+      }
+    }
+    
+    if (!depoSelect) {
+      // Son çare: form içinde "Depo" text'i olan label'ı bul
+      const labels = Array.from(document.querySelectorAll('label'));
+      for (const label of labels) {
+        if (label.textContent.includes('Depo')) {
+          const forAttr = label.getAttribute('for');
+          if (forAttr) {
+            depoSelect = document.getElementById(forAttr);
+            if (depoSelect) break;
+          }
+          // Label'ın parent container'ından select'i bul
+          const container = label.closest('.form-field') || label.parentElement;
+          if (container) {
+            const nextSelect = container.querySelector('select');
+            if (nextSelect) {
+              depoSelect = nextSelect;
+              break;
+            }
+          }
+        }
+      }
+    }
+    
+    if (!depoSelect) {
+      return;
+    }
+    if (depoSelect.dataset.shelfHandlerInit === '1') {
+      return;
+    }
+    depoSelect.dataset.shelfHandlerInit = '1';
+    
+    // Eğer sayfa yüklendiğinde bir depo seçiliyse, o deponun raflarını yükle
+    let rafSelect = document.getElementById('id_raf') || document.querySelector('select[name="raf"]');
+    const initialRafId = rafSelect ? (rafSelect.getAttribute('data-initial-raf') || rafSelect.value || '') : '';
+
+    if (depoSelect.value) {
+      loadShelvesForDepo(depoSelect.value, initialRafId);
+    }
+
+    depoSelect.addEventListener('change', function() {
+      if (rafSelect) {
+        rafSelect.removeAttribute('data-initial-raf');
+      }
+      loadShelvesForDepo(this.value, '');
+    });
+    
+    console.log('Event listener eklendi');
+  }
+  
+  // DOM hazır olduğunda çalıştır
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDepoShelfHandler);
+  } else {
+    initDepoShelfHandler();
+  }
+  
+  // Biraz gecikmeyle tekrar dene (form yüklenene kadar bekle)
+  setTimeout(initDepoShelfHandler, 100);
+  setTimeout(initDepoShelfHandler, 500);
+  setTimeout(initDepoShelfHandler, 1000);
+})();
+
+// QR Code güncelleme - Ürün adı değiştiğinde QR code'u güncelle (sadece mevcut kayıt için)
+{% if stok %}
+(function() {
+  const urunAdiInput = document.getElementById('id_ad');
+  const qrcodeContainer = document.getElementById('qrcode-container');
+  
+  if (urunAdiInput && qrcodeContainer) {
+    // Ürün adı değiştiğinde sayfa yenilenecek, bu yüzden sadece görsel feedback verelim
+    urunAdiInput.addEventListener('input', function() {
+      const urunAdi = this.value;
+      if (!urunAdi || !urunAdi.trim()) {
+        qrcodeContainer.innerHTML = '<div style="color: #9ca3af; font-size: 14px; padding: 40px 20px;">Ürün adı bilgisi girildiğinde karekod otomatik oluşturulur</div>';
+      }
+    });
+  }
+})();
+{% endif %}
+
+// Stok kodu kontrolü
+(function() {
+  const input = document.getElementById('id_stok_kodu');
+  const uyari = document.getElementById('kod-uyari');
+  if (!input || !uyari) return;
+  
+  let timeout;
+  input.addEventListener('input', () => {
+    clearTimeout(timeout);
+    timeout = setTimeout(async () => {
+      const val = input.value.trim();
+      if (!val) {
+        uyari.style.display = 'none';
+        return;
+      }
+      try {
+        const resp = await fetch('{% url "stokapp:api_check_stok_kodu" %}?q=' + encodeURIComponent(val));
+        const data = await resp.json();
+        uyari.style.display = data.exists ? 'block' : 'none';
+      } catch(e) {}
+    }, 300);
+  });
+})();
+
+// Foto önizleme / lightbox
+(function() {
+  window.stokPhotoViewOnly = {% if is_readonly %}true{% else %}false{% endif %};
+
+  const lightbox = document.getElementById('stokFotoLightbox');
+  const lightboxImg = document.getElementById('stokFotoLightboxImg');
+  const lightboxClose = document.getElementById('stokFotoLightboxClose');
+  const lightboxPrint = document.getElementById('stokFotoLightboxPrint');
+  const lightboxBackdrop = document.getElementById('stokFotoLightboxBackdrop');
+  const fotoHelp = document.getElementById('foto-thumb-help');
+  const stokPrintLabel = {% if stok %}'{{ stok.stok_kodu|escapejs }} — {{ stok.ad|escapejs }}'{% else %}''{% endif %};
+
+  function printPhotoLightbox() {
+    const src = lightboxImg && lightboxImg.src;
+    if (!src) return;
+
+    let frame = document.getElementById('stokFotoPrintFrame');
+    if (!frame) {
+      frame = document.createElement('iframe');
+      frame.id = 'stokFotoPrintFrame';
+      frame.setAttribute('aria-hidden', 'true');
+      frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;';
+      document.body.appendChild(frame);
+    }
+
+    const title = stokPrintLabel || (lightboxImg.alt || 'Ürün fotoğrafı');
+    const safeSrc = src.replace(/"/g, '&quot;');
+    const safeTitle = String(title).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + safeTitle + '</title>' +
+      '<style>' +
+      '@page { size: A4 portrait; margin: 12mm; }' +
+      '* { box-sizing: border-box; }' +
+      'html, body { margin: 0; padding: 0; width: 100%; height: 100%; }' +
+      'body { font-family: Arial, sans-serif; }' +
+      '.sheet { width: 186mm; min-height: 273mm; margin: 0 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8mm; }' +
+      '.caption { font-size: 11pt; color: #374151; text-align: center; max-width: 100%; word-break: break-word; }' +
+      '.photo-wrap { flex: 1; width: 100%; display: flex; align-items: center; justify-content: center; min-height: 0; }' +
+      'img { max-width: 100%; max-height: 250mm; width: auto; height: auto; object-fit: contain; display: block; }' +
+      '</style></head><body>' +
+      '<div class="sheet">' +
+      (safeTitle ? '<div class="caption">' + safeTitle + '</div>' : '') +
+      '<div class="photo-wrap"><img src="' + safeSrc + '" alt="' + safeTitle + '"></div>' +
+      '</div></body></html>';
+
+    const doc = frame.contentDocument || frame.contentWindow.document;
+    doc.open();
+    doc.write(html);
+    doc.close();
+
+    const doPrint = function() {
+      try {
+        frame.contentWindow.focus();
+        frame.contentWindow.print();
+      } catch (err) {
+        console.error('Yazdırma hatası:', err);
+      }
+    };
+
+    const img = frame.contentDocument && frame.contentDocument.querySelector('img');
+    if (img && !img.complete) {
+      img.onload = function() { setTimeout(doPrint, 100); };
+      img.onerror = doPrint;
+    } else {
+      setTimeout(doPrint, 150);
+    }
+  }
+
+  function openPhotoLightbox(src, alt) {
+    if (!lightbox || !lightboxImg || !src) return;
+    lightboxImg.src = src;
+    lightboxImg.alt = alt || 'Ürün fotoğrafı';
+    lightbox.classList.add('open');
+    lightbox.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closePhotoLightbox() {
+    if (!lightbox) return;
+    lightbox.classList.remove('open');
+    lightbox.setAttribute('aria-hidden', 'true');
+    if (lightboxImg) lightboxImg.src = '';
+    document.body.style.overflow = '';
+  }
+
+  if (lightboxClose) lightboxClose.addEventListener('click', closePhotoLightbox);
+  if (lightboxPrint) lightboxPrint.addEventListener('click', function(e) {
+    e.stopPropagation();
+    printPhotoLightbox();
+  });
+  if (lightboxBackdrop) lightboxBackdrop.addEventListener('click', closePhotoLightbox);
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closePhotoLightbox();
+  });
+
+  function updatePhotoThumbMode() {
+    const box = document.getElementById('foto-thumb');
+    if (!box) return;
+    const hasImg = !!box.querySelector('img');
+    box.classList.toggle('photo-view-only', window.stokPhotoViewOnly && hasImg);
+    box.classList.toggle('photo-edit-mode', !window.stokPhotoViewOnly);
+    if (fotoHelp) {
+      if (window.stokPhotoViewOnly && hasImg) {
+        fotoHelp.textContent = 'Büyütmek için fotoğrafa tıklayın';
+      } else if (!window.stokPhotoViewOnly) {
+        fotoHelp.textContent = 'Yeni fotoğraf seçmek için tıklayın (JPEG veya PNG, max 5MB)';
+      } else {
+        fotoHelp.textContent = 'Maksimum 5MB, JPEG veya PNG formatında';
+      }
+    }
+  }
+
+  window.stokPhotoEnterEditMode = function() {
+    window.stokPhotoViewOnly = false;
+    updatePhotoThumbMode();
+  };
+
+  function initPhotoUpload() {
+    const box = document.getElementById('foto-thumb');
+    if (!box || box.dataset.photoUploadInit === '1') {
+      return;
+    }
+
+    const inp = document.getElementById('id_fotograf')
+      || document.querySelector('input[name="fotograf"]');
+    if (!inp) {
+      return;
+    }
+
+    box.dataset.photoUploadInit = '1';
+    inp.style.display = 'none';
+
+    box.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      const img = box.querySelector('img');
+      if (window.stokPhotoViewOnly) {
+        if (img && img.src) {
+          openPhotoLightbox(img.src, img.alt);
+        }
+        return;
+      }
+      inp.click();
+    });
+
+    inp.addEventListener('change', function() {
+      const file = this.files?.[0];
+      if (!file) {
+        {% if form.instance.fotograf %}
+        box.innerHTML = '<img src="{{ form.instance.fotograf.url }}" alt="Mevcut fotoğraf">';
+        {% else %}
+        box.innerHTML = '<div class="upload-placeholder"><div class="upload-placeholder-icon">📷</div><div>Fotoğraf yüklemek için tıklayın</div><div style="font-size: 11px; margin-top: 4px; color: var(--muted);">JPEG veya PNG, max 5MB</div></div>';
+        {% endif %}
+        updatePhotoThumbMode();
+        return;
+      }
+      const url = URL.createObjectURL(file);
+      box.innerHTML = '<img src="' + url + '" alt="Önizleme">';
+      updatePhotoThumbMode();
+    });
+
+    updatePhotoThumbMode();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initPhotoUpload);
+  } else {
+    initPhotoUpload();
+  }
+})();
+
+// Ürün kaynak tipi toggle (Satın Alma / Üretim)
+(function() {
+  const rolSelect = document.getElementById('{{ form.urun_rolu.id_for_label }}');
+  const kaynakSelect = document.getElementById('id_urun_tipi');
+  const satinAlmaModu = document.getElementById('satin-alma-modu');
+  const uretimModu = document.getElementById('uretim-modu');
+  const alisFiyatiInput = document.getElementById('{{ form.alis_fiyati.id_for_label }}');
+  const satisFiyatiSatinalmaInput = document.getElementById('{{ form.satis_fiyati.id_for_label }}');
+  const satisFiyatiUretimInput = document.getElementById('id_satis_fiyati_uretim');
+  const satisFiyatiFieldName = '{{ form.satis_fiyati.name|escapejs }}';
+  const uretimMaliyetiInput = document.getElementById('id_toplam_uretim_maliyeti');
+  const alisFiyatiField = document.getElementById('alis-fiyati-field');
+  const satisFiyatiFieldSatinalma = document.getElementById('satis-fiyati-field-satinalma');
+  const satisFiyatiFieldUretim = document.getElementById('satis-fiyati-field-uretim');
+  const tedarikciSelect = document.getElementById('{{ form.tedarikci.id_for_label }}');
+  const tedarikciAddBtn = document.getElementById('tedarikciAddBtn');
+  
+  // Satış para birimi select'lerini bul
+  const satisParaBirimiSatinalma = document.getElementById('id_satis_para_birimi');
+  const satisParaBirimiUretim = document.getElementById('id_satis_para_birimi_uretim');
+  
+  if (!kaynakSelect || !satinAlmaModu || !uretimModu) return;
+  
+  const toggleMod = () => {
+    const isUretim = kaynakSelect.value === 'URETIM';
+    
+    if (isUretim) {
+      // Üretim modu
+      satinAlmaModu.style.display = 'none';
+      uretimModu.style.display = 'grid';
+      
+      // Satış para birimi: Satın alma modunu disable et ve name'ini değiştir
+      if (satisParaBirimiSatinalma) {
+        satisParaBirimiSatinalma.disabled = true;
+        satisParaBirimiSatinalma.name = 'satis_para_birimi_disabled';
+        // Satın alma modundaki değeri üretim moduna kopyala
+        if (satisParaBirimiUretim && satisParaBirimiSatinalma.value) {
+          satisParaBirimiUretim.value = satisParaBirimiSatinalma.value;
+        }
+      }
+      // Üretim modunu aktif et ve name'ini düzelt
+      if (satisParaBirimiUretim) {
+        satisParaBirimiUretim.disabled = false;
+        satisParaBirimiUretim.name = 'satis_para_birimi';
+      }
+
+      // Satış fiyatı: sadece üretim alanı form name'i ile gönderilsin
+      if (satisFiyatiSatinalmaInput) {
+        satisFiyatiSatinalmaInput.disabled = true;
+        satisFiyatiSatinalmaInput.name = 'satis_fiyati_disabled';
+      }
+      if (satisFiyatiUretimInput) {
+        satisFiyatiUretimInput.disabled = false;
+        satisFiyatiUretimInput.name = satisFiyatiFieldName;
+      }
+      
+      // Alış Fiyatı input'unu pasif yap
+      if (alisFiyatiInput) {
+        alisFiyatiInput.disabled = true;
+        alisFiyatiInput.style.backgroundColor = '#f3f4f6';
+        alisFiyatiInput.style.cursor = 'not-allowed';
+      }
+
+      // Ürünü üretiyoruz seçiliyse tedarikçi seçimi pasif
+      if (tedarikciSelect) {
+        if (!tedarikciSelect.dataset.prevValue) {
+          tedarikciSelect.dataset.prevValue = tedarikciSelect.value || '';
+        }
+        if (!tedarikciSelect.dataset.optionsBackup) {
+          tedarikciSelect.dataset.optionsBackup = tedarikciSelect.innerHTML;
+        }
+        tedarikciSelect.innerHTML = '<option value="">🔥 {{ firma_ismi|escapejs }} Tarafından Üretiliyor</option>';
+        tedarikciSelect.value = '';
+        tedarikciSelect.disabled = true;
+        tedarikciSelect.style.backgroundColor = '#fff7ed';
+        tedarikciSelect.style.color = '#c2410c';
+        tedarikciSelect.style.borderColor = '#fb923c';
+        tedarikciSelect.style.fontWeight = '700';
+        tedarikciSelect.style.cursor = 'not-allowed';
+      }
+      if (tedarikciAddBtn) {
+        tedarikciAddBtn.disabled = true;
+        tedarikciAddBtn.style.opacity = '0.5';
+        tedarikciAddBtn.style.cursor = 'not-allowed';
+      }
+    } else {
+      // Satın alma modu
+      satinAlmaModu.style.display = 'grid';
+      uretimModu.style.display = 'none';
+      
+      // Satış para birimi: Üretim modunu disable et ve name'ini değiştir
+      if (satisParaBirimiUretim) {
+        satisParaBirimiUretim.disabled = true;
+        satisParaBirimiUretim.name = 'satis_para_birimi_disabled';
+        // Üretim modundaki değeri satın alma moduna kopyala
+        if (satisParaBirimiSatinalma && satisParaBirimiUretim.value) {
+          satisParaBirimiSatinalma.value = satisParaBirimiUretim.value;
+        }
+      }
+      // Satın alma modunu aktif et ve name'ini düzelt
+      if (satisParaBirimiSatinalma) {
+        satisParaBirimiSatinalma.disabled = false;
+        satisParaBirimiSatinalma.name = 'satis_para_birimi';
+      }
+
+      // Satış fiyatı: sadece satın alma alanı form name'i ile gönderilsin
+      if (satisFiyatiUretimInput) {
+        satisFiyatiUretimInput.disabled = true;
+        satisFiyatiUretimInput.name = 'satis_fiyati_disabled';
+      }
+      if (satisFiyatiSatinalmaInput) {
+        satisFiyatiSatinalmaInput.disabled = false;
+        satisFiyatiSatinalmaInput.name = satisFiyatiFieldName;
+      }
+      
+      // Alış Fiyatı input'unu aktif yap
+      if (alisFiyatiInput) {
+        alisFiyatiInput.disabled = false;
+        alisFiyatiInput.style.backgroundColor = '';
+        alisFiyatiInput.style.cursor = '';
+      }
+
+      // Satın alma modunda tedarikçi tekrar aktif
+      if (tedarikciSelect) {
+        if (tedarikciSelect.dataset.optionsBackup) {
+          tedarikciSelect.innerHTML = tedarikciSelect.dataset.optionsBackup;
+        }
+        tedarikciSelect.disabled = false;
+        tedarikciSelect.style.backgroundColor = '';
+        tedarikciSelect.style.color = '';
+        tedarikciSelect.style.borderColor = '';
+        tedarikciSelect.style.fontWeight = '';
+        tedarikciSelect.style.cursor = '';
+        if (!tedarikciSelect.value && tedarikciSelect.dataset.prevValue) {
+          tedarikciSelect.value = tedarikciSelect.dataset.prevValue;
+        }
+      }
+      if (tedarikciAddBtn) {
+        tedarikciAddBtn.disabled = false;
+        tedarikciAddBtn.style.opacity = '';
+        tedarikciAddBtn.style.cursor = '';
+      }
+    }
+  };
+  
+  const applyRoleRules = () => {
+    if (!rolSelect) return;
+    const rol = rolSelect.value;
+
+    // Nihai ürün ve al-sat için kaynak sabit; üretim bileşeninde kullanıcı seçer
+    if (rol === 'NIHAI_URUN') {
+      kaynakSelect.value = 'URETIM';
+    } else if (rol === 'AL_SAT') {
+      kaynakSelect.value = 'SATINAL';
+    }
+    kaynakSelect.disabled = false;
+    kaynakSelect.removeAttribute('aria-readonly');
+    kaynakSelect.style.pointerEvents = '';
+    kaynakSelect.style.backgroundColor = '';
+    kaynakSelect.style.cursor = '';
+    toggleMod();
+
+    // Varsayılan görünürlükler
+    if (alisFiyatiField) alisFiyatiField.style.display = '';
+    if (satisFiyatiFieldSatinalma) satisFiyatiFieldSatinalma.style.display = '';
+    if (satisFiyatiFieldUretim) satisFiyatiFieldUretim.style.display = '';
+
+    if (rol === 'BILESEN') {
+      if (satisFiyatiFieldSatinalma) satisFiyatiFieldSatinalma.style.display = 'none';
+      if (satisFiyatiSatinalmaInput) {
+        satisFiyatiSatinalmaInput.value = '0.00';
+        satisFiyatiSatinalmaInput.disabled = true;
+      }
+      if (satisFiyatiUretimInput) {
+        satisFiyatiUretimInput.value = '0.00';
+        satisFiyatiUretimInput.disabled = true;
+      }
+    } else if (rol === 'NIHAI_URUN') {
+      if (alisFiyatiInput) {
+        alisFiyatiInput.value = '0.00';
+      }
+      if (satisFiyatiUretimInput) {
+        satisFiyatiUretimInput.disabled = false;
+      }
+      if (satisFiyatiSatinalmaInput) {
+        satisFiyatiSatinalmaInput.disabled = true;
+      }
+    } else {
+      if (satisFiyatiSatinalmaInput) {
+        satisFiyatiSatinalmaInput.disabled = false;
+      }
+      if (satisFiyatiUretimInput) {
+        satisFiyatiUretimInput.disabled = true;
+      }
+    }
+
+    const uretimKaynagi = kaynakSelect.value === 'URETIM';
+    if (rol !== 'NIHAI_URUN' && !(rol === 'BILESEN' && uretimKaynagi) && uretimMaliyetiInput) {
+      uretimMaliyetiInput.value = '0.00';
+    }
+  };
+  
+  // İlk yüklemede uygulansın
+  applyRoleRules();
+  
+  // Değişiklik olduğunda güncelle
+  kaynakSelect.addEventListener('change', function() {
+    if (rolSelect) {
+      if (kaynakSelect.value === 'URETIM' && rolSelect.value === 'AL_SAT') {
+        rolSelect.value = 'NIHAI_URUN';
+      } else if (kaynakSelect.value === 'SATINAL' && rolSelect.value === 'NIHAI_URUN') {
+        rolSelect.value = 'AL_SAT';
+      }
+    }
+    applyRoleRules();
+  });
+  if (rolSelect) {
+    rolSelect.addEventListener('change', applyRoleRules);
+  }
+})();
+
+// Sayı alanlarını 2 ondalık basamaklı formata çevir
+(function() {
+  // Formatlama fonksiyonu
+  function formatNumber(input) {
+    if (!input || input.type !== 'number') return;
+    
+    let value = input.value;
+    if (value === '' || value === null || value === undefined) return;
+    
+    // String'e çevir ve temizle
+    value = String(value).trim();
+    if (value === '') return;
+    
+    // Sayıya çevir
+    const numValue = parseFloat(value);
+    if (isNaN(numValue)) return;
+    
+    // 2 ondalık basamaklı formata çevir
+    const formatted = numValue.toFixed(2);
+    
+    // Input değerini güncelle
+    input.value = formatted;
+  }
+  
+  // Tüm sayı input alanlarını bul ve formatla
+  function initNumberFormatting() {
+    // Miktar alanları
+    const numberInputs = [
+      'id_acilis_miktari',
+      'id_minimum_stok',
+      'id_maximum_stok',
+      'id_alis_fiyati',
+      'id_satis_fiyati',
+      'id_satis_fiyati_uretim'
+    ];
+    
+    // Tüm number type input'ları bul
+    const allNumberInputs = document.querySelectorAll('input[type="number"]');
+    
+    // Her input için event listener ekle
+    allNumberInputs.forEach(function(input) {
+      // Blur event: Kullanıcı alanı terk ettiğinde formatla
+      input.addEventListener('blur', function() {
+        formatNumber(this);
+      });
+      
+      // Sayfa yüklendiğinde mevcut değerleri formatla
+      if (input.value && input.value !== '') {
+        formatNumber(input);
+      }
+    });
+  }
+  
+  // DOM hazır olduğunda çalıştır
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initNumberFormatting);
+  } else {
+    initNumberFormatting();
+  }
+  
+  // Form yüklendikten sonra tekrar dene
+  setTimeout(initNumberFormatting, 100);
+  setTimeout(initNumberFormatting, 500);
+})();
+
+// Stok takibi kapalıyken min/max stok alanlarını sıfırla ve pasifleştir
+(function() {
+  const stokTakipSelect = document.getElementById('id_stok_takip');
+  const minInput = document.getElementById('id_minimum_stok');
+  const maxInput = document.getElementById('id_maximum_stok');
+  if (!stokTakipSelect || !minInput || !maxInput) return;
+
+  function isDetailViewMode() {
+    const editBtn = document.getElementById('editBtn');
+    return !!editBtn && editBtn.style.display !== 'none';
+  }
+
+  const minField = minInput.closest('.form-field');
+  const maxField = maxInput.closest('.form-field');
+
+  function lockMinMaxInputs() {
+    minInput.value = '0';
+    maxInput.value = '0';
+    minInput.readOnly = true;
+    maxInput.readOnly = true;
+    minInput.classList.add('readonly-field', 'stok-minmax-pasif');
+    maxInput.classList.add('readonly-field', 'stok-minmax-pasif');
+    minField?.classList.add('stok-minmax-pasif-field');
+    maxField?.classList.add('stok-minmax-pasif-field');
+    minInput.setAttribute('aria-readonly', 'true');
+    maxInput.setAttribute('aria-readonly', 'true');
+  }
+
+  function unlockMinMaxInputs() {
+    if (isDetailViewMode()) return;
+    minInput.readOnly = false;
+    maxInput.readOnly = false;
+    minInput.classList.remove('readonly-field', 'stok-minmax-pasif');
+    maxInput.classList.remove('readonly-field', 'stok-minmax-pasif');
+    minField?.classList.remove('stok-minmax-pasif-field');
+    maxField?.classList.remove('stok-minmax-pasif-field');
+    minInput.removeAttribute('aria-readonly');
+    maxInput.removeAttribute('aria-readonly');
+  }
+
+  function applyStokTakipMinMaxState() {
+    const takipKapali = stokTakipSelect.value === 'False';
+    if (takipKapali) {
+      if (!minInput.dataset.stokTakipSaved) {
+        minInput.dataset.prevMin = minInput.value || '';
+        maxInput.dataset.prevMax = maxInput.value || '';
+        minInput.dataset.stokTakipSaved = '1';
+      }
+      lockMinMaxInputs();
+      return;
+    }
+
+    if (minInput.dataset.stokTakipSaved) {
+      minInput.value = minInput.dataset.prevMin || '';
+      maxInput.value = maxInput.dataset.prevMax || '';
+      delete minInput.dataset.stokTakipSaved;
+      delete minInput.dataset.prevMin;
+      delete maxInput.dataset.prevMax;
+    }
+    unlockMinMaxInputs();
+  }
+
+  stokTakipSelect.addEventListener('change', applyStokTakipMinMaxState);
+  window.applyStokTakipMinMaxState = applyStokTakipMinMaxState;
+  applyStokTakipMinMaxState();
+})();
+
+// Malzeme Hesaplama (Boyutlu Çelik Malzeme)
+(function() {
+  const kategoriSelect = document.getElementById('id_kategori');
+  const malzemeBolumu = document.getElementById('malzeme-hesaplama-bolumu');
+  const enInput = document.getElementById('malzeme_en');
+  const boyInput = document.getElementById('malzeme_boy');
+  const kalinlikInput = document.getElementById('malzeme_kalinlik');
+  const kgFiyatInput = document.getElementById('malzeme_kg_fiyat');
+  const aktarBtn = document.getElementById('malzeme_aktar_btn');
+  const hesaplananAgirlikSpan = document.getElementById('hesaplanan_agirlik');
+  const alisFiyatiInput = document.getElementById('{{ form.alis_fiyati.id_for_label }}');
+  
+  if (!kategoriSelect || !malzemeBolumu) return;
+  
+  // Kategori seçimi değiştiğinde
+  function checkKategori() {
+    if (!kategoriSelect || !malzemeBolumu) return;
+    
+    const selectedOption = kategoriSelect.options[kategoriSelect.selectedIndex];
+    const kategoriAdi = selectedOption ? selectedOption.text.trim() : '';
+    
+    // Türkçe karakterleri normalize et
+    const normalizedAd = kategoriAdi.toLowerCase()
+      .replace(/ı/g, 'i')
+      .replace(/ğ/g, 'g')
+      .replace(/ü/g, 'u')
+      .replace(/ş/g, 's')
+      .replace(/ö/g, 'o')
+      .replace(/ç/g, 'c');
+    
+    // "boyutlu çelik malzeme" kontrolü (case-insensitive, Türkçe karakterler normalize edilmiş)
+    if (normalizedAd.includes('boyutlu') && normalizedAd.includes('celik') && normalizedAd.includes('malzeme')) {
+      malzemeBolumu.style.display = 'block';
+    } else if (normalizedAd === 'boyutlu celik malzeme' || normalizedAd.includes('boyutlu celik malzeme')) {
+      malzemeBolumu.style.display = 'block';
+    } else {
+      malzemeBolumu.style.display = 'none';
+      // Alanları temizle
+      if (enInput) enInput.value = '';
+      if (boyInput) boyInput.value = '';
+      if (kalinlikInput) kalinlikInput.value = '';
+      if (kgFiyatInput) kgFiyatInput.value = '';
+      if (hesaplananAgirlikSpan) hesaplananAgirlikSpan.textContent = '0.00';
+    }
+  }
+  
+  // Hesaplama fonksiyonu
+  function hesaplaAgirlik() {
+    if (!enInput || !boyInput || !kalinlikInput) return 0;
+    
+    const en = parseFloat(enInput.value) || 0;
+    const boy = parseFloat(boyInput.value) || 0;
+    const kalinlik = parseFloat(kalinlikInput.value) || 0;
+    
+    if (en <= 0 || boy <= 0 || kalinlik <= 0) {
+      return 0;
+    }
+    
+    // Özgül ağırlık = 8 gr/cm³
+    // Boyutlar mm cinsinden, cm'ye çevir
+    const enCm = en / 10;
+    const boyCm = boy / 10;
+    const kalinlikCm = kalinlik / 10;
+    
+    // Hacim = En x Boy x Kalınlık (cm³)
+    const hacim = enCm * boyCm * kalinlikCm;
+    
+    // Ağırlık = Hacim x Özgül Ağırlık / 1000 (kg cinsinden)
+    const agirlikKg = (hacim * 8) / 1000;
+    
+    return agirlikKg;
+  }
+  
+  // Ağırlık hesaplama ve gösterme
+  function guncelleAgirlik() {
+    const agirlik = hesaplaAgirlik();
+    if (hesaplananAgirlikSpan) {
+      hesaplananAgirlikSpan.textContent = agirlik.toFixed(3);
+    }
+  }
+  
+  // Aktar butonu
+  function aktarFiyat() {
+    const agirlik = hesaplaAgirlik();
+    const kgFiyat = parseFloat(kgFiyatInput.value) || 0;
+    
+    if (agirlik <= 0) {
+      alert('Lütfen önce boyutları girin (En, Boy, Kalınlık).');
+      return;
+    }
+    
+    if (kgFiyat <= 0) {
+      alert('Lütfen kg fiyatını girin.');
+      return;
+    }
+    
+    // Toplam fiyat = Ağırlık x Kg Fiyat
+    const toplamFiyat = agirlik * kgFiyat;
+    
+    // Alış fiyatına aktar
+    if (alisFiyatiInput) {
+      alisFiyatiInput.value = toplamFiyat.toFixed(2);
+      
+      // Input event'i tetikle (diğer scriptler için)
+      const event = new Event('input', { bubbles: true });
+      alisFiyatiInput.dispatchEvent(event);
+      
+      // Change event'i de tetikle
+      const changeEvent = new Event('change', { bubbles: true });
+      alisFiyatiInput.dispatchEvent(changeEvent);
+      
+      // Başarı mesajı (konsola yazdır, alert yerine)
+      console.log(`Fiyat başarıyla aktarıldı! Ağırlık: ${agirlik.toFixed(3)} kg, Toplam Fiyat: ${toplamFiyat.toFixed(2)}`);
+    }
+  }
+  
+  // Event listener'ları ekle
+  kategoriSelect.addEventListener('change', checkKategori);
+  
+  if (enInput) enInput.addEventListener('input', guncelleAgirlik);
+  if (enInput) enInput.addEventListener('change', guncelleAgirlik);
+  if (boyInput) boyInput.addEventListener('input', guncelleAgirlik);
+  if (boyInput) boyInput.addEventListener('change', guncelleAgirlik);
+  if (kalinlikInput) kalinlikInput.addEventListener('input', guncelleAgirlik);
+  if (kalinlikInput) kalinlikInput.addEventListener('change', guncelleAgirlik);
+  
+  if (aktarBtn) aktarBtn.addEventListener('click', aktarFiyat);
+  
+  // Sayfa yüklendiğinde kontrol et
+  checkKategori();
+  
+  // Sayfa yüklendikten sonra tekrar kontrol et
+  setTimeout(checkKategori, 100);
+  setTimeout(checkKategori, 500);
+})();
+
+// Tamamlanma kuralları — eksik alan vurgusu
+(function() {
+    {% if tamamlanma_eksik_liste %}
+    const eksikKeys = [{% for eksik in tamamlanma_eksik_liste %}'{{ eksik.key }}'{% if not forloop.last %}, {% endif %}{% endfor %}];
+
+    eksikKeys.forEach(function(key) {
+        document.querySelectorAll('[data-tamamlanma="' + key + '"]').forEach(function(el) {
+            el.classList.add('tamamlanma-eksik-field');
+        });
+    });
+
+    const panel = document.getElementById('tamamlanmaEksikPanel');
+    const toggleBtn = document.getElementById('tamamlanmaEksikToggle');
+    if (toggleBtn && panel) {
+        toggleBtn.addEventListener('click', function() {
+            panel.classList.toggle('open');
+            toggleBtn.textContent = panel.classList.contains('open') ? 'Eksikleri gizle' : 'Eksikleri göster';
+        });
+    }
+
+    document.querySelectorAll('.tamamlanma-goto').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const key = btn.getAttribute('data-tamamlanma-key');
+            const target = document.querySelector('[data-tamamlanma="' + key + '"]');
+            if (!target) return;
+            if (panel) panel.classList.add('open');
+            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            target.classList.remove('tamamlanma-pulse');
+            void target.offsetWidth;
+            target.classList.add('tamamlanma-pulse');
+            const editBtn = document.getElementById('editBtn');
+            if (editBtn && editBtn.style.display !== 'none') {
+                editBtn.click();
+            }
+        });
+    });
+    {% endif %}
+})();
+
+// Readonly mod kontrolü
+(function() {
+    const isReadonly = {% if is_readonly %}true{% else %}false{% endif %};
+    
+    function setReadonlyMode(readonly) {
+        const form = document.getElementById('stokForm');
+        if (!form) return;
+        
+        // Tüm input, select, textarea alanlarını bul
+        const inputs = form.querySelectorAll('input, select, textarea, button[type="submit"]');
+        
+        inputs.forEach(function(input) {
+            // Checkbox'ları ve hidden input'ları atla
+            if (input.type === 'checkbox' || input.type === 'hidden') {
+                return;
+            }
+            
+            // Tamamlanma ve alış fiyat alanları her zaman düzenlenebilir (POST'a gitsinler)
+            if (input.hasAttribute('data-tamamlanma-field') || input.closest('[data-tamamlanma]')) {
+                input.disabled = false;
+                input.readOnly = false;
+                input.removeAttribute('aria-readonly');
+                input.classList.remove('readonly-field', 'readonly-select');
+                input.style.pointerEvents = '';
+                input.style.backgroundColor = '';
+                input.style.cursor = '';
+                input.style.color = '';
+                input.style.borderColor = '';
+                input.style.fontWeight = '';
+                input.tabIndex = '';
+                return;
+            }
+
+            // Alış fiyat alanını her zaman düzenlenebilir bırak
+            if (input.id === 'id_alis_fiyati' || input.name === 'alis_fiyati') {
+                input.disabled = false;
+                input.readOnly = false;
+                input.classList.remove('readonly-field');
+                return;
+            }
+            
+            if (readonly) {
+                if (input.tagName === 'SELECT') {
+                    input.disabled = false;
+                    input.readOnly = false;
+                    input.setAttribute('aria-readonly', 'true');
+                    input.classList.add('readonly-field', 'readonly-select');
+                    input.style.pointerEvents = 'none';
+                    input.style.backgroundColor = '#f3f4f6';
+                    input.tabIndex = -1;
+                } else {
+                    input.disabled = false;
+                    input.readOnly = true;
+                    input.classList.add('readonly-field');
+                }
+                
+                // Submit butonunu gizle
+                if (input.type === 'submit') {
+                    input.style.display = 'none';
+                }
+            } else {
+                input.disabled = false;
+                input.readOnly = false;
+                input.removeAttribute('aria-readonly');
+                input.classList.remove('readonly-field', 'readonly-select');
+                input.style.pointerEvents = '';
+                input.style.backgroundColor = '';
+                input.tabIndex = '';
+                
+                // Submit butonunu göster
+                if (input.type === 'submit') {
+                    input.style.display = '';
+                }
+            }
+        });
+        
+        // "Ekle" butonlarını da kontrol et
+        const addButtons = form.querySelectorAll('.add-btn');
+        addButtons.forEach(function(btn) {
+            if (readonly) {
+                btn.style.display = 'none';
+            } else {
+                btn.style.display = '';
+            }
+        });
+    }
+    
+    // Sayfa yüklendiğinde readonly modunu ayarla
+    if (isReadonly) {
+        setReadonlyMode(true);
+    }
+    
+    // Düzenle butonuna tıklandığında
+    const editBtn = document.getElementById('editBtn');
+    if (editBtn) {
+        editBtn.addEventListener('click', function() {
+            setReadonlyMode(false);
+            if (typeof window.stokPhotoEnterEditMode === 'function') {
+                window.stokPhotoEnterEditMode();
+            }
+            if (typeof window.applyStokTakipMinMaxState === 'function') {
+                window.applyStokTakipMinMaxState();
+            }
+            const kaynakSelect = document.getElementById('id_urun_tipi');
+            if (kaynakSelect) {
+                kaynakSelect.removeAttribute('aria-readonly');
+                kaynakSelect.style.pointerEvents = '';
+                kaynakSelect.style.backgroundColor = '';
+                kaynakSelect.style.cursor = '';
+            }
+            this.style.display = 'none'; // Düzenle butonunu gizle
+        });
+    }
+
+    // Kaydet öncesi: disabled alanları etkinleştir (POST'a dahil olsunlar)
+    const stokFormEl = document.getElementById('stokForm');
+    if (stokFormEl) {
+        stokFormEl.addEventListener('submit', function(e) {
+            const enableField = function(el) {
+                if (!el || el.type === 'hidden') return;
+                el.disabled = false;
+                el.readOnly = false;
+                el.removeAttribute('aria-readonly');
+                el.classList.remove('readonly-select');
+                el.style.pointerEvents = '';
+                el.style.backgroundColor = '';
+                el.style.cursor = '';
+                el.tabIndex = '';
+                if (el.name && el.name.endsWith('_disabled') && el.dataset.originalName) {
+                    el.name = el.dataset.originalName;
+                }
+            };
+            stokFormEl.querySelectorAll('input, select, textarea').forEach(enableField);
+            document.querySelectorAll('[form="stokForm"]').forEach(enableField);
+            // Devre dışı fiyat alanlarının name'lerini düzelt
+            const satisFiyatiFieldName = '{{ form.satis_fiyati.name|escapejs }}';
+            stokFormEl.querySelectorAll('[name="satis_fiyati_disabled"]').forEach(function(el) {
+                el.disabled = false;
+                el.name = satisFiyatiFieldName;
+            });
+            stokFormEl.querySelectorAll('[name="satis_para_birimi_disabled"]').forEach(function(el) {
+                el.disabled = false;
+                el.name = 'satis_para_birimi';
+            });
+        }, true);
+    }
+})();
+
+// Fiyat Analizi Modal
+function showFiyatAnalizi() {
+    const modal = document.getElementById('fiyatAnaliziModal');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+}
+
+function closeFiyatAnalizi() {
+    const modal = document.getElementById('fiyatAnaliziModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function showKullanildigiUrunler() {
+    const modal = document.getElementById('kullanildigiUrunlerModal');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+}
+
+function closeKullanildigiUrunler() {
+    const modal = document.getElementById('kullanildigiUrunlerModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// Modal dışına tıklandığında kapat
+window.onclick = function(event) {
+    const fiyatModal = document.getElementById('fiyatAnaliziModal');
+    const urunModal = document.getElementById('kullanildigiUrunlerModal');
+    if (event.target == fiyatModal) {
+        closeFiyatAnalizi();
+    }
+    if (event.target == urunModal) {
+        closeKullanildigiUrunler();
+    }
+}
+
+</script>
+
+<!-- Fiyat Analizi Modal -->
+{% if stok %}
+<div id="fiyatAnaliziModal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center;">
+  <div style="background-color: white; margin: auto; padding: 0; border-radius: 12px; max-width: 900px; width: 90%; max-height: 80vh; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.3); display: flex; flex-direction: column;">
+    <div style="padding: 20px 24px; border-bottom: 2px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; background: #f9fafb;">
+      <h2 style="margin: 0; font-size: 20px; font-weight: 600; color: #111827;">📊 Fiyat Analizi - {{ stok.stok_kodu }}</h2>
+      <span onclick="closeFiyatAnalizi()" style="color: #6b7280; font-size: 28px; font-weight: bold; cursor: pointer; line-height: 1;" title="Kapat">&times;</span>
+    </div>
+    <div style="padding: 24px; overflow-y: auto; flex: 1;">
+      {% if fiyat_gecmisi %}
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+            <thead>
+              <tr style="background: #1e3a8a; border-bottom: 2px solid #e5e7eb;">
+                <th style="padding: 12px; text-align: left; font-weight: 600; color: #ffffff;">Tarih</th>
+                <th style="padding: 12px; text-align: right; font-weight: 600; color: #ffffff;">Eski Fiyat</th>
+                <th style="padding: 12px; text-align: right; font-weight: 600; color: #ffffff;">Yeni Fiyat</th>
+                <th style="padding: 12px; text-align: right; font-weight: 600; color: #ffffff;">Değişim</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600; color: #ffffff;">Para Birimi</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600; color: #ffffff;">Açıklama</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600; color: #ffffff;">Kullanıcı</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for gecmis in fiyat_gecmisi %}
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                  <td style="padding: 12px; color: #6b7280;">{{ gecmis.tarih|date:"d.m.Y H:i" }}</td>
+                  <td style="padding: 12px; text-align: right; color: #6b7280;">{{ gecmis.eski_alis_fiyati|default:"-"|floatformat:2 }}</td>
+                  <td style="padding: 12px; text-align: right; font-weight: 600; color: #059669;">{{ gecmis.yeni_alis_fiyati|default:"-"|floatformat:2 }}</td>
+                  <td style="padding: 12px; text-align: right;">
+                    {% if gecmis.fiyat_farki is not None %}
+                      {% if gecmis.fiyat_farki > 0 %}
+                        <span style="color: #dc2626; font-weight: 600;">+{{ gecmis.fiyat_farki|floatformat:2 }} (↑)</span>
+                      {% elif gecmis.fiyat_farki < 0 %}
+                        <span style="color: #059669; font-weight: 600;">{{ gecmis.fiyat_farki|floatformat:2 }} (↓)</span>
+                      {% else %}
+                        <span style="color: #6b7280;">0.00 (-)</span>
+                      {% endif %}
+                    {% else %}
+                      <span style="color: #6b7280;">-</span>
+                    {% endif %}
+                  </td>
+                  <td style="padding: 12px; color: #6b7280;">{{ gecmis.para_birimi|default:"TL" }}</td>
+                  <td style="padding: 12px; color: #6b7280; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="{{ gecmis.aciklama }}">{{ gecmis.aciklama|default:"-"|truncatewords:10 }}</td>
+                  <td style="padding: 12px; color: #6b7280;">{{ gecmis.user|default:"Sistem" }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div style="text-align: center; padding: 40px; color: #6b7280;">
+          <div style="font-size: 48px; margin-bottom: 16px;">📈</div>
+          <div style="font-size: 16px; font-weight: 500;">Henüz fiyat değişikliği kaydı bulunmamaktadır.</div>
+        </div>
+      {% endif %}
+    </div>
+    <div style="padding: 16px 24px; border-top: 1px solid #e5e7eb; background: #f9fafb; display: flex; justify-content: flex-end;">
+      <button onclick="closeFiyatAnalizi()" style="padding: 8px 20px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">Kapat</button>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Kullanıldığı Ürünler Modal -->
+{% if stok %}
+<div id="kullanildigiUrunlerModal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center;">
+  <div style="background-color: white; margin: auto; padding: 0; border-radius: 12px; max-width: 980px; width: 92%; max-height: 80vh; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.3); display: flex; flex-direction: column;">
+    <div style="padding: 20px 24px; border-bottom: 2px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; background: #f9fafb;">
+      <h2 style="margin: 0; font-size: 20px; font-weight: 600; color: #111827;">🧾 Kullanıldığı Ürünler - {{ stok.stok_kodu }}</h2>
+      <span onclick="closeKullanildigiUrunler()" style="color: #6b7280; font-size: 28px; font-weight: bold; cursor: pointer; line-height: 1;" title="Kapat">&times;</span>
+    </div>
+    <div style="padding: 24px; overflow-y: auto; flex: 1;">
+      {% if kullanildigi_urunler %}
+        <div style="overflow-x: auto;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+            <thead>
+              <tr style="background: #1f2937; border-bottom: 2px solid #e5e7eb;">
+                <th style="padding: 12px; text-align: left; font-weight: 600; color: #ffffff;">Ürün Kodu</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600; color: #ffffff;">Ürün Adı</th>
+                <th style="padding: 12px; text-align: center; font-weight: 600; color: #ffffff;">Reçete Versiyonu</th>
+                <th style="padding: 12px; text-align: right; font-weight: 600; color: #ffffff;">Kullanım Miktarı</th>
+                <th style="padding: 12px; text-align: center; font-weight: 600; color: #ffffff;">Birim</th>
+                <th style="padding: 12px; text-align: center; font-weight: 600; color: #ffffff;">Durum</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for detay in kullanildigi_urunler %}
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                  <td style="padding: 12px;">
+                    <a href="{% url 'stokapp:stok_ekle' detay.recete.urun.pk %}"
+                       style="color: #2563eb; font-weight: 600; text-decoration: none;">
+                      {{ detay.recete.urun.stok_kodu }}
+                    </a>
+                  </td>
+                  <td style="padding: 12px; color: #4b5563;">{{ detay.recete.urun.ad }}</td>
+                  <td style="padding: 12px; text-align: center;">
+                    <a href="{% url 'stokapp:recete_detay' detay.recete.pk %}"
+                       style="color: #2563eb; font-weight: 600; text-decoration: none;">
+                      {{ detay.recete.versiyon }}
+                    </a>
+                  </td>
+                  <td style="padding: 12px; text-align: right; color: #111827;">{{ detay.miktar|floatformat:3 }}</td>
+                  <td style="padding: 12px; text-align: center; color: #4b5563;">{{ detay.birim }}</td>
+                  <td style="padding: 12px; text-align: center;">
+                    {% if detay.recete.aktif %}
+                      <span style="display: inline-block; padding: 4px 8px; background: #dcfce7; color: #166534; border-radius: 999px; font-size: 12px; font-weight: 600;">Aktif</span>
+                    {% else %}
+                      <span style="display: inline-block; padding: 4px 8px; background: #fee2e2; color: #991b1b; border-radius: 999px; font-size: 12px; font-weight: 600;">Pasif</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div style="text-align: center; padding: 40px; color: #6b7280;">
+          <div style="font-size: 46px; margin-bottom: 16px;">📭</div>
+          <div style="font-size: 16px; font-weight: 500;">Bu malzeme henüz herhangi bir ürün reçetesinde kullanılmıyor.</div>
+        </div>
+      {% endif %}
+    </div>
+    <div style="padding: 16px 24px; border-top: 1px solid #e5e7eb; background: #f9fafb; display: flex; justify-content: flex-end;">
+      <button onclick="closeKullanildigiUrunler()" style="padding: 8px 20px; background: #6c757d; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">Kapat</button>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+</script>
+{% endblock %}

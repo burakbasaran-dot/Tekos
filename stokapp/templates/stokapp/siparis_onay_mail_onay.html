@@ -1,0 +1,50 @@
+{% extends "stokapp/base.html" %}
+{% load currency_filters %}
+{% block title %}Sipariş onay — mail gönder{% endblock %}
+{% block content %}
+{% include "stokapp/partials/mail_sending_overlay.html" with mail_sending_subtext="Lütfen bekleyin, sipariş onaylanıyor." %}
+
+<div class="card" style="max-width: 900px; margin: 0 auto;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h2 style="margin:0;">✅ Mail gönder — onay</h2>
+        <a href="{% url 'stokapp:siparis_listesi' %}" class="btn btn-secondary">← Siparişlere dön</a>
+    </div>
+
+    <p style="font-size:14px; color:#374151;">
+        Sipariş: <strong>{{ siparis.siparis_numarasi }}</strong> — Teyit maili şu alıcılara gidecek:
+    </p>
+
+    {% if emails_invalid %}
+    <div style="padding:12px; background:#fef3c7; border-radius:8px; margin-bottom:16px; color:#92400e;">
+        Seçilen adresler güncel müşteri listesiyle eşleşmiyor. <a href="{{ geri_url }}">Alıcı seçimine dönün</a>.
+    </div>
+    {% else %}
+    <ul style="font-size:14px; line-height:1.55;">
+        {% for lb in labels %}
+        <li>{{ lb }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
+    <div style="border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; background: #fafafa; margin-top: 16px;">
+        <div style="font-weight:600; margin-bottom:10px; font-size:14px;">Gönderilecek içerik önizlemesi</div>
+        <div style="border: 1px solid #e5e7eb; border-radius: 10px; overflow: auto; max-height: 420px; background: #fff;">
+            {% if siparis.musteri %}
+            {% with siparis=preview_ctx.siparis kalemler=preview_ctx.kalemler ara_toplam=preview_ctx.ara_toplam vergi=preview_ctx.vergi toplam=preview_ctx.toplam tekos_logo_cid=preview_ctx.tekos_logo_cid tekos_logo_url=preview_ctx.tekos_logo_url tekmar_logo_cid=preview_ctx.tekmar_logo_cid tekmar_logo_data_uri=preview_ctx.tekmar_logo_data_uri %}
+                {% include "stokapp/emails/siparis_onay_email.html" %}
+            {% endwith %}
+            {% else %}
+            <p style="padding:16px; color:#6b7280;">Önizleme için siparişte müşteri gerekir.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <form method="post" class="js-mail-sending-form" data-mail-sending-subtext="Lütfen bekleyin, sipariş onaylanıyor." style="margin-top: 20px;">
+        {% csrf_token %}
+        <div style="display: flex; gap: 12px; justify-content: flex-end; flex-wrap: wrap;">
+            <a href="{{ geri_url }}" class="btn btn-secondary js-mail-sending-disable">← Alıcıları değiştir</a>
+            <button type="submit" class="btn btn-primary" style="background:#22c55e; border-color:#22c55e;" {% if emails_invalid %}disabled{% endif %}>Maili gönder ve siparişi onayla</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

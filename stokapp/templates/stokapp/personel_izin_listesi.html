@@ -1,0 +1,299 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Personel İzin Girişleri{% endblock %}
+{% block content %}
+{% include "stokapp/includes/tdk_form_styles.html" %}
+
+<style>
+  .tdk-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+  @media (max-width: 768px) {
+    .tdk-stat-grid { grid-template-columns: 1fr; }
+  }
+  .tdk-stat-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+  }
+  .tdk-stat-card .label {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+  .tdk-stat-card .value {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1.1;
+  }
+  .tdk-stat-card.is-active {
+    border-color: #86efac;
+    background: linear-gradient(145deg, #f0fdf4 0%, #ecfdf5 100%);
+  }
+  .tdk-stat-card.is-upcoming {
+    border-color: #fcd34d;
+    background: linear-gradient(145deg, #fffbeb 0%, #fef3c7 100%);
+  }
+  .tdk-collapse-panel { margin-bottom: 20px; overflow: visible; }
+  .tdk-collapse-head {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 24px;
+    border: none;
+    background: #f8fafc;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+  }
+  .tdk-collapse-head h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .tdk-collapse-toggle {
+    font-size: 12px;
+    color: var(--muted);
+    transition: transform 0.2s ease;
+  }
+  .tdk-collapse-panel.is-open .tdk-collapse-toggle { transform: rotate(180deg); }
+  .tdk-collapse-body { display: none; }
+  .tdk-collapse-panel.is-open .tdk-collapse-body { display: block; }
+  .tdk-collapse-body .tdk-section { border-bottom: none; }
+  .tdk-filter-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    padding-bottom: 2px;
+  }
+  .tdk-badge-izin {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    background: #e0e7ff;
+    color: #3730a3;
+  }
+  .tdk-empty-state {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--muted);
+  }
+  .tdk-empty-state .icon {
+    font-size: 42px;
+    opacity: 0.55;
+    margin-bottom: 10px;
+  }
+  .tdk-table-scroll {
+    max-height: 70vh;
+    overflow: auto;
+  }
+  .tdk-row-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    white-space: nowrap;
+  }
+  .tdk-row-actions .btn { padding: 6px 10px; font-size: 12px; }
+  .tdk-btn-danger { background: #dc2626 !important; color: #fff !important; border-color: #dc2626 !important; }
+</style>
+
+<div class="tdk-page">
+  <div class="tdk-header">
+    <div>
+      <h1>🗓️ Personel İzin Girişleri</h1>
+      <p>Personel izin kayıtlarını oluşturun, filtreleyin ve yönetin.</p>
+    </div>
+  </div>
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="tdk-alert {% if message.tags == 'error' %}tdk-alert-error{% elif message.tags == 'warning' %}tdk-alert-warning{% else %}tdk-alert-success{% endif %}">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <div class="tdk-stat-grid">
+    <div class="tdk-stat-card">
+      <div class="label">Toplam Kayıt</div>
+      <div class="value">{{ toplam_kayit }}</div>
+    </div>
+    <div class="tdk-stat-card is-active">
+      <div class="label">Aktif İzin</div>
+      <div class="value">{{ aktif_izin_sayisi }}</div>
+    </div>
+    <div class="tdk-stat-card is-upcoming">
+      <div class="label">Yaklaşan Bitiş (7 gün)</div>
+      <div class="value">{{ yaklasan_bitis_sayisi }}</div>
+    </div>
+  </div>
+
+  <div class="tdk-form-card" style="margin-bottom: 20px;">
+    <section class="tdk-section">
+      <h2 class="tdk-section-title">
+        <span class="tdk-section-icon">🔎</span>
+        Filtreler
+      </h2>
+      <form method="get">
+        <div class="tdk-grid-3">
+          <div class="tdk-field tdk-has-help" data-help="Belirli bir personelin izin kayıtlarını listeler. Boş bırakılırsa tüm personel gösterilir.">
+            <label class="tdk-label" for="filter-personel">Personel</label>
+            <select name="personel" id="filter-personel" class="form-select">
+              <option value="">Tümü</option>
+              {% for p in personeller %}
+                <option value="{{ p.id }}" {% if personel_id == p.id|stringformat:"s" %}selected{% endif %}>{{ p.ad }} {{ p.soyad }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="tdk-field tdk-has-help" data-help="Listede gösterilecek izinlerin başlangıç tarihi alt sınırı.">
+            <label class="tdk-label" for="filter-tarih-baslangic">Başlangıç Tarihi</label>
+            <input type="date" name="tarih_baslangic" id="filter-tarih-baslangic" value="{{ tarih_baslangic }}" class="form-control">
+          </div>
+          <div class="tdk-field tdk-has-help" data-help="Listede gösterilecek izinlerin başlangıç tarihi üst sınırı.">
+            <label class="tdk-label" for="filter-tarih-bitis">Bitiş Tarihi</label>
+            <input type="date" name="tarih_bitis" id="filter-tarih-bitis" value="{{ tarih_bitis }}" class="form-control">
+          </div>
+        </div>
+        <div class="tdk-filter-actions" style="margin-top: 16px;">
+          <button type="submit" class="btn btn-primary">Filtrele</button>
+          <a href="{% url 'stokapp:personel_izin_listesi' %}" class="btn btn-secondary">Temizle</a>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <div class="tdk-form-card tdk-collapse-panel" id="yeniIzinPanel">
+    <button type="button" class="tdk-collapse-head" id="yeniIzinToggleBtn" aria-expanded="false" aria-controls="yeniIzinBody">
+      <h3><span class="tdk-section-icon" style="width:28px;height:28px;font-size:14px;">➕</span> Yeni İzin Ekle</h3>
+      <span class="tdk-collapse-toggle" id="yeniIzinToggle">▼</span>
+    </button>
+    <div class="tdk-collapse-body" id="yeniIzinBody">
+      <section class="tdk-section">
+        {% if form.non_field_errors %}
+          <div class="tdk-alert tdk-alert-error">{{ form.non_field_errors }}</div>
+        {% endif %}
+        <form method="post">
+          {% csrf_token %}
+          <div class="tdk-grid">
+            <div class="tdk-field tdk-has-help" data-help="İzin kaydı oluşturulacak personel.">
+              <label class="tdk-label required" for="{{ form.personel.id_for_label }}">{{ form.personel.label }}</label>
+              {{ form.personel }}
+              {% if form.personel.errors %}<div class="tdk-error">{{ form.personel.errors }}</div>{% endif %}
+            </div>
+            <div class="tdk-field tdk-has-help" data-help="İzin türü (yıllık, raporlu, mazeret vb.).">
+              <label class="tdk-label required" for="{{ form.izin_tipi.id_for_label }}">{{ form.izin_tipi.label }}</label>
+              {{ form.izin_tipi }}
+              {% if form.izin_tipi.errors %}<div class="tdk-error">{{ form.izin_tipi.errors }}</div>{% endif %}
+            </div>
+            <div class="tdk-field tdk-has-help" data-help="İznin başladığı tarih ve saat. Üretim planlamasında çakışma kontrolünde kullanılır.">
+              <label class="tdk-label required" for="{{ form.baslangic_zamani.id_for_label }}">{{ form.baslangic_zamani.label }}</label>
+              {{ form.baslangic_zamani }}
+              {% if form.baslangic_zamani.errors %}<div class="tdk-error">{{ form.baslangic_zamani.errors }}</div>{% endif %}
+            </div>
+            <div class="tdk-field tdk-has-help" data-help="İznin biteceği tarih ve saat. Başlangıçtan sonra olmalıdır.">
+              <label class="tdk-label required" for="{{ form.bitis_zamani.id_for_label }}">{{ form.bitis_zamani.label }}</label>
+              {{ form.bitis_zamani }}
+              {% if form.bitis_zamani.errors %}<div class="tdk-error">{{ form.bitis_zamani.errors }}</div>{% endif %}
+            </div>
+            <div class="tdk-field tdk-has-help full" data-help="İzin hakkında ek not veya açıklama.">
+              <label class="tdk-label" for="{{ form.aciklama.id_for_label }}">{{ form.aciklama.label }}</label>
+              {{ form.aciklama }}
+              {% if form.aciklama.errors %}<div class="tdk-error">{{ form.aciklama.errors }}</div>{% endif %}
+            </div>
+          </div>
+          <div class="tdk-footer" style="border-top: none; padding: 20px 0 0; background: transparent;">
+            <button type="submit" class="btn btn-primary">💾 İzin Kaydet</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  </div>
+
+  <div class="tdk-form-card">
+    <section class="tdk-section">
+      <h2 class="tdk-section-title">
+        <span class="tdk-section-icon green">📋</span>
+        İzin Kayıtları
+      </h2>
+      <div class="tdk-table-wrap tdk-table-scroll">
+        <table class="tdk-table">
+          <thead>
+            <tr>
+              <th class="tdk-has-help" data-help="İzin kullanan personelin adı soyadı.">Personel</th>
+              <th class="tdk-has-help" data-help="İzin türü (yıllık, raporlu, mazeret vb.).">İzin Tipi</th>
+              <th class="tdk-has-help" data-help="İznin başladığı tarih ve saat.">Başlangıç</th>
+              <th class="tdk-has-help" data-help="İznin biteceği tarih ve saat.">Bitiş</th>
+              <th class="tdk-has-help" data-help="Kayıt hakkında kısa açıklama.">Açıklama</th>
+              <th class="tdk-has-help" data-help="Kaydı düzenleme veya silme işlemleri.">İşlem</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for izin in izinler %}
+            <tr>
+              <td><strong>{{ izin.personel.ad }} {{ izin.personel.soyad }}</strong></td>
+              <td><span class="tdk-badge-izin">{{ izin.get_izin_tipi_display }}</span></td>
+              <td>{{ izin.baslangic_zamani|date:"d.m.Y H:i" }}</td>
+              <td>{{ izin.bitis_zamani|date:"d.m.Y H:i" }}</td>
+              <td>{{ izin.aciklama|default:"-"|truncatechars:60 }}</td>
+              <td>
+                <div class="tdk-row-actions">
+                  <a href="{% url 'stokapp:personel_izin_duzenle' izin.pk %}" class="btn btn-secondary">Düzenle</a>
+                  <a href="{% url 'stokapp:personel_izin_sil' izin.pk %}" class="btn btn-secondary tdk-btn-danger">Sil</a>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6">
+                <div class="tdk-empty-state">
+                  <div class="icon">📭</div>
+                  <div>Kayıt bulunamadı.</div>
+                  <p style="margin: 8px 0 0; font-size: 13px;">Filtreleri değiştirin veya yeni izin ekleyin.</p>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  var panel = document.getElementById('yeniIzinPanel');
+  var toggleBtn = document.getElementById('yeniIzinToggleBtn');
+  if (!panel || !toggleBtn) return;
+
+  function setOpen(open) {
+    panel.classList.toggle('is-open', open);
+    toggleBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+
+  toggleBtn.addEventListener('click', function () {
+    setOpen(!panel.classList.contains('is-open'));
+  });
+
+  {% if form.errors %}
+  setOpen(true);
+  {% endif %}
+});
+</script>
+{% endblock %}

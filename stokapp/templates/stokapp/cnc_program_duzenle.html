@@ -1,0 +1,216 @@
+{% extends "stokapp/base.html" %}
+{% block title %}CNC Program Düzenle - {{ program.program_name }}{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>CNC Program Düzenle: {{ program.program_name }}</h2>
+        <a href="{% url 'stokapp:cnc_program_detay' program.program_id %}" class="btn" style="background-color: #6b7280; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px;">
+            ← Geri
+        </a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 15px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background: #fff3cd; color: #856404; border-left: 4px solid #ffc107;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" style="max-width: 800px;">
+        {% csrf_token %}
+        
+        <div style="display: grid; gap: 20px;">
+            <div>
+                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #111827;">{{ form.product.label }} *</label>
+                {{ form.product }}
+                {% if form.product.errors %}
+                <div style="color: #dc3545; font-size: 13px; margin-top: 5px;">{{ form.product.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div>
+                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #111827;">{{ form.urun_parcasi.label }}</label>
+                {{ form.urun_parcasi }}
+                {% if form.urun_parcasi.errors %}
+                <div style="color: #dc3545; font-size: 13px; margin-top: 5px;">{{ form.urun_parcasi.errors }}</div>
+                {% endif %}
+                <small style="color: #6b7280; font-size: 12px;">
+                    CNC programı ürünün hangi parçası/bileşeni için yapılıyor? Ürün seçilince reçete bileşenleri otomatik yüklenir.
+                </small>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div>
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #111827;">{{ form.machine_type.label }} *</label>
+                    {{ form.machine_type }}
+                    {% if form.machine_type.errors %}
+                    <div style="color: #dc3545; font-size: 13px; margin-top: 5px;">{{ form.machine_type.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #111827;">{{ form.file_format.label }} *</label>
+                    {{ form.file_format }}
+                    {% if form.file_format.errors %}
+                    <div style="color: #dc3545; font-size: 13px; margin-top: 5px;">{{ form.file_format.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div>
+                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #111827;">{{ form.machine_name.label }}</label>
+                {{ form.machine_name }}
+                {% if form.machine_name.errors %}
+                <div style="color: #dc3545; font-size: 13px; margin-top: 5px;">{{ form.machine_name.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+                <div>
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #111827;">{{ form.program_name.label }} *</label>
+                    {{ form.program_name }}
+                    {% if form.program_name.errors %}
+                    <div style="color: #dc3545; font-size: 13px; margin-top: 5px;">{{ form.program_name.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #111827;">{{ form.program_number.label }}</label>
+                    {{ form.program_number }}
+                    {% if form.program_number.errors %}
+                    <div style="color: #dc3545; font-size: 13px; margin-top: 5px;">{{ form.program_number.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            {% include "stokapp/_dosya_konumu_picker.html" %}
+
+            <div>
+                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #111827;">{{ form.status.label }} *</label>
+                {{ form.status }}
+                {% if form.status.errors %}
+                <div style="color: #dc3545; font-size: 13px; margin-top: 5px;">{{ form.status.errors }}</div>
+                {% endif %}
+            </div>
+
+            {% if not has_existing_revisions %}
+            <div style="margin-top: 10px; padding: 18px; background: #fef3c7; border: 1px solid #fcd34d; border-radius: 10px;">
+                <h3 style="margin: 0 0 6px 0; font-size: 16px; color: #92400e;">📂 İlk Program Dosyası (R01) — Henüz revizyon eklenmemiş</h3>
+                <p style="margin: 0 0 16px 0; color: #78350f; font-size: 13px;">
+                    Bu programa henüz hiç revizyon eklenmemiş. Aşağıdan bir <strong>.nc</strong> veya <strong>.txt</strong> dosyası yüklerseniz, otomatik olarak <strong>R01</strong> revizyonu oluşturulup aktif yapılır.
+                </p>
+
+                <div style="display: grid; gap: 16px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #111827;">{{ form.program_file.label }}</label>
+                        {{ form.program_file }}
+                        {% if form.program_file.errors %}
+                        <div style="color: #dc3545; font-size: 13px; margin-top: 5px;">{{ form.program_file.errors }}</div>
+                        {% endif %}
+                        <small style="color: #6b7280; font-size: 12px;">Sadece .nc veya .txt dosyaları yüklenebilir.</small>
+                    </div>
+
+                    <div>
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #111827;">{{ form.revision_note.label }}</label>
+                        {{ form.revision_note }}
+                        {% if form.revision_note.errors %}
+                        <div style="color: #dc3545; font-size: 13px; margin-top: 5px;">{{ form.revision_note.errors }}</div>
+                        {% endif %}
+                        <small style="color: #6b7280; font-size: 12px;">Boş bırakırsanız "İlk program tanımı" olarak kaydedilir.</small>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div style="margin-top: 10px; padding: 14px 16px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 10px;">
+                <p style="margin: 0; color: #334155; font-size: 13px;">
+                    📁 Bu programın zaten revizyonları mevcut. Yeni bir program dosyası eklemek için
+                    <a href="{% url 'stokapp:cnc_program_revizyon_ekle' program.program_id %}" style="color: #2563eb; font-weight: 600;">Yeni Revizyon Ekle</a>
+                    sayfasını kullanın.
+                </p>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div style="margin-top: 30px; padding-top: 20px; border-top: 2px solid #e5e7eb; display: flex; gap: 10px;">
+            <button type="submit" style="padding: 12px 24px; background-color: #22c55e; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer;">
+                ✅ Kaydet
+            </button>
+            <a href="{% url 'stokapp:cnc_program_detay' program.program_id %}" style="padding: 12px 24px; background-color: #6b7280; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; text-decoration: none; display: inline-block;">
+                ❌ İptal
+            </a>
+        </div>
+    </form>
+</div>
+
+<script>
+(function() {
+    const productSelect = document.getElementById('id_product');
+    const parcasiSelect = document.getElementById('id_urun_parcasi');
+    if (!productSelect || !parcasiSelect) return;
+
+    const recetUrlTemplate = "{% url 'stokapp:kurulum_dosyasi_recete_bilesenleri' 0 %}";
+
+    function loadReceteBilesenleri(urunId, preselectVal) {
+        if (!urunId) {
+            parcasiSelect.innerHTML = '<option value="">— Seçiniz (önce ürün seçin) —</option>';
+            return;
+        }
+        parcasiSelect.innerHTML = '<option value="">Yükleniyor...</option>';
+        const url = recetUrlTemplate.replace('/0/', '/' + urunId + '/');
+        fetch(url)
+            .then(r => r.json())
+            .then(data => {
+                parcasiSelect.innerHTML = '';
+                const placeholder = document.createElement('option');
+                placeholder.value = '';
+                placeholder.textContent = '— Seçiniz —';
+                parcasiSelect.appendChild(placeholder);
+
+                if (data.success && Array.isArray(data.bilesenler) && data.bilesenler.length > 0) {
+                    data.bilesenler.forEach(b => {
+                        const opt = document.createElement('option');
+                        opt.value = b.stok_kodu + ' - ' + b.ad;
+                        opt.textContent = `${b.stok_kodu} - ${b.ad} (${b.miktar} ${b.birim})`;
+                        parcasiSelect.appendChild(opt);
+                    });
+                } else {
+                    const noOpt = document.createElement('option');
+                    noOpt.value = '';
+                    noOpt.textContent = 'Bu ürün için reçete bileşeni bulunamadı.';
+                    noOpt.disabled = true;
+                    parcasiSelect.appendChild(noOpt);
+                }
+
+                if (preselectVal) {
+                    let found = Array.from(parcasiSelect.options).some(o => o.value === preselectVal);
+                    if (!found) {
+                        const opt = document.createElement('option');
+                        opt.value = preselectVal;
+                        opt.textContent = preselectVal + ' (mevcut)';
+                        parcasiSelect.appendChild(opt);
+                    }
+                    parcasiSelect.value = preselectVal;
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                parcasiSelect.innerHTML = '<option value="">Yükleme hatası</option>';
+            });
+    }
+
+    productSelect.addEventListener('change', function() {
+        loadReceteBilesenleri(this.value, null);
+    });
+
+    const initialUrun = productSelect.value;
+    const initialParca = parcasiSelect.value;
+    if (initialUrun) {
+        loadReceteBilesenleri(initialUrun, initialParca);
+    }
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends 'stokapp/base.html' %}
+
+{% block title %}{{ form_title }}{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:700px;">
+  <h2 style="margin-top:0;">{{ form_title }}</h2>
+  <form method="post">
+    {% csrf_token %}
+    <div style="display:flex; flex-direction:column; gap:12px;">
+      <div>
+        <label style="font-weight:600; display:block; margin-bottom:6px;">Başlık</label>
+        {{ form.baslik }}
+        {% if form.baslik.errors %}
+          <div style="color:#dc2626; font-size:12px;">{{ form.baslik.errors }}</div>
+        {% endif %}
+      </div>
+      <div>
+        <label style="font-weight:600; display:block; margin-bottom:6px;">Açıklama</label>
+        {{ form.aciklama }}
+        {% if form.aciklama.errors %}
+          <div style="color:#dc2626; font-size:12px;">{{ form.aciklama.errors }}</div>
+        {% endif %}
+      </div>
+    </div>
+    <div style="margin-top:16px; display:flex; gap:10px;">
+      <button type="submit" class="btn btn-primary">Kaydet</button>
+      <a href="{% url 'stokapp:gelistirme_talep_listesi' %}" class="btn btn-secondary">İptal</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

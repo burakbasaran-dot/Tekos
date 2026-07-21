@@ -1,0 +1,104 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Stok Tamamlanma Kuralları{% endblock %}
+{% block content %}
+<style>
+    .tamamlanma-container { max-width: 1100px; margin: 0 auto; }
+    .tamamlanma-card {
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        margin-bottom: 20px;
+    }
+    .kural-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .kural-table th, .kural-table td {
+        border: 1px solid #e5e7eb;
+        padding: 10px 12px;
+        text-align: center;
+    }
+    .kural-table th {
+        background: #f9fafb;
+        font-weight: 600;
+        color: #dc2626 !important;
+    }
+    .kural-table td:first-child, .kural-table th:first-child { text-align: left; }
+    .kural-table td:first-child {
+        color: #dc2626;
+        font-weight: 500;
+    }
+    .kural-table input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+    .info-box {
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 8px;
+        padding: 12px 16px;
+        font-size: 13px;
+        color: #1e40af;
+        margin-bottom: 20px;
+    }
+</style>
+
+<div class="tamamlanma-container">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+        <h1 style="margin:0;">📋 Stok Tamamlanma Kuralları</h1>
+        <div style="display:flex; gap:8px;">
+            <a href="{% url 'stokapp:stok_tamamlanma_raporu' %}" class="btn btn-primary" style="text-decoration:none; padding:8px 14px;">Raporu Gör</a>
+            <a href="{% url 'stokapp:stok_listesi' %}" class="btn btn-secondary" style="text-decoration:none; padding:8px 14px;">← Stok Listesi</a>
+        </div>
+    </div>
+
+    <div class="tekos-tab-buttons">
+        <a href="{% url 'stokapp:genel_ayarlar' %}" class="tekos-tab-btn tab-blue">
+            <span class="tab-icon" aria-hidden="true">⚙️</span>
+            <span>Genel Ayarlar</span>
+        </a>
+        <a href="{% url 'stokapp:stok_tamamlanma_ayarlari' %}" class="tekos-tab-btn tab-delivery is-active">
+            <span class="tab-icon" aria-hidden="true">📦</span>
+            <span>Stok Tamamlanma</span>
+        </a>
+    </div>
+
+    <div class="info-box">
+        Her stok tipi için hangi alanların <strong>doldurulması beklendiğini</strong> işaretleyin.
+        İşaretli alanlar tamamlanma raporunda kontrol edilir; işaretlenmeyenler hesaba katılmaz.
+        <em>Aktif Reçete</em> yalnızca üretim tipi stoklarda uygulanır.
+    </div>
+
+    <div class="tamamlanma-card">
+        <form method="post">
+            {% csrf_token %}
+            <table class="kural-table">
+                <thead>
+                    <tr>
+                        <th>Alan</th>
+                        {% for tip_kod, tip_ad in stok_tipleri %}
+                        <th>{{ tip_ad }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for satir in kural_matris %}
+                    <tr>
+                        <td>
+                            {{ satir.alan.label }}
+                            {% if satir.alan.only_uretim %}
+                            <span style="font-size:11px; color:#6b7280;">(üretim)</span>
+                            {% endif %}
+                        </td>
+                        {% for hucre in satir.hucreler %}
+                        <td>
+                            <input type="checkbox" name="{{ hucre.field_name }}" value="1" {% if hucre.checked %}checked{% endif %}>
+                        </td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div style="margin-top:20px; display:flex; gap:10px;">
+                <button type="submit" class="btn btn-primary">Kaydet</button>
+                <a href="{% url 'stokapp:stok_tamamlanma_raporu' %}" class="btn btn-secondary" style="text-decoration:none;">Raporu Görüntüle</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

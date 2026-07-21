@@ -1,0 +1,399 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Canlı Üretim Akış Haritası — TEKOS{% endblock %}
+
+{% block content %}
+<style>
+  .cah-wrap { max-width: 100%; }
+  .cah-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+  .cah-head h1 { margin: 0; font-size: 1.35rem; font-weight: 800; color: var(--ink, #111827); }
+  .cah-sub { color: var(--muted, #6b7280); font-size: 0.9rem; max-width: 560px; line-height: 1.45; margin: 6px 0 0; }
+  .cah-ozet { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+  .cah-chip { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 12px; font-size: 0.85rem; font-weight: 700;
+    background: linear-gradient(145deg, #f8fafc, #eef2ff); border: 1px solid #e2e8f0; box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06); }
+  .cah-chip span.val { font-variant-numeric: tabular-nums; color: #1e293b; }
+  .cah-filtre { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; margin-bottom: 18px; align-items: end; }
+  .cah-filtre label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted, #64748b); display: block; margin-bottom: 4px; }
+  .cah-filtre input, .cah-filtre select { width: 100%; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border, #e5e7eb); font: inherit; background: #fff; }
+  .cah-filtre .cah-fcheck { display: flex; align-items: center; gap: 8px; padding-top: 20px; }
+  .cah-filtre .cah-fcheck input { width: auto; }
+  .cah-btn { padding: 9px 16px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer; background: linear-gradient(180deg, #2563eb, #1d4ed8); color: #fff; font-family: inherit; box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35); }
+  .cah-btn:hover { filter: brightness(1.05); }
+  .cah-board { display: flex; gap: 0; overflow-x: auto; padding-bottom: 12px; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+  .cah-col { flex: 0 0 min(280px, 82vw); scroll-snap-align: start; display: flex; flex-direction: column; min-height: 220px; }
+  .cah-col-inner { margin-right: 10px; border-radius: 18px; padding: 14px; min-height: 100%;
+    background: linear-gradient(165deg, #ffffff 0%, #f1f5f9 100%);
+    border: 1px solid #e2e8f0; box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08), 0 2px 0 rgba(255,255,255,0.8) inset;
+    position: relative; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+  .cah-col-inner:hover { transform: translateY(-2px); box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12), 0 2px 0 rgba(255,255,255,0.8) inset; }
+  .cah-col--arrow { flex: 0 0 28px; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 1.2rem; user-select: none; }
+  .cah-st-hd { text-align: center; margin-bottom: 12px; }
+  .cah-st-ico { font-size: 2.1rem; line-height: 1; filter: drop-shadow(0 4px 6px rgba(0,0,0,.12)); margin-bottom: 6px; }
+  .cah-st-title { font-weight: 800; font-size: 0.95rem; color: #0f172a; }
+  .cah-st-desc { font-size: 11px; color: #64748b; margin-top: 4px; line-height: 1.35; min-height: 2.6em; }
+  .cah-st-badges { position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+  .cah-mini { font-size: 10px; font-weight: 700; padding: 3px 7px; border-radius: 8px; background: #f1f5f9; color: #475569; }
+  .cah-cards { display: flex; flex-direction: column; gap: 10px; }
+  .cah-card { border-radius: 14px; padding: 10px 11px; cursor: pointer; text-align: left; font: inherit; width: 100%;
+    background: linear-gradient(155deg, #fafafa, #f8fafc); border: 2px solid #e5e7eb; box-shadow: 0 6px 16px rgba(0,0,0,.06);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s; }
+  .cah-card:hover { transform: translateY(-2px) scale(1.01); box-shadow: 0 10px 24px rgba(0,0,0,.1); }
+  .cah-card--bekliyor { border-color: #9ca3af; }
+  .cah-card--isleniyor { border-color: #3b82f6; background: linear-gradient(155deg, #eff6ff, #dbeafe); }
+  .cah-card--beklemede { border-color: #f59e0b; }
+  .cah-card--tamamlandi { border-color: #22c55e; background: linear-gradient(155deg, #f0fdf4, #dcfce7); }
+  .cah-card--gecikti, .cah-card--sorunlu, .cah-card--dis_gecikti { border-color: #ef4444; background: linear-gradient(155deg, #fef2f2, #fee2e2); }
+  .cah-card--dis_hazir { border-color: #94a3b8; }
+  .cah-card--dis_disarda { border-color: #eab308; background: linear-gradient(155deg, #fefce8, #fef9c3); }
+  .cah-card-h { font-weight: 800; font-size: 0.82rem; color: #111827; margin-bottom: 4px; }
+  .cah-card-meta { font-size: 11px; color: #475569; line-height: 1.4; }
+  .cah-lbl { display: inline-block; margin-top: 6px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; padding: 3px 8px; border-radius: 999px; background: #e5e7eb; color: #374151; }
+  .cah-lbl--mavi { background: #dbeafe; color: #1e40af; }
+  .cah-lbl--sari { background: #fef08a; color: #854d0e; }
+  .cah-lbl--yesil { background: #bbf7d0; color: #166534; }
+  .cah-lbl--kirmizi { background: #fecaca; color: #991b1b; }
+  .cah-err { display: none; background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; padding: 10px 14px; border-radius: 10px; margin-bottom: 12px; font-size: 0.9rem; }
+  .cah-err.show { display: block; }
+  .cah-modal-bg { display: none; position: fixed; inset: 0; background: rgba(15,23,42,.45); z-index: 2000; align-items: center; justify-content: center; padding: 16px; }
+  .cah-modal-bg.show { display: flex; }
+  .cah-modal { background: #fff; border-radius: 16px; max-width: 640px; width: 100%; max-height: 90vh; overflow: auto; box-shadow: 0 24px 64px rgba(0,0,0,.25); }
+  .cah-modal-hd { padding: 16px 18px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .cah-modal-hd h2 { margin: 0; font-size: 1.05rem; }
+  .cah-modal-bd { padding: 16px 18px; font-size: 0.9rem; color: #334155; }
+  .cah-modal-close { border: none; background: #f3f4f6; width: 36px; height: 36px; border-radius: 10px; cursor: pointer; font-size: 1.2rem; line-height: 1; }
+  .cah-as-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 12px; }
+  .cah-as-table th, .cah-as-table td { border-bottom: 1px solid #e5e7eb; padding: 8px 6px; text-align: left; vertical-align: top; }
+  .cah-as-table th { background: #f8fafc; font-weight: 700; color: #475569; }
+  .cah-note { font-size: 11px; color: #64748b; margin-top: 4px; }
+  .cah-fr { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+  .cah-fr a { display: inline-flex; align-items: center; padding: 8px 14px; border-radius: 10px; background: #2563eb; color: #fff; text-decoration: none; font-weight: 700; font-size: 0.85rem; }
+  .cah-fr a.secondary { background: #f3f4f6; color: #111827; }
+  .cah-col--frame-bekliyor .cah-col-inner { border-top: 3px solid #9ca3af; }
+  .cah-col--frame-calisiyor .cah-col-inner { border-top: 3px solid #3b82f6; }
+  .cah-col--frame-dis .cah-col-inner { border-top: 3px solid #eab308; }
+  .cah-col--frame-gec .cah-col-inner { border-top: 3px solid #ef4444; }
+</style>
+
+<div class="cah-wrap">
+  <div class="cah-head">
+    <div>
+      <h1>Canlı Üretim Akış Haritası</h1>
+      <p class="cah-sub">Açık iş emirleri, mevcut operasyon adımına göre istasyon sütunlarında gösterilir. Durumlar yalnızca iş emri operasyonlarındaki <strong>İşi Başlat</strong> ve <strong>İşi Bitir</strong> akışına bağlıdır; makine/PLC sinyali kullanılmaz.</p>
+    </div>
+    <div id="cahUpdated" style="font-size:12px;color:var(--muted,#64748b);"></div>
+  </div>
+
+  <div id="cahErr" class="cah-err" role="alert"></div>
+
+  <div class="cah-ozet" id="cahOzet" aria-live="polite"></div>
+
+  <form class="cah-filtre" id="cahFiltre" onsubmit="return false;">
+    <div>
+      <label for="f_emir">İş emri no</label>
+      <input type="text" id="f_emir" name="emir_no" placeholder="Ara…" autocomplete="off">
+    </div>
+    <div>
+      <label for="f_urun">Ürün kodu / ad</label>
+      <input type="text" id="f_urun" name="urun_kodu" placeholder="Ara…" autocomplete="off">
+    </div>
+    <div>
+      <label for="f_must">Müşteri (açıklama)</label>
+      <input type="text" id="f_must" name="musteri" placeholder="Metin…" autocomplete="off">
+    </div>
+    <div>
+      <label for="f_op">Operasyon tipi</label>
+      <select id="f_op" name="operasyon_id"><option value="">Tümü</option></select>
+    </div>
+    <div class="cah-fcheck">
+      <label><input type="checkbox" id="f_gec" name="sadece_geciken" value="1"> Sadece gecikenler</label>
+    </div>
+    <div class="cah-fcheck">
+      <label><input type="checkbox" id="f_dis" name="sadece_dis" value="1"> Sadece dış operasyon</label>
+    </div>
+    <div>
+      <label>&nbsp;</label>
+      <button type="button" class="cah-btn" id="cahUygula">Yenile</button>
+    </div>
+  </form>
+
+  <div class="cah-board" id="cahBoard" aria-label="Üretim akış istasyonları"></div>
+</div>
+
+<div class="cah-modal-bg" id="cahModalBg" role="dialog" aria-modal="true" aria-labelledby="cahModalTitle">
+  <div class="cah-modal">
+    <div class="cah-modal-hd">
+      <h2 id="cahModalTitle">İş emri</h2>
+      <button type="button" class="cah-modal-close" id="cahModalX" aria-label="Kapat">×</button>
+    </div>
+    <div class="cah-modal-bd" id="cahModalBody"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const API_LISTE = "{{ api_canli_akis_url|escapejs }}";
+  const API_DETAY_TPL = "{{ api_canli_akis_detay_tpl|escapejs }}";
+  const ozetEl = document.getElementById('cahOzet');
+  const boardEl = document.getElementById('cahBoard');
+  const errEl = document.getElementById('cahErr');
+  const updatedEl = document.getElementById('cahUpdated');
+  const opSel = document.getElementById('f_op');
+  const modalBg = document.getElementById('cahModalBg');
+  const modalBody = document.getElementById('cahModalBody');
+  const modalTitle = document.getElementById('cahModalTitle');
+  const modalX = document.getElementById('cahModalX');
+
+  function showErr(msg) {
+    errEl.textContent = msg || 'Yükleme hatası';
+    errEl.classList.add('show');
+  }
+  function clearErr() { errEl.classList.remove('show'); }
+
+  function qs() {
+    const p = new URLSearchParams();
+    const em = document.getElementById('f_emir').value.trim();
+    const ur = document.getElementById('f_urun').value.trim();
+    const mu = document.getElementById('f_must').value.trim();
+    const op = document.getElementById('f_op').value;
+    if (em) p.set('emir_no', em);
+    if (ur) p.set('urun_kodu', ur);
+    if (mu) p.set('musteri', mu);
+    if (op) p.set('operasyon_id', op);
+    if (document.getElementById('f_gec').checked) p.set('sadece_geciken', '1');
+    if (document.getElementById('f_dis').checked) p.set('sadece_dis', '1');
+    return p.toString();
+  }
+
+  function fillOperasyonlar(ops) {
+    const cur = opSel.value;
+    opSel.innerHTML = '<option value="">Tümü</option>';
+    (ops || []).forEach(function (o) {
+      const opt = document.createElement('option');
+      opt.value = String(o.id);
+      opt.textContent = o.ad;
+      opSel.appendChild(opt);
+    });
+    if (cur) opSel.value = cur;
+  }
+
+  function variantClass(v) {
+    const m = {
+      bekliyor: 'cah-card--bekliyor',
+      isleniyor: 'cah-card--isleniyor',
+      beklemede: 'cah-card--beklemede',
+      tamamlandi: 'cah-card--tamamlandi',
+      gecikti: 'cah-card--gecikti',
+      sorunlu: 'cah-card--sorunlu',
+      dis_hazir: 'cah-card--dis_hazir',
+      dis_disarda: 'cah-card--dis_disarda',
+      dis_gecikti: 'cah-card--dis_gecikti',
+    };
+    return m[v] || 'cah-card--bekliyor';
+  }
+
+  function lblClass(v) {
+    if (v === 'gecikti' || v === 'sorunlu' || v === 'dis_gecikti') return 'cah-lbl cah-lbl--kirmizi';
+    if (v === 'isleniyor' || v === 'beklemede') return 'cah-lbl cah-lbl--mavi';
+    if (v === 'dis_hazir' || v === 'dis_disarda') return 'cah-lbl cah-lbl--sari';
+    if (v === 'tamamlandi') return 'cah-lbl cah-lbl--yesil';
+    return 'cah-lbl';
+  }
+
+  function colFrameClass(st) {
+    if (st.geciken > 0) return 'cah-col--frame-gec';
+    if (st.dis_disarda > 0) return 'cah-col--frame-dis';
+    if (st.isleniyor > 0) return 'cah-col--frame-calisiyor';
+    return 'cah-col--frame-bekliyor';
+  }
+
+  function esc(s) {
+    if (s == null) return '';
+    const d = document.createElement('div');
+    d.textContent = String(s);
+    return d.innerHTML;
+  }
+
+  function renderOzet(o) {
+    if (!o) return;
+    const chips = [
+      ['Toplam açık', o.toplam_acik],
+      ['İşleniyor', o.isleniyor],
+      ['Bekliyor', o.bekleyen],
+      ['Dış operasyonda', o.dis_disarda],
+      ['Geciken', o.geciken],
+    ];
+    ozetEl.innerHTML = chips.map(function (c) {
+      return '<div class="cah-chip"><span>' + esc(c[0]) + '</span><span class="val">' + esc(c[1]) + '</span></div>';
+    }).join('');
+  }
+
+  function elLine(cls, text) {
+    const x = document.createElement('div');
+    x.className = cls;
+    x.textContent = text;
+    return x;
+  }
+
+  function buildCardButton(c) {
+    const v = c.variant || 'bekliyor';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'cah-card ' + variantClass(v);
+    const h = elLine('cah-card-h', c.emir_no || c.operasyon_no || 'Kayıt');
+    btn.appendChild(h);
+    btn.appendChild(elLine('cah-card-meta', (c.urun_kodu || '') + ' · ' + (c.urun_ad || '')));
+    btn.appendChild(elLine('cah-card-meta', (c.miktar || '') + ' ' + (c.birim || '')));
+    btn.appendChild(elLine('cah-card-meta', 'Op: ' + (c.asama_ad || '')));
+    if (c.plan_bitis) btn.appendChild(elLine('cah-card-meta', 'Plan bitiş: ' + c.plan_bitis));
+    const sp = document.createElement('span');
+    sp.className = lblClass(v);
+    sp.textContent = c.durum_label || '';
+    btn.appendChild(sp);
+    const di = c.dis_info;
+    if (di) {
+      const box = document.createElement('div');
+      box.className = 'cah-card-meta';
+      box.style.marginTop = '6px';
+      if (di.taseron) box.appendChild(elLine('cah-card-meta', 'Taşeron: ' + di.taseron));
+      if (di.gonderim) box.appendChild(elLine('cah-card-meta', 'Gönderim: ' + di.gonderim));
+      if (di.plan_donus) box.appendChild(elLine('cah-card-meta', 'Plan dönüş: ' + di.plan_donus));
+      const ln = document.createElement('div');
+      ln.className = 'cah-card-meta';
+      ln.textContent = 'Dışarıda: ' + (di.gun_disarda != null ? di.gun_disarda : 0) + ' gün';
+      if (di.gecikti) {
+        const st = document.createElement('strong');
+        st.style.color = '#b91c1c';
+        st.textContent = ' (Gecikme)';
+        ln.appendChild(st);
+      }
+      box.appendChild(ln);
+      btn.appendChild(box);
+    }
+    btn.addEventListener('click', function () { openModal(c); });
+    return btn;
+  }
+
+  function renderBoard(data) {
+    const stations = data.istasyonlar || [];
+    boardEl.innerHTML = '';
+    stations.forEach(function (st, idx) {
+      if (idx > 0) {
+        const ar = document.createElement('div');
+        ar.className = 'cah-col--arrow';
+        ar.setAttribute('aria-hidden', 'true');
+        ar.textContent = '→';
+        boardEl.appendChild(ar);
+      }
+      const col = document.createElement('div');
+      col.className = 'cah-col ' + colFrameClass(st);
+      const inner = document.createElement('div');
+      inner.className = 'cah-col-inner';
+      const hd = document.createElement('div');
+      hd.className = 'cah-st-hd';
+      hd.innerHTML =
+        '<div class="cah-st-ico">' + esc(st.emoji || '🏭') + '</div>' +
+        '<div class="cah-st-title">' + esc(st.ad) + '</div>' +
+        '<div class="cah-st-desc">' + esc(st.kisa_aciklama || '') + '</div>';
+      const badges = document.createElement('div');
+      badges.className = 'cah-st-badges';
+      badges.innerHTML =
+        '<span class="cah-mini">B ' + esc(st.bekleyen) + '</span>' +
+        '<span class="cah-mini">Ç ' + esc(st.isleniyor) + '</span>' +
+        '<span class="cah-mini">D ' + esc(st.dis_disarda) + '</span>' +
+        '<span class="cah-mini">! ' + esc(st.geciken) + '</span>';
+      inner.appendChild(badges);
+      inner.appendChild(hd);
+      const cards = document.createElement('div');
+      cards.className = 'cah-cards';
+      (st.kartlar || []).forEach(function (c) {
+        cards.appendChild(buildCardButton(c));
+      });
+      inner.appendChild(cards);
+      col.appendChild(inner);
+      boardEl.appendChild(col);
+    });
+  }
+
+  function openModalFromApi(emirId) {
+    const url = API_DETAY_TPL.replace('__ID__', String(emirId));
+    modalTitle.textContent = 'İş emri #' + emirId;
+    modalBody.innerHTML = '<p>Yükleniyor…</p>';
+    modalBg.classList.add('show');
+    fetch(url, { headers: { 'Accept': 'application/json' } })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (!j.success) throw new Error(j.error || 'Hata');
+        renderDetay(j.detay);
+      })
+      .catch(function (e) { modalBody.innerHTML = '<p>' + esc(e.message) + '</p>'; });
+  }
+
+  function renderDetay(d) {
+    modalTitle.textContent = d.emir_no || 'İş emri';
+    let rows = (d.asamalar || []).map(function (a) {
+      return '<tr><td>' + esc(a.sira) + '</td><td>' + esc(a.ad) + '</td><td>' + esc(a.durum) + '</td><td>' + esc(a.baslama || '—') + '</td><td>' + esc(a.bitis || '—') + '</td></tr>';
+    }).join('');
+    const notes = (d.asamalar || []).map(function (a) {
+      if (!a.notlar || !a.notlar.length) return '';
+      const nn = a.notlar.map(function (n) {
+        return '<div class="cah-note">' + esc(n.tarih) + ' — ' + esc(n.olusturan) + ': ' + esc(n.metin) + '</div>';
+      }).join('');
+      return '<div style="margin-top:10px"><strong>' + esc(a.ad) + '</strong> notları:' + nn + '</div>';
+    }).join('');
+    modalBody.innerHTML =
+      '<p><strong>' + esc(d.emir_no) + '</strong> · ' + esc(d.urun_kodu) + ' · ' + esc(d.urun_ad) + '</p>' +
+      '<p>Miktar: ' + esc(d.miktar) + (d.plan_bitis ? ' · Plan bitiş: ' + esc(d.plan_bitis) : '') + '</p>' +
+      '<table class="cah-as-table"><thead><tr><th>Sıra</th><th>Adım</th><th>Durum</th><th>Başlama</th><th>Bitiş</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+      notes +
+      '<div class="cah-fr"><a href="' + esc(d.detay_url) + '">İş emrine git</a><a href="#" class="secondary" id="cahModalKapat2">Kapat</a></div>';
+    document.getElementById('cahModalKapat2').addEventListener('click', function (ev) {
+      ev.preventDefault();
+      closeModal();
+    });
+  }
+
+  function openModal(c) {
+    modalTitle.textContent = c.tip === 'dis_operasyon' ? 'Dış operasyon' : ('İş emri ' + (c.emir_no || ''));
+    if (c.tip === 'is_emri' && c.emir_id) {
+      openModalFromApi(c.emir_id);
+      return;
+    }
+    const di = c.dis_info;
+    let body = '<p><strong>' + esc(c.operasyon_no) + '</strong> · ' + esc(c.urun_kodu) + ' · ' + esc(c.urun_ad) + '</p>';
+    body += '<p>Miktar: ' + esc(c.miktar) + ' ' + esc(c.birim || '') + '</p>';
+    if (di) {
+      body += '<p>Taşeron: ' + esc(di.taseron) + '</p>';
+      body += '<p>Gönderim: ' + esc(di.gonderim || '—') + ' · Plan dönüş: ' + esc(di.plan_donus || '—') + '</p>';
+      body += '<p>Dışarıda ' + esc(di.gun_disarda) + ' gün' + (di.gecikti ? ' <strong style="color:#b91c1c">(Gecikme)</strong>' : '') + '</p>';
+    }
+    body += '<div class="cah-fr"><a href="#" class="secondary" id="cahModalKapat3">Kapat</a></div>';
+    modalBody.innerHTML = body;
+    document.getElementById('cahModalKapat3').addEventListener('click', function (ev) { ev.preventDefault(); closeModal(); });
+    modalBg.classList.add('show');
+  }
+
+  function closeModal() { modalBg.classList.remove('show'); }
+
+  function load() {
+    clearErr();
+    const url = API_LISTE + (qs() ? ('?' + qs()) : '');
+    fetch(url, { headers: { 'Accept': 'application/json' } })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (!j.success) throw new Error(j.error || 'Bilinmeyen hata');
+        fillOperasyonlar(j.operasyonlar);
+        renderOzet(j.ozet);
+        renderBoard(j);
+        updatedEl.textContent = 'Son yenileme: ' + new Date().toLocaleString('tr-TR');
+      })
+      .catch(function (e) { showErr(e.message); });
+  }
+
+  document.getElementById('cahUygula').addEventListener('click', load);
+  modalX.addEventListener('click', closeModal);
+  modalBg.addEventListener('click', function (ev) { if (ev.target === modalBg) closeModal(); });
+
+  setInterval(load, 25000);
+  load();
+})();
+</script>
+{% endblock %}

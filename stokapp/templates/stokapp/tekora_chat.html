@@ -1,0 +1,588 @@
+{% extends "stokapp/base.html" %}
+{% load static %}
+
+{% block title %}TEKORA AI{% endblock %}
+
+{% block content %}
+<div
+  class="tekora-app"
+  id="tekora-chat-root"
+  data-chat-url="{% url 'stokapp:tekora_chat_api' %}"
+>
+  {% csrf_token %}
+  <header class="tekora-app__header">
+    <div class="tekora-app__brand">
+      <span class="tekora-app__logo" aria-hidden="true">◆</span>
+      <div>
+        <h1 class="tekora-app__title">TEKORA</h1>
+        <p class="tekora-app__subtitle">Şirket içi ERP asistanı · Üretim · Stok · Satınalma · Operasyon</p>
+      </div>
+    </div>
+    <span class="tekora-app__badge">Live</span>
+  </header>
+
+  <div class="tekora-app__messages" id="tekora-messages" role="log" aria-live="polite" aria-relevant="additions">
+    <div class="tekora-msg tekora-msg--assistant tekora-msg--intro" id="tekora-intro">
+      <div class="tekora-msg__avatar" aria-hidden="true">T</div>
+      <div class="tekora-msg__bubble">
+        <p>Merhaba. Ben TEKORA. ERP özet verilerinize erişerek sorularınızı yanıtlarım. Nasıl yardımcı olabilirim?</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="tekora-app__composer">
+    <div class="tekora-app__error" id="tekora-error" hidden></div>
+
+    <div class="tekora-app__tts-bar">
+      <label class="tekora-app__tts-label" id="tekora-tts-label">
+        <input type="checkbox" id="tekora-tts-enable" checked aria-describedby="tekora-tts-hint">
+        <span class="tekora-app__tts-text" aria-hidden="true">🔊</span>
+        <span>Sesli Yanıt</span>
+      </label>
+      <span class="tekora-app__tts-indicator" id="tekora-tts-indicator" hidden aria-live="polite">TEKORA konuşuyor…</span>
+    </div>
+    <p class="visually-hidden" id="tekora-tts-hint">Açıkken yanıtlar tarayıcıda seslendirilir; mikrofon dinlerken seslendirme başlamaz.</p>
+
+    <div class="tekora-app__handsfree-bar">
+      <label class="tekora-app__handsfree-label" id="tekora-handsfree-label">
+        <input type="checkbox" id="tekora-handsfree-enable" aria-describedby="tekora-handsfree-hint">
+        <span class="tekora-app__handsfree-text" aria-hidden="true">🎧</span>
+        <span>Hands-Free</span>
+      </label>
+      <span class="tekora-app__handsfree-status" id="tekora-handsfree-status" hidden></span>
+    </div>
+    <p class="visually-hidden" id="tekora-handsfree-hint">Açıkken mikrofon “Tekora” uyandırma kelimesini dinler; komut tarayıcıda işlenir.</p>
+
+    <div class="tekora-app__approval-panel" id="tekora-approval-panel">
+      <div class="tekora-app__approval-title">Onay merkezi — satınalma önerisi</div>
+      <p class="tekora-app__approval-desc">
+        Doğrudan satınalma açılmaz; yalnızca onay kaydı oluşturulur. İsterseniz alanları doldurup kutuyu işaretleyin.
+      </p>
+      <div class="tekora-app__approval-grid">
+        <label class="tekora-app__approval-field">
+          <span>Ürün / malzeme</span>
+          <input type="text" id="tekora-ap-product" maxlength="500" placeholder="Örn: M10x20 İmbus Galvaniz" autocomplete="off">
+        </label>
+        <label class="tekora-app__approval-field">
+          <span>Güncel stok (opsiyonel)</span>
+          <input type="text" id="tekora-ap-stock" inputmode="decimal" placeholder="12" autocomplete="off">
+        </label>
+        <label class="tekora-app__approval-field">
+          <span>Önerilen miktar</span>
+          <input type="text" id="tekora-ap-qty" inputmode="numeric" placeholder="500" autocomplete="off">
+        </label>
+      </div>
+      <label class="tekora-app__approval-check">
+        <input type="checkbox" id="tekora-ap-enable">
+        <span>Bu bilgilerle satınalma önerisini onay kuyruğuna ekle (<code>create_purchase_request</code>)</span>
+      </label>
+    </div>
+
+    <div class="tekora-app__input-row">
+      <label class="visually-hidden" for="tekora-input">Mesajınız</label>
+      <textarea
+        id="tekora-input"
+        class="tekora-app__input"
+        rows="1"
+        maxlength="12000"
+        placeholder="Örn: Kritik stok ve açık sipariş durumunu özetle…"
+        autocomplete="off"
+      ></textarea>
+      <button
+        type="button"
+        class="tekora-app__voice"
+        id="tekora-voice"
+        aria-label="Sesli komut: dinlemeyi başlat veya durdur"
+        aria-pressed="false"
+        title="Sesli komut (tarayıcıda metne çevrilir, sunucuya ses gönderilmez)"
+      >
+        <span class="tekora-app__voice-icon" aria-hidden="true">🎙️</span>
+      </button>
+      <button type="button" class="tekora-app__send" id="tekora-send" aria-label="Gönder">
+        <span class="tekora-app__send-icon" aria-hidden="true">➤</span>
+      </button>
+    </div>
+    <p class="tekora-app__voice-status" id="tekora-voice-status" hidden></p>
+    <p class="tekora-app__hint">Enter gönderir · Shift+Enter satır atlar · Yanıtlar yerel Ollama (DeepSeek-R1) üzerinden üretilir · Onay kutusu işaretliyse isteğe bağlı <code>confirm_purchase_request</code> gönderilir · 🎙️ ses tanıma tarayıcıda; dinlemeyi durdurunca metin kısa süre görünür ve otomatik gönderilir · 🔊 Sesli Yanıt tarayıcıda okur (mikrofon açıkken okuma başlamaz) · 🎧 Hands-Free: “Tekora” ile uyandırma (TEKORA seslendirirken dinleme durur)</p>
+  </div>
+</div>
+
+<style>
+  .tekora-app {
+    --tekora-bg: #0b0f14;
+    --tekora-surface: #121922;
+    --tekora-border: #1e293b;
+    --tekora-text: #e2e8f0;
+    --tekora-muted: #94a3b8;
+    --tekora-user: #2563eb;
+    --tekora-user-hover: #1d4ed8;
+    --tekora-assistant: #1e293b;
+    --tekora-accent: #38bdf8;
+    --tekora-error: #f87171;
+    max-width: 920px;
+    margin: 0 auto;
+    min-height: calc(100vh - 100px);
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(165deg, #0b0f14 0%, #0f172a 45%, #0b0f14 100%);
+    border: 1px solid var(--tekora-border);
+    border-radius: 16px;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    overflow: hidden;
+  }
+  .tekora-app__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--tekora-border);
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(8px);
+  }
+  .tekora-app__brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .tekora-app__logo {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #0ea5e9, #6366f1);
+    color: #fff;
+    font-size: 18px;
+    font-weight: 800;
+    box-shadow: 0 4px 14px rgba(14, 165, 233, 0.35);
+  }
+  .tekora-app__title {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    color: #f8fafc;
+  }
+  .tekora-app__subtitle {
+    margin: 2px 0 0;
+    font-size: 0.72rem;
+    color: var(--tekora-muted);
+    max-width: 42ch;
+    line-height: 1.35;
+  }
+  .tekora-app__badge {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #22c55e;
+    border: 1px solid rgba(34, 197, 94, 0.45);
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(22, 101, 52, 0.25);
+  }
+  .tekora-app__messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    scroll-behavior: smooth;
+  }
+  .tekora-msg {
+    display: flex;
+    gap: 10px;
+    max-width: 100%;
+  }
+  .tekora-msg--user {
+    flex-direction: row-reverse;
+    align-self: flex-end;
+  }
+  .tekora-msg--assistant {
+    align-self: flex-start;
+  }
+  .tekora-msg__avatar {
+    flex-shrink: 0;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 13px;
+    color: #fff;
+    background: linear-gradient(135deg, #334155, #475569);
+  }
+  .tekora-msg--user .tekora-msg__avatar {
+    background: linear-gradient(135deg, #1d4ed8, #2563eb);
+  }
+  .tekora-msg__bubble {
+    padding: 12px 16px;
+    border-radius: 14px;
+    font-size: 0.9rem;
+    line-height: 1.55;
+    color: var(--tekora-text);
+    max-width: min(100%, 72ch);
+    word-break: break-word;
+  }
+  .tekora-msg--assistant .tekora-msg__bubble {
+    background: var(--tekora-assistant);
+    border: 1px solid rgba(148, 163, 184, 0.15);
+    border-top-left-radius: 4px;
+  }
+  .tekora-msg--user .tekora-msg__bubble {
+    background: var(--tekora-user);
+    border-top-right-radius: 4px;
+    color: #f1f5f9;
+  }
+  .tekora-msg--error .tekora-msg__bubble {
+    border-color: rgba(248, 113, 113, 0.4);
+    color: #fecaca;
+  }
+  .tekora-msg__bubble p {
+    margin: 0 0 0.5em;
+  }
+  .tekora-msg__bubble p:last-child {
+    margin-bottom: 0;
+  }
+  .tekora-msg--loading .tekora-msg__bubble {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 44px;
+  }
+  .tekora-typing-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--tekora-accent);
+    animation: tekoraBounce 1.2s ease-in-out infinite;
+  }
+  .tekora-typing-dot:nth-child(2) { animation-delay: 0.15s; }
+  .tekora-typing-dot:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes tekoraBounce {
+    0%, 80%, 100% { transform: translateY(0); opacity: 0.45; }
+    40% { transform: translateY(-5px); opacity: 1; }
+  }
+  .tekora-app__composer {
+    padding: 14px 16px 18px;
+    border-top: 1px solid var(--tekora-border);
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(10px);
+  }
+  .tekora-app__tts-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(56, 189, 248, 0.15);
+    background: rgba(15, 23, 42, 0.45);
+  }
+  .tekora-app__tts-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    color: #94a3b8;
+    user-select: none;
+    transition: color 0.15s;
+  }
+  .tekora-app__tts-label:hover {
+    color: #cbd5e1;
+  }
+  .tekora-app__tts-label--active {
+    color: #7dd3fc;
+  }
+  .tekora-app__tts-label--active .tekora-app__tts-text {
+    filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.55));
+  }
+  .tekora-app__tts-label input {
+    width: 16px;
+    height: 16px;
+    accent-color: #38bdf8;
+    cursor: pointer;
+  }
+  .tekora-app__tts-text {
+    font-size: 1rem;
+    line-height: 1;
+  }
+  .tekora-app__tts-indicator {
+    font-size: 0.72rem;
+    color: #7dd3fc;
+    font-weight: 600;
+    white-space: nowrap;
+    animation: tekoraTtsPulse 1.2s ease-in-out infinite;
+  }
+  @keyframes tekoraTtsPulse {
+    0%, 100% { opacity: 0.65; }
+    50% { opacity: 1; }
+  }
+  .tekora-app__handsfree-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(167, 139, 250, 0.2);
+    background: rgba(15, 23, 42, 0.45);
+  }
+  .tekora-app__handsfree-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    color: #94a3b8;
+    user-select: none;
+    transition: color 0.15s;
+  }
+  .tekora-app__handsfree-label:hover {
+    color: #cbd5e1;
+  }
+  .tekora-app__handsfree-label--active {
+    color: #c4b5fd;
+  }
+  .tekora-app__handsfree-label--active .tekora-app__handsfree-text {
+    filter: drop-shadow(0 0 6px rgba(167, 139, 250, 0.5));
+  }
+  .tekora-app__handsfree-label input {
+    width: 16px;
+    height: 16px;
+    accent-color: #a78bfa;
+    cursor: pointer;
+  }
+  .tekora-app__handsfree-text {
+    font-size: 1rem;
+    line-height: 1;
+  }
+  .tekora-app__handsfree-status {
+    font-size: 0.72rem;
+    color: #c4b5fd;
+    font-weight: 500;
+    max-width: 62%;
+    text-align: right;
+    line-height: 1.35;
+  }
+  .tekora-app__handsfree-status.is-error {
+    color: var(--tekora-error);
+  }
+  .tekora-app__error {
+    color: var(--tekora-error);
+    font-size: 0.8rem;
+    margin-bottom: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: rgba(127, 29, 29, 0.25);
+    border: 1px solid rgba(248, 113, 113, 0.25);
+  }
+  .tekora-app__input-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+  }
+  .tekora-app__input {
+    flex: 1;
+    resize: none;
+    min-height: 46px;
+    max-height: 160px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--tekora-border);
+    background: var(--tekora-surface);
+    color: var(--tekora-text);
+    font-family: inherit;
+    font-size: 0.9rem;
+    line-height: 1.45;
+  }
+  .tekora-app__input:focus {
+    outline: none;
+    border-color: rgba(56, 189, 248, 0.5);
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.12);
+  }
+  .tekora-app__input::placeholder {
+    color: #64748b;
+  }
+  .tekora-app__voice {
+    flex-shrink: 0;
+    width: 46px;
+    height: 46px;
+    border: 1px solid var(--tekora-border);
+    border-radius: 12px;
+    cursor: pointer;
+    background: var(--tekora-surface);
+    color: #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, border-color 0.15s, transform 0.1s, box-shadow 0.15s;
+  }
+  .tekora-app__voice:hover:not(:disabled) {
+    border-color: rgba(56, 189, 248, 0.45);
+    background: rgba(30, 41, 59, 0.95);
+  }
+  .tekora-app__voice:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .tekora-app__voice.is-listening {
+    background: rgba(14, 165, 233, 0.25);
+    border-color: rgba(56, 189, 248, 0.75);
+    color: #7dd3fc;
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+  }
+  .tekora-app__voice:active:not(:disabled) {
+    transform: scale(0.96);
+  }
+  .tekora-app__voice-icon {
+    font-size: 1.15rem;
+    line-height: 1;
+  }
+  .tekora-app__voice-status {
+    margin: 8px 0 0;
+    font-size: 0.78rem;
+    color: #7dd3fc;
+    min-height: 1.25em;
+  }
+  .tekora-app__voice-status.is-error {
+    color: var(--tekora-error);
+  }
+  .tekora-app__send {
+    flex-shrink: 0;
+    width: 46px;
+    height: 46px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    background: var(--tekora-user);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .tekora-app__send:hover:not(:disabled) {
+    background: var(--tekora-user-hover);
+  }
+  .tekora-app__send:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .tekora-app__send:active:not(:disabled) {
+    transform: scale(0.96);
+  }
+  .tekora-app__send-icon {
+    font-size: 1rem;
+    transform: translateX(1px);
+  }
+  .tekora-app__hint {
+    margin: 10px 0 0;
+    font-size: 0.68rem;
+    color: #64748b;
+  }
+  .tekora-app__hint code {
+    font-size: 0.62rem;
+    color: #94a3b8;
+    background: rgba(30, 41, 59, 0.8);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  .tekora-app__approval-panel {
+    margin-bottom: 14px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(56, 189, 248, 0.22);
+    background: rgba(15, 23, 42, 0.55);
+  }
+  .tekora-app__approval-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #7dd3fc;
+    margin-bottom: 6px;
+  }
+  .tekora-app__approval-desc {
+    margin: 0 0 10px;
+    font-size: 0.75rem;
+    color: #94a3b8;
+    line-height: 1.45;
+  }
+  .tekora-app__approval-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .tekora-app__approval-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.68rem;
+    color: #cbd5e1;
+  }
+  .tekora-app__approval-field input {
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--tekora-border);
+    background: var(--tekora-surface);
+    color: var(--tekora-text);
+    font-size: 0.85rem;
+  }
+  .tekora-app__approval-field input:focus {
+    outline: none;
+    border-color: rgba(56, 189, 248, 0.45);
+  }
+  .tekora-app__approval-check {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 0.72rem;
+    color: #cbd5e1;
+    cursor: pointer;
+    line-height: 1.35;
+  }
+  .tekora-app__approval-check input {
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+  .tekora-app__approval-check code {
+    font-size: 0.65rem;
+    color: #7dd3fc;
+  }
+  @media (max-width: 720px) {
+    .tekora-app__approval-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  @media (max-width: 640px) {
+    .tekora-app {
+      min-height: calc(100vh - 72px);
+      border-radius: 12px;
+    }
+    .tekora-app__subtitle {
+      display: none;
+    }
+  }
+</style>
+<script src="{% static 'stokapp/js/tekora_chat.js' %}" defer></script>
+{% endblock %}

@@ -1,0 +1,471 @@
+{% extends "stokapp/base.html" %}
+{% load static %}
+{% block title %}Ölçü Aleti Düzenle - {{ alet.seri_no }}{% endblock %}
+{% block content %}
+<div class="card">
+    <h2>Ölçü Aleti Düzenle: {{ alet.seri_no }}</h2>
+    
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 15px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background: #fff3cd; color: #856404; border-left: 4px solid #ffc107;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+    
+    <form method="post" enctype="multipart/form-data" style="max-width: 800px;">
+        {% csrf_token %}
+        
+        <!-- Temel Bilgiler -->
+        <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="margin: 0 0 15px 0; color: #111827;">Temel Bilgiler</h3>
+            
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.alet_turu.label }} <span style="color: red;">*</span></label>
+                <div style="display: flex; gap: 5px;">
+                    <div style="flex: 3; min-width: 0;">{{ form.alet_turu }}</div>
+                    <a href="{% url 'stokapp:olcu_aleti_turu_ekle' %}" target="_blank" style="padding: 8px 12px; background: #22c55e; color: white; border-radius: 4px; text-decoration: none; white-space: nowrap; height: fit-content;">+</a>
+                </div>
+                {% if form.alet_turu.errors %}
+                    <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.alet_turu.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.marka.label }} <span style="color: red;">*</span></label>
+                    <div style="display: flex; gap: 5px;">
+                        {{ form.marka }}
+                        <button type="button" onclick="showMarkaModal()" style="padding: 8px 12px; background: #22c55e; color: white; border: none; border-radius: 4px; cursor: pointer; white-space: nowrap;">+</button>
+                    </div>
+                    <datalist id="markalar_list">
+                        {% for marka in markalar %}
+                        <option value="{{ marka }}">
+                        {% endfor %}
+                    </datalist>
+                    {% if form.marka.errors %}
+                        <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.marka.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.model.label }}</label>
+                    {{ form.model }}
+                    {% if form.model.errors %}
+                        <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.model.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.seri_no.label }} <span style="color: red;">*</span></label>
+                    {{ form.seri_no }}
+                    {% if form.seri_no.errors %}
+                        <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.seri_no.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.fotograf.label }}</label>
+                    {% if alet.fotograf %}
+                        <div style="margin-bottom: 10px;">
+                            <img src="{{ alet.fotograf.url }}" 
+                                 alt="{{ alet.seri_no }}" 
+                                 style="max-width: 200px; max-height: 150px; border-radius: 8px; border: 1px solid #e5e7eb;">
+                            <div style="margin-top: 8px; font-size: 14px; color: #6b7280;">
+                                Mevcut fotoğraf
+                            </div>
+                        </div>
+                    {% endif %}
+                    {{ form.fotograf }}
+                    {% if form.fotograf.errors %}
+                        <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.fotograf.errors }}</div>
+                    {% endif %}
+                    <small style="color: #6b7280; font-size: 12px;">JPEG, PNG veya GIF formatında yükleyebilirsiniz.</small>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Teknik Bilgiler -->
+        <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="margin: 0 0 15px 0; color: #111827;">Teknik Bilgiler (Opsiyonel)</h3>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.olcum_araligi.label }}</label>
+                    {{ form.olcum_araligi }}
+                    {% if form.olcum_araligi.errors %}
+                        <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.olcum_araligi.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.hassasiyet.label }}</label>
+                    {{ form.hassasiyet }}
+                    {% if form.hassasiyet.errors %}
+                        <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.hassasiyet.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr; gap: 15px;">
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.satın_alma_tarihi.label }}</label>
+                    {{ form.satın_alma_tarihi }}
+                    {% if form.satın_alma_tarihi.errors %}
+                        <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.satın_alma_tarihi.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Kullanım Bilgileri -->
+        <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="margin: 0 0 15px 0; color: #111827;">Kullanım Bilgileri</h3>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.kullanim_yeri.label }}</label>
+                    <div style="display: flex; gap: 5px;">
+                        {{ form.kullanim_yeri }}
+                        <button type="button" onclick="showKullanimYeriModal()" style="padding: 8px 12px; background: #22c55e; color: white; border: none; border-radius: 4px; cursor: pointer; white-space: nowrap;">+</button>
+                    </div>
+                    <datalist id="kullanim_yeri_list">
+                        {% for istasyon in istasyonlar %}
+                        <option value="{{ istasyon.ad }}">
+                        {% endfor %}
+                        {% for yer in kullanim_yerleri %}
+                        <option value="{{ yer }}">
+                        {% endfor %}
+                    </datalist>
+                    {% if form.kullanim_yeri.errors %}
+                        <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.kullanim_yeri.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.sorumlu_kisi.label }}</label>
+                    <div style="display: flex; gap: 5px;">
+                        {{ form.sorumlu_kisi }}
+                        <button type="button" onclick="showSorumluKisiModal()" style="padding: 8px 12px; background: #22c55e; color: white; border: none; border-radius: 4px; cursor: pointer; white-space: nowrap;">+</button>
+                    </div>
+                    <datalist id="sorumlu_kisi_list">
+                        {% for personel in personeller %}
+                        <option value="{{ personel.ad }} {{ personel.soyad }}">
+                        {% endfor %}
+                    </datalist>
+                    {% if form.sorumlu_kisi.errors %}
+                        <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.sorumlu_kisi.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.kritiklik_seviyesi.label }}</label>
+                    {{ form.kritiklik_seviyesi }}
+                    {% if form.kritiklik_seviyesi.errors %}
+                        <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.kritiklik_seviyesi.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.durum.label }}</label>
+                    {{ form.durum }}
+                    {% if form.durum.errors %}
+                        <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.durum.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Şirket İçi Kalibrasyon -->
+        <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="margin: 0 0 15px 0; color: #111827;">Şirket İçi Kalibrasyon</h3>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.kalibrasyon_periyot_tipi.label }}</label>
+                    {{ form.kalibrasyon_periyot_tipi }}
+                    {% if form.kalibrasyon_periyot_tipi.errors %}
+                        <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.kalibrasyon_periyot_tipi.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.kalibrasyon_periyot_sayisi.label }}</label>
+                    {{ form.kalibrasyon_periyot_sayisi }}
+                    {% if form.kalibrasyon_periyot_sayisi.errors %}
+                        <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.kalibrasyon_periyot_sayisi.errors }}</div>
+                    {% endif %}
+                    <small style="color: #6b7280; font-size: 12px;" id="periyot-aciklama">Örn: 1 yıl</small>
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.son_kalibrasyon_tarihi.label }}</label>
+                    {{ form.son_kalibrasyon_tarihi }}
+                    {% if form.son_kalibrasyon_tarihi.errors %}
+                        <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.son_kalibrasyon_tarihi.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.sonraki_kalibrasyon_tarihi.label }}</label>
+                    {{ form.sonraki_kalibrasyon_tarihi }}
+                    {% if form.sonraki_kalibrasyon_tarihi.errors %}
+                        <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.sonraki_kalibrasyon_tarihi.errors }}</div>
+                    {% endif %}
+                    <small style="color: #6b7280; font-size: 12px;">Değiştirilebilir (otomatik hesaplanır)</small>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Dış Kalibrasyon -->
+        <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                <label style="display: flex; align-items: center; gap: 8px; margin: 0; font-weight: 600; font-size: 16px; color: #111827;">
+                    {{ form.dis_kalibrasyon_gerekli }}
+                    <span>Gerekli</span>
+                </label>
+                <h3 style="margin: 0; color: #111827;">Dış Kalibrasyon</h3>
+            </div>
+            
+            <div id="dis-kalibrasyon-alanlar" style="{% if not alet.dis_kalibrasyon_gerekli %}display: none;{% endif %}">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.dis_kalibrasyon_periyot_tipi.label }}</label>
+                        {{ form.dis_kalibrasyon_periyot_tipi }}
+                        {% if form.dis_kalibrasyon_periyot_tipi.errors %}
+                            <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.dis_kalibrasyon_periyot_tipi.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.dis_kalibrasyon_periyot_sayisi.label }}</label>
+                        {{ form.dis_kalibrasyon_periyot_sayisi }}
+                        {% if form.dis_kalibrasyon_periyot_sayisi.errors %}
+                            <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.dis_kalibrasyon_periyot_sayisi.errors }}</div>
+                        {% endif %}
+                        <small style="color: #6b7280; font-size: 12px;" id="dis-periyot-aciklama">Örn: 1 yıl</small>
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.dis_kalibrasyon_son_tarih.label }}</label>
+                        {{ form.dis_kalibrasyon_son_tarih }}
+                        {% if form.dis_kalibrasyon_son_tarih.errors %}
+                            <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.dis_kalibrasyon_son_tarih.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div>
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.dis_kalibrasyon_sonraki_tarih.label }}</label>
+                        {{ form.dis_kalibrasyon_sonraki_tarih }}
+                        {% if form.dis_kalibrasyon_sonraki_tarih.errors %}
+                            <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.dis_kalibrasyon_sonraki_tarih.errors }}</div>
+                        {% endif %}
+                        <small style="color: #6b7280; font-size: 12px;">Değiştirilebilir (otomatik hesaplanır)</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Aktif -->
+        <div style="margin-bottom: 20px;">
+            <label style="display: flex; align-items: center; gap: 8px;">
+                {{ form.aktif }}
+                <span>{{ form.aktif.label }}</span>
+            </label>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <button type="submit" class="btn btn-primary" style="background-color: #22c55e; border-color: #22c55e; padding: 10px 20px;">Kaydet</button>
+            <a href="{% url 'stokapp:kalibrasyon_ekle' alet.pk %}" class="btn" style="background-color: #3b82f6; color: white; padding: 10px 20px; text-decoration: none; margin-left: 10px;">📋 Kalibrasyon Ekle</a>
+            <a href="{% url 'stokapp:olcu_aleti_listesi' %}" class="btn" style="background-color: #6b7280; color: white; padding: 10px 20px; text-decoration: none; margin-left: 10px;">İptal</a>
+        </div>
+    </form>
+</div>
+
+<script>
+// Periyot tipine göre açıklama güncelle
+document.getElementById('id_kalibrasyon_periyot_tipi').addEventListener('change', function() {
+    const tip = this.value;
+    const aciklama = document.getElementById('periyot-aciklama');
+    
+    const aciklamalar = {
+        'GUN': 'gün',
+        'HAFTA': 'hafta',
+        'AY': 'ay',
+        'YIL': 'yıl'
+    };
+    
+    if (tip && aciklamalar[tip]) {
+        aciklama.textContent = `Örn: 1 ${aciklamalar[tip]}`;
+    }
+});
+
+// Son kalibrasyon tarihi değiştiğinde sonraki kalibrasyon tarihini otomatik hesapla
+document.getElementById('id_son_kalibrasyon_tarihi').addEventListener('change', function() {
+    const sonTarih = this.value;
+    if (!sonTarih) return;
+    
+    const periyotTipi = document.getElementById('id_kalibrasyon_periyot_tipi').value;
+    const periyotSayisi = parseInt(document.getElementById('id_kalibrasyon_periyot_sayisi').value) || 1;
+    
+    if (!periyotTipi) return;
+    
+    const sonTarihObj = new Date(sonTarih);
+    let sonrakiTarih = new Date(sonTarihObj);
+    
+    if (periyotTipi === 'GUN') {
+        sonrakiTarih.setDate(sonrakiTarih.getDate() + periyotSayisi);
+    } else if (periyotTipi === 'HAFTA') {
+        sonrakiTarih.setDate(sonrakiTarih.getDate() + (periyotSayisi * 7));
+    } else if (periyotTipi === 'AY') {
+        sonrakiTarih.setMonth(sonrakiTarih.getMonth() + periyotSayisi);
+    } else if (periyotTipi === 'YIL') {
+        sonrakiTarih.setFullYear(sonrakiTarih.getFullYear() + periyotSayisi);
+    }
+    
+    // Tarihi YYYY-MM-DD formatına çevir
+    const yil = sonrakiTarih.getFullYear();
+    const ay = String(sonrakiTarih.getMonth() + 1).padStart(2, '0');
+    const gun = String(sonrakiTarih.getDate()).padStart(2, '0');
+    
+    document.getElementById('id_sonraki_kalibrasyon_tarihi').value = `${yil}-${ay}-${gun}`;
+});
+
+// Periyot sayısı değiştiğinde de hesapla
+document.getElementById('id_kalibrasyon_periyot_sayisi').addEventListener('change', function() {
+    document.getElementById('id_son_kalibrasyon_tarihi').dispatchEvent(new Event('change'));
+});
+
+// Periyot tipi değiştiğinde de hesapla
+document.getElementById('id_kalibrasyon_periyot_tipi').addEventListener('change', function() {
+    document.getElementById('id_son_kalibrasyon_tarihi').dispatchEvent(new Event('change'));
+});
+
+// Dış kalibrasyon gerekli checkbox kontrolü
+document.getElementById('id_dis_kalibrasyon_gerekli').addEventListener('change', function() {
+    const disKalibrasyonAlanlar = document.getElementById('dis-kalibrasyon-alanlar');
+    const isChecked = this.checked;
+    
+    if (isChecked) {
+        disKalibrasyonAlanlar.style.display = 'block';
+        // Alanları aktif et
+        document.getElementById('id_dis_kalibrasyon_periyot_tipi').disabled = false;
+        document.getElementById('id_dis_kalibrasyon_periyot_sayisi').disabled = false;
+        document.getElementById('id_dis_kalibrasyon_son_tarih').disabled = false;
+        document.getElementById('id_dis_kalibrasyon_sonraki_tarih').disabled = false;
+    } else {
+        disKalibrasyonAlanlar.style.display = 'none';
+        // Alanları pasif et
+        document.getElementById('id_dis_kalibrasyon_periyot_tipi').disabled = true;
+        document.getElementById('id_dis_kalibrasyon_periyot_sayisi').disabled = true;
+        document.getElementById('id_dis_kalibrasyon_son_tarih').disabled = true;
+        document.getElementById('id_dis_kalibrasyon_sonraki_tarih').disabled = true;
+        // Değerleri temizle
+        document.getElementById('id_dis_kalibrasyon_periyot_tipi').value = '';
+        document.getElementById('id_dis_kalibrasyon_periyot_sayisi').value = '';
+        document.getElementById('id_dis_kalibrasyon_son_tarih').value = '';
+        document.getElementById('id_dis_kalibrasyon_sonraki_tarih').value = '';
+    }
+});
+
+// Dış kalibrasyon periyot tipine göre açıklama güncelle
+document.getElementById('id_dis_kalibrasyon_periyot_tipi').addEventListener('change', function() {
+    const tip = this.value;
+    const aciklama = document.getElementById('dis-periyot-aciklama');
+    
+    const aciklamalar = {
+        'GUN': 'gün',
+        'HAFTA': 'hafta',
+        'AY': 'ay',
+        'YIL': 'yıl'
+    };
+    
+    if (tip && aciklamalar[tip]) {
+        aciklama.textContent = `Örn: 1 ${aciklamalar[tip]}`;
+    }
+});
+
+// Dış kalibrasyon son tarihi değiştiğinde sonraki tarihi otomatik hesapla
+document.getElementById('id_dis_kalibrasyon_son_tarih').addEventListener('change', function() {
+    const sonTarih = this.value;
+    if (!sonTarih) return;
+    
+    const periyotTipi = document.getElementById('id_dis_kalibrasyon_periyot_tipi').value;
+    const periyotSayisi = parseInt(document.getElementById('id_dis_kalibrasyon_periyot_sayisi').value) || 1;
+    
+    if (!periyotTipi) return;
+    
+    const sonTarihObj = new Date(sonTarih);
+    let sonrakiTarih = new Date(sonTarihObj);
+    
+    if (periyotTipi === 'GUN') {
+        sonrakiTarih.setDate(sonrakiTarih.getDate() + periyotSayisi);
+    } else if (periyotTipi === 'HAFTA') {
+        sonrakiTarih.setDate(sonrakiTarih.getDate() + (periyotSayisi * 7));
+    } else if (periyotTipi === 'AY') {
+        sonrakiTarih.setMonth(sonrakiTarih.getMonth() + periyotSayisi);
+    } else if (periyotTipi === 'YIL') {
+        sonrakiTarih.setFullYear(sonrakiTarih.getFullYear() + periyotSayisi);
+    }
+    
+    // Tarihi YYYY-MM-DD formatına çevir
+    const yil = sonrakiTarih.getFullYear();
+    const ay = String(sonrakiTarih.getMonth() + 1).padStart(2, '0');
+    const gun = String(sonrakiTarih.getDate()).padStart(2, '0');
+    
+    document.getElementById('id_dis_kalibrasyon_sonraki_tarih').value = `${yil}-${ay}-${gun}`;
+});
+
+// Dış kalibrasyon periyot sayısı veya tipi değiştiğinde de hesapla
+document.getElementById('id_dis_kalibrasyon_periyot_sayisi').addEventListener('change', function() {
+    document.getElementById('id_dis_kalibrasyon_son_tarih').dispatchEvent(new Event('change'));
+});
+document.getElementById('id_dis_kalibrasyon_periyot_tipi').addEventListener('change', function() {
+    document.getElementById('id_dis_kalibrasyon_son_tarih').dispatchEvent(new Event('change'));
+});
+
+// Sayfa yüklendiğinde checkbox durumuna göre alanları ayarla
+window.addEventListener('DOMContentLoaded', function() {
+    const checkbox = document.getElementById('id_dis_kalibrasyon_gerekli');
+    if (checkbox) {
+        checkbox.dispatchEvent(new Event('change'));
+    }
+});
+
+// Marka modal
+function showMarkaModal() {
+    const marka = prompt('Yeni marka adı girin:');
+    if (marka && marka.trim()) {
+        document.getElementById('id_marka').value = marka.trim();
+    }
+}
+
+// Kullanım yeri modal
+function showKullanimYeriModal() {
+    const yeniYer = prompt('Yeni kullanım yeri / istasyon adı girin:');
+    if (yeniYer && yeniYer.trim()) {
+        document.getElementById('id_kullanim_yeri').value = yeniYer.trim();
+    }
+}
+
+// Sorumlu kişi modal
+function showSorumluKisiModal() {
+    const yeniKisi = prompt('Yeni sorumlu kişi adı girin:');
+    if (yeniKisi && yeniKisi.trim()) {
+        document.getElementById('id_sorumlu_kisi').value = yeniKisi.trim();
+    }
+}
+</script>
+{% endblock %}
+

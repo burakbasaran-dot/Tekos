@@ -1,0 +1,270 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Haftalık Enerji Planı — TEKOS{% endblock %}
+
+{% block content %}
+<style>
+  .ep-head { display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:20px; }
+  .ep-head h1 { margin:0; font-size:1.35rem; font-weight:800; color:var(--ink); }
+  .ep-sub { color:var(--muted); font-size:0.9rem; max-width:640px; line-height:1.5; margin:8px 0 0; }
+  .ep-back { font-size:0.9rem; }
+  .ep-back a { color:#2563eb; font-weight:600; text-decoration:none; }
+  .ep-back a:hover { text-decoration:underline; }
+  .ep-section { background:var(--card); border:1px solid var(--border); border-radius:14px; box-shadow:0 10px 30px rgba(17,24,39,.06); padding:18px; margin-bottom:18px; }
+  .ep-section h2 { margin:0 0 10px; font-size:1rem; font-weight:700; color:#111827; display:flex; align-items:center; gap:8px; }
+  .ep-note { font-size:12px; color:var(--muted); margin:0 0 14px; line-height:1.45; }
+  .ep-table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; border-radius:10px; border:1px solid var(--border); }
+  table.ep-table { width:100%; border-collapse:collapse; font-size:13px; background:#fff; min-width:920px; }
+  table.ep-table th { text-align:left; padding:10px 10px; background:#1f2937; color:#f9fafb; font-weight:700; white-space:nowrap; }
+  table.ep-table td { padding:8px 10px; border-bottom:1px solid #e5e7eb; vertical-align:middle; color:#374151; }
+  table.ep-table tr:last-child td { border-bottom:0; }
+  table.ep-table td.ep-td-note { min-width:200px; max-width:320px; }
+  table.ep-table input[type="text"], table.ep-table textarea { width:100%; max-width:300px; font-size:12px; padding:6px 8px; border:1px solid var(--border); border-radius:8px; font-family:inherit; box-sizing:border-box; }
+  table.ep-table textarea { min-height:44px; resize:vertical; }
+  table.ep-table input[type="checkbox"] { width:18px; height:18px; cursor:pointer; }
+  table.ep-table select { font-size:12px; padding:6px 8px; border-radius:8px; border:1px solid var(--border); min-width:110px; }
+  table.ep-table .ep-center { text-align:center; }
+  .ep-toolbar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:12px; }
+  .ep-toolbar .btn { display:inline-flex; align-items:center; gap:8px; font-weight:600; padding:10px 14px; border-radius:10px; border:1px solid var(--border); background:#f3f4f6; color:#111827; cursor:pointer; font-family:inherit; font-size:13px; }
+  .ep-toolbar .btn:hover { background:#e5e7eb; }
+  .ep-toolbar .btn-primary { background:var(--primary); color:#fff; border-color:transparent; }
+  .ep-toolbar .btn-primary:hover { background:var(--primary-d); }
+  .ep-msg { font-size:13px; margin-top:10px; }
+  .ep-msg.ok { color:#166534; }
+  .ep-msg.err { color:#991b1b; }
+  .enerji-badge { display:inline-flex; align-items:center; padding:3px 8px; border-radius:999px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; }
+  .enerji-badge-ok { background:#dcfce7; color:#166534; }
+  .enerji-badge-warn { background:#fef3c7; color:#92400e; }
+  .enerji-badge-danger { background:#fee2e2; color:#991b1b; }
+  .ep-td-oneri { max-width:340px; font-size:12px; line-height:1.45; }
+</style>
+
+<div class="ep-head">
+  <div>
+    <h1>Haftalık Enerji Planı</h1>
+    <p class="ep-sub">Yüklerin hangi gün açık olacağı ve hava / güneş tahmini (demo). Veriler sayfa açılışında bir kez yüklenir. Kaydet şimdilik oturuma yazar; kalıcı kayıt için veritabanı katmanı eklenecek.</p>
+  </div>
+  <div class="ep-back"><a href="{% url 'stokapp:enerji_dashboard' %}">← Enerji Dashboard</a></div>
+</div>
+
+<form id="ep-csrf" style="display:none">{% csrf_token %}</form>
+
+<section class="ep-section" aria-labelledby="ep-cal">
+  <h2 id="ep-cal"><span>📋</span> Haftalık Çalışma Gün Planı</h2>
+  <p class="ep-note">Kolonlar: gün, tarih, CNC Torna / Freze, araç şarj, atölye ve üst katlar (aktif = işaretli), planlanan üretim yoğunluğu, not.</p>
+  <div class="ep-table-wrap">
+    <table class="ep-table" aria-label="Haftalık çalışma planı">
+      <thead>
+        <tr>
+          <th>Gün</th>
+          <th>Tarih</th>
+          <th class="ep-center">CNC Torna</th>
+          <th class="ep-center">CNC Freze</th>
+          <th class="ep-center">Araç Şarj İstasyonu</th>
+          <th class="ep-center">Atölye ve Üst Katlar</th>
+          <th>Planlanan üretim yoğunluğu</th>
+          <th>Not</th>
+        </tr>
+      </thead>
+      <tbody id="planHaftaBody"></tbody>
+    </table>
+  </div>
+  <div class="ep-toolbar">
+    <button type="button" class="btn btn-primary" id="btnKaydetPlan">Kaydet (demo — oturum)</button>
+    <span class="ep-msg" id="planKayitMsg" aria-live="polite"></span>
+  </div>
+</section>
+
+<section class="ep-section" aria-labelledby="ep-hava">
+  <h2 id="ep-hava"><span>🌤️</span> Haftalık Hava ve Güneşlenme Tahmini</h2>
+  <p class="ep-note">Gerçek meteoroloji entegrasyonu sonraya bırakıldı; tablo demo veridir.</p>
+  <div class="ep-table-wrap">
+    <table class="ep-table" aria-label="Hava ve güneşlenme tahmini">
+      <thead>
+        <tr>
+          <th>Gün</th>
+          <th>Hava durumu</th>
+          <th>Tahmini güneşlenme süresi (saat)</th>
+          <th>Tahmini solar üretim seviyesi</th>
+          <th>Enerji yönetim önerisi</th>
+        </tr>
+      </thead>
+      <tbody id="havaHaftaBody"></tbody>
+    </table>
+  </div>
+</section>
+
+<script>
+(function () {
+  var API_PLAN = "{{ api_haftalik_plan|escapejs }}";
+  var API_HAVA = "{{ api_hava_tahmini|escapejs }}";
+
+  function getCookie(name) {
+    var v = null;
+    if (document.cookie) {
+      var p = document.cookie.split(';');
+      for (var i = 0; i < p.length; i++) {
+        var c = p[i].trim();
+        if (c.indexOf(name + '=') === 0) v = decodeURIComponent(c.substring(name.length + 1));
+      }
+    }
+    return v;
+  }
+  function getCsrf() {
+    var inp = document.querySelector('#ep-csrf input[name=csrfmiddlewaretoken]');
+    return inp ? inp.value : getCookie('csrftoken');
+  }
+  function esc(s) {
+    var d = document.createElement('div');
+    d.textContent = s == null ? '' : String(s);
+    return d.innerHTML;
+  }
+  function yogunlukLabel(v) {
+    if (v === 'dusuk') return 'Düşük';
+    if (v === 'orta') return 'Orta';
+    if (v === 'yuksek') return 'Yüksek';
+    return esc(v);
+  }
+  function solarSeviyeBadge(v) {
+    var cls = 'enerji-badge-warn';
+    if (v === 'yuksek') cls = 'enerji-badge-ok';
+    if (v === 'dusuk') cls = 'enerji-badge-danger';
+    return '<span class="enerji-badge ' + cls + '">' + esc(yogunlukLabel(v)) + '</span>';
+  }
+  function selectYogunluk(tarih, current) {
+    var opts = [
+      { v: 'dusuk', t: 'Düşük' },
+      { v: 'orta', t: 'Orta' },
+      { v: 'yuksek', t: 'Yüksek' }
+    ];
+    var html = '<select data-field="planlanan_uretim_yogunlugu" aria-label="Yoğunluk ' + esc(tarih) + '">';
+    for (var i = 0; i < opts.length; i++) {
+      var o = opts[i];
+      html += '<option value="' + esc(o.v) + '"' + (o.v === current ? ' selected' : '') + '>' + esc(o.t) + '</option>';
+    }
+    html += '</select>';
+    return html;
+  }
+  function chk(field, checked) {
+    return '<input type="checkbox" data-field="' + esc(field) + '"' + (checked ? ' checked' : '') + ' />';
+  }
+
+  function renderPlanRows(gunler) {
+    var tb = document.getElementById('planHaftaBody');
+    if (!Array.isArray(gunler)) {
+      tb.innerHTML = '<tr><td colspan="8">Plan verisi yüklenemedi.</td></tr>';
+      return;
+    }
+    tb.innerHTML = gunler.map(function (r) {
+      var tr = r.tarih;
+      return (
+        '<tr data-tarih="' + esc(tr) + '">' +
+        '<td>' + esc(r.gun) + '</td>' +
+        '<td>' + esc(r.tarih) + '</td>' +
+        '<td class="ep-center">' + chk('cnc_torna_aktif', r.cnc_torna_aktif) + '</td>' +
+        '<td class="ep-center">' + chk('cnc_freze_aktif', r.cnc_freze_aktif) + '</td>' +
+        '<td class="ep-center">' + chk('arac_sarj_istasyonu_aktif', r.arac_sarj_istasyonu_aktif) + '</td>' +
+        '<td class="ep-center">' + chk('atolye_ve_ust_katlar_aktif', r.atolye_ve_ust_katlar_aktif) + '</td>' +
+        '<td>' + selectYogunluk(tr, r.planlanan_uretim_yogunlugu || 'orta') + '</td>' +
+        '<td class="ep-td-note"><textarea data-field="not">' + esc(r.not || '') + '</textarea></td>' +
+        '</tr>'
+      );
+    }).join('');
+  }
+
+  function renderHavaRows(gunler) {
+    var tb = document.getElementById('havaHaftaBody');
+    if (!Array.isArray(gunler)) {
+      tb.innerHTML = '<tr><td colspan="5">Hava verisi yüklenemedi.</td></tr>';
+      return;
+    }
+    tb.innerHTML = gunler.map(function (r) {
+      return (
+        '<tr>' +
+        '<td>' + esc(r.gun) + '</td>' +
+        '<td>' + esc(r.hava_durumu) + '</td>' +
+        '<td>' + esc(r.tahmini_guneslenme_saat) + '</td>' +
+        '<td>' + solarSeviyeBadge(r.tahmini_solar_seviye) + '</td>' +
+        '<td class="ep-td-oneri">' + esc(r.enerji_yonetim_onerisi) + '</td>' +
+        '</tr>'
+      );
+    }).join('');
+  }
+
+  function collectPlanGunler() {
+    var rows = [];
+    document.querySelectorAll('#planHaftaBody tr[data-tarih]').forEach(function (tr) {
+      var tarih = tr.getAttribute('data-tarih');
+      var getChk = function (name) {
+        var el = tr.querySelector('[data-field="' + name + '"]');
+        return el ? !!el.checked : false;
+      };
+      var sel = tr.querySelector('select[data-field="planlanan_uretim_yogunlugu"]');
+      var ta = tr.querySelector('textarea[data-field="not"]');
+      rows.push({
+        tarih: tarih,
+        cnc_torna_aktif: getChk('cnc_torna_aktif'),
+        cnc_freze_aktif: getChk('cnc_freze_aktif'),
+        arac_sarj_istasyonu_aktif: getChk('arac_sarj_istasyonu_aktif'),
+        atolye_ve_ust_katlar_aktif: getChk('atolye_ve_ust_katlar_aktif'),
+        planlanan_uretim_yogunlugu: sel ? sel.value : 'orta',
+        not: ta ? ta.value : ''
+      });
+    });
+    return rows;
+  }
+
+  document.getElementById('btnKaydetPlan').addEventListener('click', function () {
+    var msg = document.getElementById('planKayitMsg');
+    var tok = getCsrf();
+    if (!tok) {
+      msg.textContent = 'CSRF bulunamadı; sayfayı yenileyin.';
+      msg.className = 'ep-msg err';
+      return;
+    }
+    msg.textContent = 'Kaydediliyor…';
+    msg.className = 'ep-msg';
+    fetch(API_PLAN, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-CSRFToken': tok,
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: JSON.stringify({ gunler: collectPlanGunler() })
+    })
+      .then(function (r) { return r.text().then(function (t) { return { ok: r.ok, t: t }; }); })
+      .then(function (res) {
+        var data = {};
+        try { data = res.t ? JSON.parse(res.t) : {}; } catch (e) {}
+        if (res.ok && data.ok && Array.isArray(data.gunler)) {
+          renderPlanRows(data.gunler);
+          msg.textContent = 'Plan oturuma kaydedildi (demo).';
+          msg.className = 'ep-msg ok';
+        } else {
+          msg.textContent = (data && data.error) ? data.error : 'Kayıt başarısız.';
+          msg.className = 'ep-msg err';
+        }
+      })
+      .catch(function () {
+        msg.textContent = 'Ağ hatası.';
+        msg.className = 'ep-msg err';
+      });
+  });
+
+  Promise.all([
+    fetch(API_PLAN, { credentials: 'same-origin', headers: { Accept: 'application/json' } }).then(function (r) { return r.json(); }),
+    fetch(API_HAVA, { credentials: 'same-origin', headers: { Accept: 'application/json' } }).then(function (r) { return r.json(); })
+  ])
+    .then(function (pair) {
+      renderPlanRows((pair[0] && pair[0].gunler) || []);
+      renderHavaRows((pair[1] && pair[1].gunler) || []);
+    })
+    .catch(function () {
+      document.getElementById('planHaftaBody').innerHTML = '<tr><td colspan="8">Yükleme hatası.</td></tr>';
+      document.getElementById('havaHaftaBody').innerHTML = '<tr><td colspan="5">Yükleme hatası.</td></tr>';
+    });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,136 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Üretim Değişiklik Kaydı — Görüntüle{% endblock %}
+{% block content %}
+<style>
+  .dg-wrap{max-width:1100px;margin:0 auto}
+  .dg-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+  .dg-header h1{margin:0;font-size:28px}
+  .dg-card{background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:22px;box-shadow:0 2px 10px rgba(0,0,0,.04)}
+  .dg-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+  .dg-field label{display:block;font-weight:600;margin-bottom:7px;color:#374151;font-size:13px}
+  .dg-value{padding:11px 12px;border:1px solid #e5e7eb;border-radius:10px;background:#f8fafc;color:#111827;min-height:44px;white-space:pre-wrap;word-break:break-word}
+  .dg-value.empty{color:#94a3b8;font-style:italic}
+  .dg-checks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:12px}
+  .dg-check{display:flex;align-items:center;gap:8px;font-weight:600;color:#374151}
+  .dg-check .mark{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:6px;font-size:12px;font-weight:700}
+  .dg-check.yes .mark{background:#dcfce7;color:#166534}
+  .dg-check.no .mark{background:#f3f4f6;color:#9ca3af}
+  .dg-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:18px;padding-top:18px;border-top:1px solid #e5e7eb}
+  .badge{display:inline-block;padding:5px 10px;border-radius:999px;font-size:11px;font-weight:700}
+  .b-acik{background:#dbeafe;color:#1d4ed8}.b-devam{background:#fef3c7;color:#92400e}.b-tamam{background:#dcfce7;color:#166534}
+  .b-kritik{background:#fee2e2;color:#991b1b}.b-yuksek{background:#ffedd5;color:#9a3412}.b-orta{background:#e0f2fe;color:#075985}.b-dusuk{background:#f3f4f6;color:#374151}
+  @media (max-width: 900px){.dg-grid,.dg-meta,.dg-checks{grid-template-columns:1fr}}
+</style>
+
+<div class="dg-wrap">
+  <div class="dg-header">
+    <h1>👁️ Üretim Değişiklik Kaydı</h1>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <a class="btn btn-secondary" href="{% url 'stokapp:uretim_degisim_listesi' %}">← Listeye Dön</a>
+      <a class="btn btn-primary" href="{% url 'stokapp:uretim_degisim_duzenle' kayit.pk %}">✏️ Düzenle</a>
+    </div>
+  </div>
+
+  <div class="dg-card">
+    <div class="dg-grid">
+      <div class="dg-field">
+        <label>Ürün</label>
+        <div class="dg-value">
+          {% if kayit.urun %}
+            <strong>{{ kayit.urun.stok_kodu }}</strong> — {{ kayit.urun.ad }}
+          {% else %}
+            <span class="empty">Belirtilmemiş</span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="dg-field">
+        <label>Değişiklik tipi</label>
+        <div class="dg-value">{{ kayit.degisiklik_tipi }}</div>
+      </div>
+      <div class="dg-field" style="grid-column:1 / -1;">
+        <label>Başlık</label>
+        <div class="dg-value">{{ kayit.baslik }}</div>
+      </div>
+      <div class="dg-field" style="grid-column:1 / -1;">
+        <label>Açıklama</label>
+        <div class="dg-value">{{ kayit.aciklama }}</div>
+      </div>
+      <div class="dg-field">
+        <label>Öncelik</label>
+        <div class="dg-value">
+          {% if kayit.oncelik == 'KRITIK' %}<span class="badge b-kritik">Kritik</span>
+          {% elif kayit.oncelik == 'YUKSEK' %}<span class="badge b-yuksek">Yüksek</span>
+          {% elif kayit.oncelik == 'ORTA' %}<span class="badge b-orta">Orta</span>
+          {% else %}<span class="badge b-dusuk">Düşük</span>{% endif %}
+        </div>
+      </div>
+      <div class="dg-field">
+        <label>Termin</label>
+        <div class="dg-value">{{ kayit.termin_tarihi|date:"d.m.Y"|default:"-" }}</div>
+      </div>
+      <div class="dg-field">
+        <label>Durum</label>
+        <div class="dg-value">
+          {% if kayit.durum == 'ACIK' %}<span class="badge b-acik">Açık</span>
+          {% elif kayit.durum == 'DEVAM' %}<span class="badge b-devam">Devam Ediyor</span>
+          {% else %}<span class="badge b-tamam">Tamamlandı</span>{% endif %}
+        </div>
+      </div>
+      <div class="dg-field" style="grid-column:1 / -1;">
+        <label>Güncelleme Etki Alanları</label>
+        <div class="dg-checks">
+          <div class="dg-check {% if kayit.teknik_resim_guncellenecek %}yes{% else %}no{% endif %}">
+            <span class="mark">{% if kayit.teknik_resim_guncellenecek %}✓{% else %}—{% endif %}</span>
+            Teknik Resim
+          </div>
+          <div class="dg-check {% if kayit.kati_model_guncellenecek %}yes{% else %}no{% endif %}">
+            <span class="mark">{% if kayit.kati_model_guncellenecek %}✓{% else %}—{% endif %}</span>
+            Katı Model
+          </div>
+          <div class="dg-check {% if kayit.tekos_recete_guncellenecek %}yes{% else %}no{% endif %}">
+            <span class="mark">{% if kayit.tekos_recete_guncellenecek %}✓{% else %}—{% endif %}</span>
+            Tekos Reçetesi
+          </div>
+          <div class="dg-check {% if kayit.cnc_programi_guncellenecek %}yes{% else %}no{% endif %}">
+            <span class="mark">{% if kayit.cnc_programi_guncellenecek %}✓{% else %}—{% endif %}</span>
+            CNC Programı
+          </div>
+        </div>
+      </div>
+      <div class="dg-field" style="grid-column:1 / -1;">
+        <label>Ek not</label>
+        <div class="dg-value{% if not kayit.ek_not %} empty{% endif %}">{{ kayit.ek_not|default:"-" }}</div>
+      </div>
+      <div class="dg-field" style="grid-column:1 / -1;">
+        <label>Kapatma notu</label>
+        <div class="dg-value{% if not kayit.kapatma_notu %} empty{% endif %}">{{ kayit.kapatma_notu|default:"-" }}</div>
+      </div>
+    </div>
+
+    <div class="dg-meta">
+      <div class="dg-field">
+        <label>Oluşturan</label>
+        <div class="dg-value">{{ kayit.olusturan.get_full_name|default:kayit.olusturan.username }}</div>
+      </div>
+      <div class="dg-field">
+        <label>Oluşturulma</label>
+        <div class="dg-value">{{ kayit.created_at|date:"d.m.Y H:i" }}</div>
+      </div>
+      <div class="dg-field">
+        <label>Son güncelleme</label>
+        <div class="dg-value">{{ kayit.updated_at|date:"d.m.Y H:i" }}</div>
+      </div>
+      {% if kayit.kapatan %}
+      <div class="dg-field">
+        <label>Kapatan</label>
+        <div class="dg-value">{{ kayit.kapatan.get_full_name|default:kayit.kapatan.username }}</div>
+      </div>
+      <div class="dg-field">
+        <label>Kapatılma tarihi</label>
+        <div class="dg-value">{{ kayit.kapatilan_tarih|date:"d.m.Y H:i" }}</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

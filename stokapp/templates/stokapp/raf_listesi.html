@@ -1,0 +1,72 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Raf Yönetimi{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>📋 Raf Yönetimi</h2>
+        <a href="{% url 'stokapp:raf_ekle' %}" class="btn btn-primary">➕ Yeni Raf Ekle</a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 15px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background: #fff3cd; color: #856404; border-left: 4px solid #ffc107;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Filtre -->
+    <div style="margin-bottom: 20px; padding: 15px; background: #f9fafb; border-radius: 8px;">
+        <form method="get" style="display: flex; gap: 10px; align-items: center;">
+            <label>Depo Filtresi:</label>
+            <select name="depo_id" style="padding: 8px; border-radius: 6px; border: 1px solid #ddd;">
+                <option value="">Tüm Depolar</option>
+                {% for depo in depolar %}
+                    <option value="{{ depo.pk }}" {% if secili_depo == depo.pk %}selected{% endif %}>{{ depo.ad }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-secondary">Filtrele</button>
+            <a href="{% url 'stokapp:raf_listesi' %}" class="btn btn-secondary">Temizle</a>
+        </form>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Depo</th>
+                <th>Raf Adı</th>
+                <th>Stok Sayısı</th>
+                <th>İşlemler</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for bilgi in raf_bilgileri %}
+            <tr>
+                <td>
+                    <strong>{{ bilgi.raf.depo.ad }}</strong>
+                </td>
+                <td>{{ bilgi.raf.ad }}</td>
+                <td>
+                    <span style="padding: 4px 12px; background: #d4edda; color: #155724; border-radius: 12px; font-weight: 600;">
+                        {{ bilgi.stok_sayisi }} ürün
+                    </span>
+                </td>
+                <td>
+                    <a href="{% url 'stokapp:raf_duzenle' bilgi.raf.pk %}" class="btn btn-secondary" style="padding: 6px 12px; font-size: 13px; margin-right: 5px;">✏️ Düzenle</a>
+                    <a href="{% url 'stokapp:depo_duzenle' bilgi.raf.depo.pk %}" class="btn btn-secondary" style="padding: 6px 12px; font-size: 13px;">🏢 Depo</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4" style="text-align: center; padding: 40px; color: #6b7280;">
+                    Henüz raf bulunmuyor. <a href="{% url 'stokapp:raf_ekle' %}">İlk rafı oluşturun</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

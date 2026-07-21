@@ -1,0 +1,71 @@
+---
+description: TEKOS modern form düzeni (tdk-*). "Modern düzene göre düzenle" denildiğinde bu yapıyı uygula.
+globs: stokapp/templates/stokapp/**/*.html
+alwaysApply: false
+---
+
+# TEKOS Modern Form Düzeni (tdk)
+
+Kullanıcı **"Modern düzene göre düzenle"** dediğinde aşağıdaki yapıyı uygula.
+
+## Zorunlu include
+
+```django
+{% include "stokapp/includes/tdk_form_styles.html" %}
+```
+
+Sayfaya özel stiller varsa ayrı `<style>` bloğunda tut; tdk temel sınıflarını tekrar yazma.
+
+## Sayfa iskeleti
+
+```html
+<div class="tdk-page">
+  <div class="tdk-header">
+    <div>
+      <h1>… Başlık</h1>
+      <p>… Alt açıklama</p>
+    </div>
+    <a href="…" class="btn btn-secondary">← Geri</a>
+  </div>
+  <form class="tdk-form-card">…</form>
+</div>
+```
+
+## Bölüm ve alanlar
+
+- `tdk-section` + `tdk-section-title` + `tdk-section-icon` (blue/green/amber varyantları)
+- Alan grid: `tdk-grid` (2 sütun) veya `tdk-grid-3` (3 sütun); tam genişlik: `full`
+- Her alan: `tdk-field tdk-has-help` + `data-help="Kısa açıklama"`
+- Etiket: `tdk-label` / zorunlu alan: `tdk-label required`
+- Hata: `tdk-error`
+- Tablo satırları: `tdk-table-wrap` + `tdk-table`
+- Özet: `tdk-ozet-box`
+- Alt aksiyon: `tdk-footer` (İptal + Kaydet)
+
+## Alan ipuçları (tooltip)
+
+Tüm giriş hücrelerine `data-help` ekle. CSS `tdk_form_styles.html` içinde tanımlı.
+
+```html
+<div class="tdk-field tdk-has-help" data-help="Bu alanın ne işe yaradığı.">
+  <label class="tdk-label" for="…">…</label>
+  {{ form.alan }}
+</div>
+```
+
+Dinamik tablo hücreleri için `td` veya input'a `tdk-has-help` + `data-help` ver.
+
+## Referans sayfalar
+
+- `musteri_ekle.html`, `tedarikci_ekle.html` — cari formlar
+- `satinalma_ekle.html` — satın alma + kalem tablosu
+- `rfq_form.html` — tedarikçi teklif talebi (RFQ) oluştur/düzenle
+- `talep_form.html` — satın alma talebi oluştur/düzenle
+- `teklif_form.html` — teklif + şartlar + banka + kalemler
+- `siparis_ekle.html`, `siparis_duzenle.html` — sipariş formları
+
+## Cari formlar
+
+- Müşteri e-posta bilgisi: `includes/cari_email_bilgi_notu.html` (tip: musteri|tedarikci)
+- İlgili kişiler: `musteri_ilgililer_inline.html` / `tedarikci_ilgililer_inline.html`
+- Tedarikçi etiket seçici: `includes/tdk_tedarikci_tag_styles.html` + chip/modal JS

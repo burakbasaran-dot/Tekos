@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Stok Detay - {{ stok.stok_kodu }}{% endblock %}
+
+{% block content %}
+<style>
+  .wrap{display:grid;grid-template-columns:320px 1fr;gap:16px;align-items:start}
+  .card{background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:16px}
+  .muted{color:#64748b}
+  .grid{display:grid;gap:10px}
+  .grid-2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .grid-3{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .thumb{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:10px;border:1px solid #e5e7eb}
+  .kv{display:grid;grid-template-columns:200px 1fr;gap:6px 12px}
+  .kv div:nth-child(odd){color:#475569}
+  table{width:100%;border-collapse:collapse}
+  th,td{border-bottom:1px solid #e5e7eb;padding:8px;text-align:left}
+  .toolbar{display:flex;gap:8px;justify-content:flex-end;margin-bottom:12px}
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:8px;border:1px solid #e5e7eb;background:#f8fafc;text-decoration:none}
+  .btn-primary{background:#2563eb;color:#fff;border-color:#2563eb}
+</style>
+
+<div class="toolbar">
+  <a class="btn" href="{% url 'stokapp:stok_listesi' %}">‹ Stok listesine dön</a>
+  <a class="btn" href="#">Düzenle</a>
+  <a class="btn" href="#">Arşivle</a>
+  <a class="btn" href="{% url 'stokapp:fiyat_gecmisi' stok.pk %}">💰 Fiyat Geçmişi</a>
+  {% if stok.barkod %}
+    <a class="btn btn-primary" href="{% url 'stokapp:barkod_olustur' stok.stok_kodu %}">Barkod bastır</a>
+  {% else %}
+    <a class="btn btn-primary" href="{% url 'stokapp:barkod_olustur' stok.stok_kodu %}">Barkod bastır</a>
+  {% endif %}
+</div>
+
+<h1>{{ stok.stok_kodu }} — {{ stok.ad }}</h1>
+
+<div class="wrap">
+  <div class="card">
+    {% if stok.fotograf %}
+      <img class="thumb" src="{{ stok.fotograf.url }}" alt="{{ stok.ad }}">
+    {% else %}
+      <div class="muted" style="text-align:center;padding:40px 0;">Fotoğraf yok</div>
+    {% endif %}
+    {% if ekler %}
+      <h3 style="margin-top:16px;">Ek Dosyalar</h3>
+      <ul>
+        {% for e in ekler %}
+          <li><a href="{{ e.dosya.url }}" download>{{ e.ad|default:e.dosya.name }}</a></li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h3>Genel Bilgiler</h3>
+      <div class="kv">
+        <div>Kategori</div><div>{{ stok.kategori }}</div>
+        <div>Birim</div><div>{{ stok.birim }}</div>
+        <div>Depo</div><div>{{ stok.depo|default:"-" }}</div>
+        <div>Raf</div><div>{{ stok.raf|default:"-" }}</div>
+        <div>Stok Takip</div><div>{{ stok.stok_takip|yesno:"Evet,Hayır" }}</div>
+        <div>Barkod</div><div>{{ stok.barkod|default:"-" }}</div>
+        <div>Açılış Miktarı</div><div>{{ stok.acilis_miktari }}</div>
+        <div>Mevcut Miktar</div><div>{{ stok.mevcut_miktar }}</div>
+        <div>Minimum Stok</div><div>{{ stok.minimum_stok }}</div>
+        <div>Güvenlik Stoku</div><div>{{ stok.guvenlik_stoku }}</div>
+        <div>Ürün Rolü</div><div>{{ stok.get_urun_rolu_display|default:"-" }}</div>
+        <div>Ürün Tipi</div><div>{{ stok.get_urun_tipi_display }}</div>
+        <div>Tedarikçi Kodu</div><div>{{ stok.tedarikci_kodu|default:"-" }}</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Fiyatlar</h3>
+      <div class="kv">
+        <div>Alış Fiyatı</div><div>{{ stok.alis_fiyati }} {{ stok.alis_para_birimi }}</div>
+        <div>Satınalma Fiyatı</div><div>{{ stok.satin_alma_fiyati }}</div>
+        <div>Satış Fiyatı</div><div>{{ stok.satis_fiyati }} {{ stok.satis_para_birimi|default:"TL" }}</div>
+        <div style="font-size: 0.8em; color: #64748b;">Ham Madde Maliyeti</div>
+        <div style="font-size: 0.8em;">
+          <span>{{ para_sembol }}</span> <span>{{ ham_madde_maliyeti|floatformat:2 }}</span>
+        </div>
+        <div style="font-size: 0.8em; color: #64748b;">Operasyonel Maliyetler</div>
+        <div style="font-size: 0.8em;">
+          <span>{{ para_sembol }}</span> <span>{{ operasyonel_maliyetler|floatformat:2 }}</span>
+        </div>
+        <div style="font-size: 0.8em; color: #64748b;">Toplam Üretim Maliyeti</div>
+        <div style="font-size: 0.8em; font-weight: 600;">
+          <span>{{ para_sembol }}</span> <span>{{ toplam_uretim_maliyeti|floatformat:2 }}</span>
+        </div>
+        <div>Üretim Maliyeti</div><div>{{ stok.uretim_maliyeti }}</div>
+      </div>
+      <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb;">
+        <a class="btn" href="{% url 'stokapp:fiyat_gecmisi' stok.pk %}">💰 Fiyat Geçmişi</a>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Stok Hareketleri</h3>
+      {% if hareketler %}
+        <table>
+          <thead>
+            <tr>
+              <th>Tarih</th>
+              <th>Tip</th>
+              <th>Miktar</th>
+              <th>Birim</th>
+              <th>Referans</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for h in hareketler %}
+            <tr>
+              <td>{{ h.tarih }}</td>
+              <td>{{ h.hareket_tipi }}</td>
+              <td>{{ h.miktar }}</td>
+              <td>{{ h.birim }}</td>
+              <td>{{ h.referans_no }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <div class="muted">Henüz hareket yok.</div>
+      {% endif %}
+    </div>
+
+    <!-- CNC Programlar Sekmesi -->
+    <div class="card" style="margin-top: 16px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="margin: 0;">CNC Programlar</h3>
+        <a href="{% url 'stokapp:cnc_program_ekle' %}?product={{ stok.pk }}" class="btn btn-primary" style="padding: 6px 12px; font-size: 13px;">
+          ➕ Yeni Program
+        </a>
+      </div>
+      
+      {% if cnc_programlar %}
+        <table>
+          <thead>
+            <tr>
+              <th>Program Adı</th>
+              <th>Makine Tipi</th>
+              <th>Makine Adı</th>
+              <th>Aktif Revizyon</th>
+              <th>İşlemler</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for program in cnc_programlar %}
+            <tr>
+              <td>
+                <strong>{{ program.program_name }}</strong>
+                {% if program.program_number %}
+                <br><small style="color: #64748b;">{{ program.program_number }}</small>
+                {% endif %}
+              </td>
+              <td>{{ program.get_machine_type_display }}</td>
+              <td>{{ program.machine_name|default:"-" }}</td>
+              <td>
+                {% if program.current_revision %}
+                <span style="background-color: #22c55e; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">
+                  {{ program.current_revision }}
+                </span>
+                {% else %}
+                <span style="color: #64748b;">-</span>
+                {% endif %}
+              </td>
+              <td>
+                <a href="{% url 'stokapp:cnc_program_detay' program.program_id %}" class="btn" style="padding: 4px 8px; font-size: 12px;">
+                  👁️ Detay
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <div class="muted" style="text-align: center; padding: 20px;">
+          Henüz CNC programı bulunmuyor.
+          <br>
+          <a href="{% url 'stokapp:cnc_program_ekle' %}?product={{ stok.pk }}" style="margin-top: 10px; display: inline-block;">
+            İlk programı oluşturun
+          </a>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

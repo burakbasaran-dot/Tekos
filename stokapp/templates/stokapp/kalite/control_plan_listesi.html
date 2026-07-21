@@ -1,0 +1,156 @@
+{% extends 'stokapp/base.html' %}
+{% load static %}
+
+{% block title %}Kontrol Planları{% endblock %}
+
+{% block content %}
+<style>
+    .kalite-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #e5e7eb;
+    }
+    .kalite-header h1 {
+        font-size: 28px;
+        font-weight: 700;
+        color: #111827;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .kalite-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .kalite-table thead tr {
+        background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+    }
+    .kalite-table thead th {
+        padding: 16px;
+        text-align: left;
+        font-weight: 600;
+        color: white;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 2px solid #111827;
+    }
+    .kalite-table tbody tr {
+        border-bottom: 1px solid #f3f4f6;
+        transition: all 0.2s ease;
+    }
+    .kalite-table tbody tr:hover {
+        background: #f9fafb;
+        transform: scale(1.01);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .kalite-table tbody td {
+        padding: 14px 16px;
+        color: #374151;
+        font-size: 14px;
+    }
+    .btn-action {
+        padding: 6px 14px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 500;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        display: inline-block;
+        background: #3b82f6;
+        color: white;
+        border: none;
+    }
+    .btn-action:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        background: #2563eb;
+    }
+    .empty-state {
+        padding: 60px 20px;
+        text-align: center;
+        color: #9ca3af;
+    }
+    .empty-state-icon {
+        font-size: 64px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+    }
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+    .badge-level-info {
+        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        color: #1e40af;
+    }
+</style>
+
+<div class="card" style="padding: 0; overflow: hidden;">
+    <div style="padding: 30px 30px 0 30px;">
+        <div class="kalite-header">
+            <h1><span style="font-size: 32px;">✅</span> Kontrol Planları</h1>
+            <a href="{% url 'stokapp:control_plan_ekle' %}" class="btn btn-primary" style="padding: 12px 24px; font-size: 14px; border-radius: 8px; box-shadow: 0 2px 8px rgba(46,204,113,0.3);">
+                <span style="font-size: 18px; margin-right: 6px;">+</span> Yeni Kontrol Planı
+            </a>
+        </div>
+    </div>
+    
+    <!-- Liste -->
+    <div style="padding: 0 30px 30px 30px;">
+        <table class="kalite-table">
+            <thead>
+                <tr>
+                    <th>Ürün</th>
+                    <th>Revizyon</th>
+                    <th>Geçerlilik Tarihi</th>
+                    <th style="text-align: center;">Kontrol Maddesi Sayısı</th>
+                    <th>Oluşturulma</th>
+                    <th style="text-align: center;">İşlemler</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for plan in plans %}
+                <tr>
+                    <td><strong>{{ plan.product.ad }}</strong></td>
+                    <td><code style="background: #dbeafe; padding: 4px 10px; border-radius: 6px; font-weight: 600;">{{ plan.revision }}</code></td>
+                    <td>{{ plan.effective_from|date:"d.m.Y" }}</td>
+                    <td style="text-align: center;">
+                        <span class="badge badge-level-info" style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); color: #1e40af;">
+                            {{ plan.items.count }} madde
+                        </span>
+                    </td>
+                    <td style="color: #6b7280; font-size: 13px;">{{ plan.created_at|date:"d.m.Y H:i" }}</td>
+                    <td style="text-align: center;">
+                        <a href="{% url 'stokapp:control_plan_detay' plan.pk %}" class="btn-action">👁️ Detay</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="empty-state">
+                        <div class="empty-state-icon">✅</div>
+                        <div style="font-size: 18px; font-weight: 600; margin-bottom: 8px; color: #6b7280;">Henüz kontrol planı bulunmuyor</div>
+                        <div style="font-size: 14px;">Yeni bir kontrol planı ekleyerek başlayın.</div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+

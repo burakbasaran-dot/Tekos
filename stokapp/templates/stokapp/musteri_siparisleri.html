@@ -1,0 +1,106 @@
+{% extends "stokapp/base.html" %}
+{% load currency_filters %}
+{% block title %}Müşteri Siparişleri - {{ musteri.ad }}{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="margin: 0;">📋 {{ musteri.ad }} - Siparişler</h2>
+        <a href="{% url 'stokapp:musteri_listesi' %}" class="btn btn-secondary" style="padding: 8px 16px;">← Geri</a>
+    </div>
+    
+    <div style="background-color: #f9fafb; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Müşteri Adı</label>
+                <div style="font-size: 16px; font-weight: 600; color: #111827;">{{ musteri.ad }}</div>
+            </div>
+            <div>
+                <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Toplam Sipariş Sayısı</label>
+                <div style="font-size: 16px; color: #111827;">{{ siparisler|length }} sipariş</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filtreler -->
+    <div style="margin-bottom: 20px; padding: 15px; background: #f9fafb; border-radius: 8px;">
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <label style="font-weight: 600; color: #6b7280;">Durum Filtresi:</label>
+            <a href="?durum=acik" 
+               style="padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: 600;
+                      {% if durum_filtre == 'acik' %}background-color: #3b82f6; color: white;{% else %}background-color: #e5e7eb; color: #6b7280;{% endif %}">
+                Açık Siparişler
+            </a>
+            <a href="?durum=kapali" 
+               style="padding: 8px 16px; border-radius: 6px; text-decoration: none; font-weight: 600;
+                      {% if durum_filtre == 'kapali' %}background-color: #3b82f6; color: white;{% else %}background-color: #e5e7eb; color: #6b7280;{% endif %}">
+                Kapalı Siparişler
+            </a>
+        </div>
+    </div>
+    
+    {% if siparisler %}
+    <table style="width: 100%; border-collapse: collapse; background: white;">
+        <thead>
+            <tr style="background-color: #f9fafb; border-bottom: 2px solid #e5e7eb;">
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Sipariş Numarası</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Oluşturulma Tarihi</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Tamamlanma Tarihi</th>
+                <th style="padding: 12px; text-align: right; font-weight: 600;">Toplam</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Para Birimi</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Sipariş Durumu</th>
+                <th style="padding: 12px; text-align: center; font-weight: 600;">İşlemler</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for siparis in siparisler %}
+            <tr style="border-bottom: 1px solid #e5e7eb;">
+                <td style="padding: 12px;">
+                    <a href="{% url 'stokapp:siparis_detay' siparis.pk %}" 
+                       style="color: #3b82f6; text-decoration: none; font-weight: 600;">
+                        {{ siparis.siparis_numarasi }}
+                    </a>
+                </td>
+                <td style="padding: 12px;">{{ siparis.olusturulma_tarihi|date:"d.m.Y" }}</td>
+                <td style="padding: 12px;">
+                    {% if siparis.tamamlanma_tarihi %}
+                        {{ siparis.tamamlanma_tarihi|date:"d.m.Y" }}
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td style="padding: 12px; text-align: right; font-weight: 600;">{{ siparis.toplam|currency }} {{ siparis.para_birimi }}</td>
+                <td style="padding: 12px;">{{ siparis.para_birimi }}</td>
+                <td style="padding: 12px;">
+                    <span style="padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;
+                        {% if siparis.siparis_durumu == 'ONAY_BEKLIYOR' %}background-color: #fef3c7; color: #92400e;
+                        {% elif siparis.siparis_durumu == 'ONAYLANDI' %}background-color: #d1fae5; color: #065f46;
+                        {% elif siparis.siparis_durumu == 'RED' %}background-color: #fee2e2; color: #991b1b;
+                        {% else %}background-color: #dbeafe; color: #1e40af;{% endif %}">
+                        {{ siparis.get_siparis_durumu_display }}
+                    </span>
+                </td>
+                <td style="padding: 12px; text-align: center;">
+                    <a href="{% url 'stokapp:siparis_detay' siparis.pk %}" 
+                       class="btn" 
+                       style="background-color: #3b82f6; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-size: 13px;">
+                        📊 Detay
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="padding: 40px; text-align: center; color: #6b7280;">
+        <p>
+            {% if durum_filtre == 'acik' %}
+                Bu müşteriye ait açık sipariş bulunmamaktadır.
+            {% else %}
+                Bu müşteriye ait kapalı sipariş bulunmamaktadır.
+            {% endif %}
+        </p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

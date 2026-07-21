@@ -1,0 +1,139 @@
+{% extends 'stokapp/base.html' %}
+{% load static %}
+
+{% block title %}Yeni Kontrol Planı{% endblock %}
+
+{% block content %}
+<style>
+    .form-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        padding-bottom: 24px;
+        border-bottom: 2px solid #e5e7eb;
+    }
+    .form-header h1 {
+        font-size: 28px;
+        font-weight: 700;
+        color: #111827;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .form-section {
+        background: linear-gradient(135deg, #f9fafb 0%, #ffffff 100%);
+        padding: 24px;
+        border-radius: 12px;
+        margin-bottom: 24px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+    .form-section h3 {
+        font-size: 18px;
+        font-weight: 600;
+        color: #111827;
+        margin: 0 0 20px 0;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #e5e7eb;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+    }
+    .form-group {
+        margin-bottom: 20px;
+    }
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #374151;
+        font-size: 14px;
+    }
+    .form-group input[type="text"],
+    .form-group input[type="date"],
+    .form-group select,
+    .form-group textarea {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        font-size: 14px;
+        transition: all 0.2s ease;
+        background: white;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    .required-field::after {
+        content: " *";
+        color: #ef4444;
+    }
+</style>
+
+<div class="card" style="padding: 30px;">
+    <div class="form-header">
+        <h1><span style="font-size: 32px;">✅</span> Yeni Kontrol Planı</h1>
+        <a href="{% url 'stokapp:control_plan_listesi' %}" class="btn btn-secondary" style="padding: 10px 20px; border-radius: 8px;">← Geri</a>
+    </div>
+    
+    <form method="post">
+        {% csrf_token %}
+        
+        <div class="form-section">
+            <h3>📋 Temel Bilgiler</h3>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="required-field">{{ form.product.label }}</label>
+                    {{ form.product }}
+                    {% if form.product.errors %}
+                        <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.product.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label class="required-field">{{ form.revision.label }}</label>
+                    {{ form.revision }}
+                    {% if form.revision.errors %}
+                        <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.revision.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="form-group">
+                    <label class="required-field">{{ form.effective_from.label }}</label>
+                    {{ form.effective_from }}
+                    {% if form.effective_from.errors %}
+                        <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.effective_from.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            {% if form.description %}
+            <div class="form-group">
+                <label>{{ form.description.label }}</label>
+                <textarea name="{{ form.description.name }}" id="{{ form.description.id_for_label }}" class="form-control" rows="5" style="width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; font-family: inherit;">{{ form.description.value|default:'' }}</textarea>
+                {% if form.description.errors %}
+                    <div style="color: #dc3545; font-size: 13px; margin-top: 6px;">{{ form.description.errors }}</div>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+        
+        <div style="margin-top: 30px; display: flex; gap: 12px; padding-top: 24px; border-top: 2px solid #e5e7eb;">
+            <button type="submit" class="btn btn-primary" style="padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 600; box-shadow: 0 2px 8px rgba(46,204,113,0.3);">💾 Kaydet</button>
+            <a href="{% url 'stokapp:control_plan_listesi' %}" class="btn btn-secondary" style="padding: 12px 24px; border-radius: 8px; font-size: 14px;">❌ İptal</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

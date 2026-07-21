@@ -1,0 +1,56 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Müşteri Düzenle{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>👥 Müşteri Düzenle: {{ musteri.ad }}</h2>
+        <a href="{% url 'stokapp:musteri_listesi' %}" class="btn btn-secondary">← Geri</a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 15px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background: #fff3cd; color: #856404; border-left: 4px solid #ffc107;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post" style="max-width: 960px;">
+        {% csrf_token %}
+        
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.ad.label }}</label>
+            {{ form.ad }}
+            {% if form.ad.errors %}
+                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.ad.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.telefon.label }}</label>
+            {{ form.telefon }}
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.email.label }}</label>
+            {{ form.email }}
+            {% include "stokapp/includes/cari_email_bilgi_notu.html" with tip="musteri" %}
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.adres.label }}</label>
+            {{ form.adres }}
+        </div>
+        
+        {% include "stokapp/musteri_ilgililer_inline.html" %}
+
+        <div style="margin-top: 30px;">
+            <button type="submit" class="btn btn-primary" style="padding: 10px 20px;">Güncelle</button>
+            <a href="{% url 'stokapp:musteri_listesi' %}" class="btn btn-secondary" style="padding: 10px 20px; margin-left: 10px;">İptal</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

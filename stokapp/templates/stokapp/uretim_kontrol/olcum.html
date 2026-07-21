@@ -1,0 +1,113 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Ölçüm — Adım {{ step_index|add:1 }}/{{ total_steps }}{% endblock %}
+{% block content %}
+<style>
+.uk-olcum { display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; max-width: 1100px; margin: 0 auto; }
+@media (max-width:900px) { .uk-olcum { grid-template-columns: 1fr; } }
+.uk-progress { background:#e2e8f0;border-radius:999px;height:10px;margin-bottom:20px;overflow:hidden; }
+.uk-progress-fill { background:#3b82f6;height:100%;transition:width .3s; }
+.uk-photo { width:100%; max-height:420px; object-fit:contain; background:#0f172a; border-radius:12px; }
+.uk-spec { background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:16px; }
+.uk-spec dt { font-size:11px; color:#64748b; text-transform:uppercase; }
+.uk-spec dd { margin:0 0 10px; font-weight:600; font-size:18px; }
+.uk-status { padding:10px 16px; border-radius:8px; font-weight:700; text-align:center; margin-top:12px; }
+.uk-status.ok { background:#dcfce7; color:#166534; }
+.uk-status.nok { background:#fef2f2; color:#b91c1c; }
+.uk-status.pending { background:#f1f5f9; color:#475569; }
+.uk-btns { display:flex; flex-wrap:wrap; gap:10px; margin-top:20px; }
+.uk-btns .btn { padding:14px 20px; font-size:15px; min-height:48px; }
+.uk-bar { position:relative; height:40px; background:#e2e8f0; border-radius:8px; margin:16px 0; }
+.uk-bar-zone { position:absolute; top:6px; bottom:6px; background:#bbf7d0; border-radius:4px; }
+.uk-bar-nom { position:absolute; top:0; bottom:0; width:3px; background:#1d4ed8; transform:translateX(-50%); }
+.uk-bar-val { position:absolute; top:4px; width:16px; height:32px; border-radius:4px; transform:translateX(-50%); }
+.uk-bar-val.ok { background:#16a34a; }
+.uk-bar-val.nok { background:#dc2626; }
+</style>
+<div style="max-width:1100px;margin:0 auto;">
+  <p style="font-size:14px;color:#64748b;">Adım <strong>{{ step_index|add:1 }} / {{ total_steps }}</strong>
+    {% if step.is_critical %}<span style="color:#b91c1c;">⚠️ Kritik ölçü</span>{% endif %}</p>
+  <div class="uk-progress"><div class="uk-progress-fill" style="width:{% widthratio step_index|add:1 total_steps 100 %}%;"></div></div>
+
+  <form method="post" id="olcumForm">
+    {% csrf_token %}
+    <div class="uk-olcum">
+      <div>
+        <h2 style="margin-top:0;">{{ step.step_no }}. {{ step.title }}</h2>
+        <p style="color:#64748b;">{{ step.description|default:"" }}</p>
+        {% if step.photo %}
+        <img src="{{ step.photo.url }}" alt="" class="uk-photo">
+        {% else %}
+        <div class="uk-photo" style="display:flex;align-items:center;justify-content:center;color:#94a3b8;">Fotoğraf yok</div>
+        {% endif %}
+      </div>
+      <div>
+        <dl class="uk-spec">
+          <dt>Nominal</dt><dd>{{ step.nominal_value }} {{ step.get_nominal_unit_display }}</dd>
+          <dt>Alt limit</dt><dd>{{ lower_limit }} {{ step.get_nominal_unit_display }}</dd>
+          <dt>Üst limit</dt><dd>{{ upper_limit }} {{ step.get_nominal_unit_display }}</dd>
+          <dt>Ölçüm ekipmanı</dt><dd>{{ step.get_measurement_method_display }}</dd>
+        </dl>
+        <label><strong>Ölçüm sonucu</strong></label>
+        {{ form.measured_value }}
+        <label style="margin-top:10px;display:block;"><strong>Birim</strong></label>
+        {{ form.measured_unit }}
+        <label style="margin-top:10px;display:block;"><strong>Ölçüm notu</strong></label>
+        {{ form.measurement_note }}
+        <div id="statusBox" class="uk-status {% if preview_status == 'OK' %}ok{% elif preview_status == 'NOK' %}nok{% else %}pending{% endif %}">
+          {% if preview_status == 'OK' %}✓ Uygun{% elif preview_status == 'NOK' %}✗ Uygun Değil{% else %}Ölçüm girin{% endif %}
+        </div>
+        <div class="uk-bar" id="tolBar"
+             data-lo="{{ lower_limit }}"
+             data-hi="{{ upper_limit }}"
+             data-nom="{{ step.nominal_value }}"></div>
+        <div class="uk-btns">
+          {% if step_index > 0 %}
+          <button type="submit" name="action" value="prev" class="btn btn-secondary">← Önceki</button>
+          {% endif %}
+          <button type="submit" name="action" value="save" class="btn btn-primary">Kaydet ve devam et →</button>
+          {% if step_index >= total_steps|add:"-1" %}
+          <button type="submit" name="action" value="finish" class="btn btn-primary" style="background:#059669;">Bitir</button>
+          {% endif %}
+          <button type="submit" name="action" value="pause" class="btn btn-secondary">Duraklat</button>
+          <button type="submit" name="action" value="cancel" class="btn btn-secondary" style="color:#b91c1c;">İptal</button>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+<script>
+(function(){
+  const inp = document.querySelector('.uk-olcum-input');
+  const bar = document.getElementById('tolBar');
+  const statusBox = document.getElementById('statusBox');
+  if (!inp || !bar) return;
+  const lo = parseFloat(bar.dataset.lo), hi = parseFloat(bar.dataset.hi), nom = parseFloat(bar.dataset.nom);
+  const pad = (hi - lo) * 0.15 || 1;
+  const minV = lo - pad, maxV = hi + pad, span = maxV - minV;
+  function pct(v) { return Math.max(0, Math.min(100, ((v - minV) / span) * 100)); }
+  const zone = document.createElement('div');
+  zone.className = 'uk-bar-zone';
+  zone.style.left = pct(lo) + '%';
+  zone.style.width = (pct(hi) - pct(lo)) + '%';
+  bar.appendChild(zone);
+  const nomEl = document.createElement('div');
+  nomEl.className = 'uk-bar-nom';
+  nomEl.style.left = pct(nom) + '%';
+  bar.appendChild(nomEl);
+  let pin = document.createElement('div');
+  pin.className = 'uk-bar-val';
+  bar.appendChild(pin);
+  function update() {
+    const v = parseFloat(inp.value);
+    if (isNaN(v)) { statusBox.className='uk-status pending'; statusBox.textContent='Ölçüm girin'; return; }
+    pin.style.left = pct(v) + '%';
+    const ok = v >= lo && v <= hi;
+    pin.className = 'uk-bar-val ' + (ok ? 'ok' : 'nok');
+    statusBox.className = 'uk-status ' + (ok ? 'ok' : 'nok');
+    statusBox.textContent = ok ? '✓ Uygun' : '✗ Uygun Değil';
+  }
+  inp.addEventListener('input', update);
+  if (inp.value) update();
+})();
+</script>
+{% endblock %}

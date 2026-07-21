@@ -1,0 +1,43 @@
+<div id="report-detail-backdrop" class="report-detail-backdrop"></div>
+<aside id="report-detail-drawer" class="report-detail-drawer" aria-hidden="true">
+  <div class="report-detail-header">
+    <h3>Görev Detayı</h3>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <a id="report-edit-task-btn" href="#" class="btn btn-sm btn-secondary hidden">Düzenle</a>
+      <a id="report-go-calendar-btn" href="#" class="btn btn-sm btn-primary hidden">Takvimdeki yerine git</a>
+      <button id="report-detail-close" type="button" class="btn btn-secondary btn-sm">Kapat</button>
+    </div>
+  </div>
+  <div id="report-detail-loading" class="report-detail-loading">Yükleniyor...</div>
+  <div id="report-detail-content" class="report-detail-content hidden">
+    <section class="detail-section">
+      <h4>Görev Özeti</h4>
+      <div class="detail-grid">
+        <div><span class="k">İş Emri No</span><span id="d-emir-no" class="v">-</span></div>
+        <div><span class="k">Ürün Kodu</span><span id="d-urun-kodu" class="v">-</span></div>
+        <div><span class="k">Ürün Adı</span><span id="d-urun-adi" class="v">-</span></div>
+        <div><span class="k">Operasyon</span><span id="d-operasyon" class="v">-</span></div>
+        <div><span class="k">Personel</span><span id="d-personel" class="v">-</span></div>
+        <div><span class="k">Durum</span><span id="d-durum" class="v">-</span></div>
+        <div><span class="k">Planlanan Süre</span><span id="d-planlanan" class="v">-</span></div>
+        <div><span class="k">Gerçekleşen Süre</span><span id="d-gercek" class="v">-</span></div>
+        <div><span class="k">Süre Farkı</span><span id="d-fark" class="v">-</span></div>
+      </div>
+    </section>
+
+    <section class="detail-section">
+      <h4>Duruş Kayıtları</h4>
+      <div id="d-duruslar" class="detail-list"></div>
+    </section>
+
+    <section class="detail-section">
+      <h4>Notlar</h4>
+      <div id="d-notlar" class="detail-list"></div>
+    </section>
+
+    <section class="detail-section">
+      <h4>Sorun Kayıtları</h4>
+      <div id="d-sorunlar" class="detail-list"></div>
+    </section>
+  </div>
+</aside>

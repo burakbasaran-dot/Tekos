@@ -1,0 +1,43 @@
+{% extends "stokapp/base.html" %}
+{% block title %}{{ baslik }}{% endblock %}
+{% block content %}
+<div class="card" style="padding:22px;max-width:900px;">
+  <h1 style="margin:0 0 18px;">{{ baslik }}</h1>
+  <form method="post">{% csrf_token %}
+    <div style="margin-bottom:14px;">
+      <label style="font-weight:600;display:block;margin-bottom:4px;">Ad</label>
+      <input type="text" name="ad" required value="{{ rol.ad|default:'' }}" style="width:100%;max-width:400px;padding:10px;border:1px solid #d1d5db;border-radius:8px;" {% if rol and rol.slug == 'admin' %}readonly{% endif %}/>
+    </div>
+    <div style="margin-bottom:14px;">
+      <label style="font-weight:600;display:block;margin-bottom:4px;">Kod (slug)</label>
+      <input type="text" name="slug" value="{{ rol.slug|default:'' }}" style="width:100%;max-width:400px;padding:10px;border:1px solid #d1d5db;border-radius:8px;" {% if rol %}readonly{% endif %} placeholder="ornek-rol"/>
+    </div>
+    <div style="margin-bottom:18px;">
+      <label style="font-weight:600;display:block;margin-bottom:4px;">Açıklama</label>
+      <textarea name="aciklama" rows="2" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:8px;">{{ rol.aciklama|default:'' }}</textarea>
+    </div>
+    {% if not rol or rol.slug != 'admin' %}
+    <h2 style="font-size:15px;margin:20px 0 10px;">Yetkiler</h2>
+    {% for mod, rows in gruplar.items %}
+    <fieldset style="border:1px solid #e5e7eb;border-radius:10px;padding:12px;margin-bottom:12px;">
+      <legend style="font-weight:700;padding:0 8px;">{{ mod }}</legend>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;">
+        {% for y in rows %}
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;">
+          <input type="checkbox" name="yetki" value="{{ y.pk }}" {% if y.pk in secili_ids %}checked{% endif %}/>
+          <span>{{ y.kod }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </fieldset>
+    {% endfor %}
+    {% else %}
+    <p class="muted">Admin rolü tüm yetkilere sahiptir; kutu seçimi kapalıdır.</p>
+    {% endif %}
+    <div style="margin-top:20px;display:flex;gap:10px;">
+      <button type="submit" class="btn btn-primary">Kaydet</button>
+      <a href="{% url 'stokapp:yetkilendirme_roller' %}" class="btn btn-secondary">Vazgeç</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

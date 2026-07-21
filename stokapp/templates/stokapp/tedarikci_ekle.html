@@ -1,0 +1,248 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Yeni Tedarikçi Ekle{% endblock %}
+{% block content %}
+{% include "stokapp/includes/tdk_form_styles.html" %}
+{% include "stokapp/includes/tdk_tedarikci_tag_styles.html" %}
+<style>
+  .tdk-section-icon.green { background: #ecfdf5; color: #059669; }
+</style>
+
+<div class="tdk-page">
+  <div class="tdk-header">
+    <div>
+      <h1>➕ Yeni Tedarikçi Ekle</h1>
+      <p>Tedarikçi bilgilerini, etiketlerini ve ilgili kişilerini tek ekrandan yönetin.</p>
+    </div>
+    <a href="{% url 'stokapp:tedarikci_listesi' %}" class="btn btn-secondary">← Geri</a>
+  </div>
+
+  <form method="post" id="tedarikciForm" class="tdk-form-card">
+    {% csrf_token %}
+
+    <section class="tdk-section">
+      <h2 class="tdk-section-title">
+        <span class="tdk-section-icon green">🏢</span>
+        Temel Bilgiler
+      </h2>
+      <div class="tdk-grid">
+        <div class="tdk-field tdk-has-help full" data-help="Tedarikçi firma adı. Satın alma kayıtları ve teklif taleplerinde kullanılır.">
+          <label class="tdk-label required" for="{{ form.ad.id_for_label }}">Tedarikçi Adı</label>
+          {{ form.ad }}
+          {% if form.ad.errors %}<div class="tdk-error">{{ form.ad.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Tedarikçi iletişim telefonu. Sipariş ve teklif süreçlerinde referans olarak saklanır.">
+          <label class="tdk-label" for="{{ form.telefon.id_for_label }}">Telefon</label>
+          {{ form.telefon }}
+          {% if form.telefon.errors %}<div class="tdk-error">{{ form.telefon.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Genel firma e-postası. Teklif talebi, sipariş formu ve tedarikçi teklif talebi maillerinde kullanılır.">
+          <label class="tdk-label" for="{{ form.email.id_for_label }}">E-posta</label>
+          {{ form.email }}
+          {% include "stokapp/includes/cari_email_bilgi_notu.html" with tip="tedarikci" %}
+          {% if form.email.errors %}<div class="tdk-error">{{ form.email.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help full" data-help="Tedarikçi adresi. Sipariş belgeleri ve cari kayıtlarda referans bilgisi olarak tutulur.">
+          <label class="tdk-label" for="{{ form.adres.id_for_label }}">Adres</label>
+          {{ form.adres }}
+          {% if form.adres.errors %}<div class="tdk-error">{{ form.adres.errors }}</div>{% endif %}
+        </div>
+      </div>
+    </section>
+
+    <section class="tdk-section">
+      <div class="tdk-tag-header">
+        <div class="tdk-has-help" data-help="Tedarikçinin tedarik edebildiği ürün/hizmet etiketleri. Teklif talebi önerilerinde filtre olarak kullanılır.">
+          <div class="tdk-label">{{ form.kategoriler.label }}</div>
+          <div class="tdk-help">{{ form.kategoriler.help_text }}</div>
+        </div>
+        <button type="button" class="tdk-tag-add-btn" id="btnKategoriEkle" title="Yeni etiket tanımla">
+          <span aria-hidden="true">+</span> Etiket Ekle
+        </button>
+      </div>
+
+      <div class="tdk-tag-picker tdk-has-help" id="tagPicker" data-help="Etiketlere tıklayarak seçin veya kaldırın. Seçili etiketler tedarikçi teklif önerilerinde dikkate alınır.">
+        <div class="tdk-tag-list" id="tagList">
+          {% for kategori in form.kategoriler.field.queryset %}
+            <label class="tdk-tag-chip{% if form.kategoriler.value and kategori.pk in form.kategoriler.value %} is-selected{% endif %}" data-id="{{ kategori.pk }}">
+              <input type="checkbox" name="kategoriler" value="{{ kategori.pk }}"
+                {% if form.kategoriler.value and kategori.pk in form.kategoriler.value %}checked{% endif %}>
+              <span class="tdk-tag-name">{{ kategori.ad }}</span>
+              <span class="tdk-tag-type">{{ kategori.get_stok_tipi_display }}</span>
+            </label>
+          {% empty %}
+            <div class="tdk-tag-empty" id="tagEmptyState">
+              <div class="tdk-tag-empty-icon">🏷️</div>
+              <strong>Henüz etiket tanımlı değil</strong>
+              <span>Tedarikçi teklif talebi önerilerinde kullanılacak etiketleri buradan seçebilir veya <strong>+ Etiket Ekle</strong> ile yeni tanımlayabilirsiniz.</span>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% if form.kategoriler.errors %}<div class="tdk-error" style="margin-top: 10px;">{{ form.kategoriler.errors }}</div>{% endif %}
+    </section>
+
+    <section class="tdk-section">
+      <h2 class="tdk-section-title">
+        <span class="tdk-section-icon green">👤</span>
+        İlgili Kişiler
+      </h2>
+      <div class="tdk-ilgililer-wrap">
+        {% include "stokapp/tedarikci_ilgililer_inline.html" %}
+      </div>
+    </section>
+
+    <div class="tdk-footer">
+      <a href="{% url 'stokapp:tedarikci_listesi' %}" class="btn btn-secondary">İptal</a>
+      <button type="submit" class="btn btn-primary">💾 Kaydet</button>
+    </div>
+  </form>
+</div>
+
+<div class="tdk-modal" id="kategoriModal" role="dialog" aria-modal="true" aria-labelledby="kategoriModalTitle">
+  <div class="tdk-modal-box">
+    <h3 id="kategoriModalTitle">Yeni Etiket Ekle</h3>
+    <p>Tedarikçinin tedarik edebildiği kategori etiketini tanımlayın. Kayıttan sonra otomatik seçilir.</p>
+    <div class="tdk-has-help" data-help="Yeni etiket adı. Örn: Civata, Sac Levha, Elektrik malzemesi.">
+      <input type="text" id="kategoriModalInput" class="tdk-modal-input" placeholder="Örn: Civata, Sac Levha, Elektrik..." autocomplete="off">
+    </div>
+    <div class="tdk-modal-error" id="kategoriModalError">Bu etiket zaten mevcut.</div>
+    <div class="tdk-modal-actions">
+      <button type="button" class="btn btn-secondary" id="kategoriModalCancel">İptal</button>
+      <button type="button" class="btn btn-primary" id="kategoriModalSave">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var tagList = document.getElementById('tagList');
+  var modal = document.getElementById('kategoriModal');
+  var modalInput = document.getElementById('kategoriModalInput');
+  var modalError = document.getElementById('kategoriModalError');
+  var modalSave = document.getElementById('kategoriModalSave');
+  var apiUrl = "{% url 'stokapp:api_quick_add' 'category' %}";
+
+  function csrfToken() {
+    var el = document.querySelector('[name=csrfmiddlewaretoken]');
+    return el ? el.value : '';
+  }
+
+  function removeEmptyState() {
+    var empty = document.getElementById('tagEmptyState');
+    if (empty) empty.remove();
+  }
+
+  function syncChipState(chip) {
+    var input = chip.querySelector('input[type="checkbox"]');
+    chip.classList.toggle('is-selected', input && input.checked);
+  }
+
+  function bindChip(chip) {
+    var input = chip.querySelector('input[type="checkbox"]');
+    if (!input) return;
+    chip.addEventListener('click', function (e) {
+      if (e.target === input) return;
+      e.preventDefault();
+      input.checked = !input.checked;
+      syncChipState(chip);
+    });
+    input.addEventListener('change', function () { syncChipState(chip); });
+    syncChipState(chip);
+  }
+
+  tagList.querySelectorAll('.tdk-tag-chip').forEach(bindChip);
+
+  function chipExistsByName(name) {
+    var lower = name.trim().toLowerCase();
+    return Array.from(tagList.querySelectorAll('.tdk-tag-name')).some(function (el) {
+      return el.textContent.trim().toLowerCase() === lower;
+    });
+  }
+
+  function addTagChip(id, ad, typeLabel, selected) {
+    removeEmptyState();
+    var chip = document.createElement('label');
+    chip.className = 'tdk-tag-chip' + (selected ? ' is-selected' : '');
+    chip.dataset.id = String(id);
+    chip.innerHTML =
+      '<input type="checkbox" name="kategoriler" value="' + id + '"' + (selected ? ' checked' : '') + '>' +
+      '<span class="tdk-tag-name"></span>' +
+      '<span class="tdk-tag-type"></span>';
+    chip.querySelector('.tdk-tag-name').textContent = ad;
+    chip.querySelector('.tdk-tag-type').textContent = typeLabel || 'Etiket';
+    tagList.appendChild(chip);
+    bindChip(chip);
+    return chip;
+  }
+
+  function openModal() {
+    modalInput.value = '';
+    modalError.classList.remove('show');
+    modal.classList.add('show');
+    modalInput.focus();
+  }
+
+  function closeModal() {
+    modal.classList.remove('show');
+    modalInput.value = '';
+    modalError.classList.remove('show');
+  }
+
+  document.getElementById('btnKategoriEkle').addEventListener('click', openModal);
+  document.getElementById('kategoriModalCancel').addEventListener('click', closeModal);
+  modal.addEventListener('click', function (e) {
+    if (e.target === modal) closeModal();
+  });
+  modalInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); saveKategori(); }
+    if (e.key === 'Escape') closeModal();
+  });
+  modalSave.addEventListener('click', saveKategori);
+
+  async function saveKategori() {
+    var ad = modalInput.value.trim();
+    if (!ad) {
+      modalInput.focus();
+      return;
+    }
+    if (chipExistsByName(ad)) {
+      modalError.classList.add('show');
+      modalInput.focus();
+      modalInput.select();
+      return;
+    }
+    modalSave.disabled = true;
+    modalSave.textContent = 'Kaydediliyor...';
+    try {
+      var resp = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken()
+        },
+        body: JSON.stringify({ ad: ad })
+      });
+      var data = await resp.json();
+      if (!resp.ok || !data.ok) {
+        throw new Error((data && data.error) || 'Etiket kaydedilemedi');
+      }
+      var display = String(data.ad || ad);
+      var typeLabel = 'Etiket';
+      var paren = display.match(/\(([^)]+)\)\s*$/);
+      var cleanName = display;
+      if (paren) {
+        typeLabel = paren[1];
+        cleanName = display.replace(/\s*\([^)]+\)\s*$/, '').trim();
+      }
+      addTagChip(data.id, cleanName || ad, typeLabel, true);
+      closeModal();
+    } catch (err) {
+      alert(err.message || 'Etiket eklenirken hata oluştu.');
+    } finally {
+      modalSave.disabled = false;
+      modalSave.textContent = 'Kaydet';
+    }
+  }
+})();
+</script>
+{% endblock %}

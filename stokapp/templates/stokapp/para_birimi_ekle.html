@@ -1,0 +1,57 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Yeni Para Birimi Ekle{% endblock %}
+{% block content %}
+<div class="card">
+    <h2>➕ Yeni Para Birimi Ekle</h2>
+    
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 15px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background: #fff3cd; color: #856404; border-left: 4px solid #ffc107;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post" style="max-width: 600px;">
+        {% csrf_token %}
+        <div style="margin-bottom: 20px;">
+            <label for="{{ form.kod.id_for_label }}" style="display: block; margin-bottom: 8px; font-weight: 600;">Kod *</label>
+            {{ form.kod }}
+            {% if form.kod.errors %}
+                <div style="color: #dc3545; margin-top: 5px; font-size: 14px;">{{ form.kod.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+            <label for="{{ form.ad.id_for_label }}" style="display: block; margin-bottom: 8px; font-weight: 600;">Ad *</label>
+            {{ form.ad }}
+            {% if form.ad.errors %}
+                <div style="color: #dc3545; margin-top: 5px; font-size: 14px;">{{ form.ad.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+            <label for="{{ form.sembol.id_for_label }}" style="display: block; margin-bottom: 8px; font-weight: 600;">Sembol *</label>
+            {{ form.sembol }}
+            {% if form.sembol.errors %}
+                <div style="color: #dc3545; margin-top: 5px; font-size: 14px;">{{ form.sembol.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                {{ form.aktif }}
+                <span>Aktif</span>
+            </label>
+        </div>
+        
+        <div style="display: flex; gap: 10px; margin-top: 30px;">
+            <button type="submit" class="btn btn-primary">💾 Kaydet</button>
+            <a href="{% url 'stokapp:para_birimi_listesi' %}" class="btn btn-secondary">İptal</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

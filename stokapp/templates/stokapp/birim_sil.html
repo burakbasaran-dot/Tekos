@@ -1,0 +1,29 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Birim Sil{% endblock %}
+{% block content %}
+<div class="card">
+    <h2>🗑️ Birim Sil: {{ birim.ad }}</h2>
+    
+    <div style="padding: 20px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107; margin-bottom: 20px;">
+        <strong>⚠️ Uyarı:</strong> Bu birimi silmek istediğinizden emin misiniz?
+        <ul style="margin-top: 10px; margin-bottom: 0;">
+            <li>Bu birim <strong>{{ stok_sayisi }} ürün</strong> tarafından kullanılıyor.</li>
+            {% if stok_sayisi > 0 %}
+            <li>Bu birimi kullanan ürünler olduğu için birim silinemez. Önce ürünleri başka bir birime taşıyın.</li>
+            {% else %}
+            <li>Birim silindiğinde, bu birime ait tüm bilgiler kalıcı olarak silinecek.</li>
+            {% endif %}
+        </ul>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+            <a href="{% url 'stokapp:birim_duzenle' birim.pk %}" class="btn btn-secondary">İptal</a>
+            {% if stok_sayisi == 0 %}
+            <button type="submit" class="btn btn-secondary" style="background: #dc3545; color: white;">🗑️ Evet, Sil</button>
+            {% endif %}
+        </div>
+    </form>
+</div>
+{% endblock %}

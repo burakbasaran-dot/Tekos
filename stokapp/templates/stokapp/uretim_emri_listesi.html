@@ -1,0 +1,239 @@
+{% extends "stokapp/base.html" %}
+{% load currency_filters %}
+{% block title %}Üretim Emirleri{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>🏭 Üretim Emirleri</h2>
+        <div style="display:flex; gap:8px;">
+            {% with qs=request.GET.urlencode %}
+            <a href="{% url 'stokapp:uretim_emri_listesi_export_excel' %}{% if qs %}?{{ qs }}{% endif %}" class="btn btn-secondary">📊 Excel</a>
+            <a href="{% url 'stokapp:uretim_emri_listesi_export_pdf' %}{% if qs %}?{{ qs }}{% endif %}" class="btn btn-secondary">📄 PDF</a>
+            {% endwith %}
+            <a href="{% url 'stokapp:uretim_emri_ekle' %}" class="btn btn-primary">➕ Üretim Emri Ekle</a>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 12px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background: #fff3cd; color: #856404; border-left: 4px solid #ffc107;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="tekos-tab-buttons">
+        <a href="?tab=devam_eden{% if durum %}&durum={{ durum }}{% endif %}{% if uretim_tipi %}&uretim_tipi={{ uretim_tipi }}{% endif %}"
+           class="tekos-tab-btn tab-pending{% if tab != 'tamamlanan' %} is-active{% endif %}">
+            <span class="tab-icon" aria-hidden="true">⚙️</span>
+            <span>Devam Eden İş Emirleri</span>
+            <span class="tab-count">{{ counts.devam_eden }}</span>
+        </a>
+        <a href="?tab=tamamlanan{% if durum %}&durum={{ durum }}{% endif %}{% if uretim_tipi %}&uretim_tipi={{ uretim_tipi }}{% endif %}"
+           class="tekos-tab-btn tab-delivered{% if tab == 'tamamlanan' %} is-active{% endif %}">
+            <span class="tab-icon" aria-hidden="true">✅</span>
+            <span>Tamamlanan İş Emirleri</span>
+            <span class="tab-count">{{ counts.tamamlanan }}</span>
+        </a>
+    </div>
+    
+    <!-- Filtreler -->
+    <div style="margin-bottom: 20px; padding: 15px; background: #f9fafb; border-radius: 8px;">
+        <form method="get" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <input type="hidden" name="tab" value="{{ tab }}">
+            <label>Durum:</label>
+            <select name="durum" style="padding: 8px; border-radius: 6px; border: 1px solid #ddd;">
+                <option value="">Tümü</option>
+                <option value="PLANLANDI" {% if durum == 'PLANLANDI' %}selected{% endif %}>Planlandı</option>
+                <option value="BASLADI" {% if durum == 'BASLADI' %}selected{% endif %}>Başladı</option>
+                <option value="TAMAMLANDI" {% if durum == 'TAMAMLANDI' %}selected{% endif %}>Tamamlandı</option>
+                <option value="IPTAL" {% if durum == 'IPTAL' %}selected{% endif %}>İptal</option>
+            </select>
+            <label>Tip:</label>
+            <select name="uretim_tipi" style="padding: 8px; border-radius: 6px; border: 1px solid #ddd;">
+                <option value="">Tümü</option>
+                <option value="ORDER" {% if uretim_tipi == 'ORDER' %}selected{% endif %}>Sipariş</option>
+                <option value="STOCK" {% if uretim_tipi == 'STOCK' %}selected{% endif %}>Stok</option>
+            </select>
+            <button type="submit" class="btn btn-secondary">Filtrele</button>
+            <a href="{% url 'stokapp:uretim_emri_listesi' %}?tab={{ tab }}" class="btn btn-secondary">Temizle</a>
+        </form>
+    </div>
+
+    {% if tab != 'tamamlanan' %}
+    <form method="post" action="{% url 'stokapp:uretim_emri_toplu_islem' %}" id="ueTopluForm">
+        {% csrf_token %}
+        <input type="hidden" name="action" id="ueTopluAction" value="">
+        <input type="hidden" name="allow_negative" id="ueAllowNegative" value="0">
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+
+        <div id="ueTopluBar" style="display:none; margin-bottom:14px; padding:12px 14px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; align-items:center; gap:10px; flex-wrap:wrap;">
+            <span style="font-weight:600; color:#1e40af;"><span id="ueSecimSayisi">0</span> emir seçili</span>
+            <button type="button" class="btn btn-primary" id="ueTopluBaslatBtn" style="padding:8px 14px;">▶ Toplu üretim başlat</button>
+            <button type="button" class="btn btn-primary" id="ueTopluTamamlaBtn" style="padding:8px 14px; background:#059669;">✓ Toplu üretim tamamla</button>
+            <button type="button" class="btn btn-secondary" id="ueSecimTemizleBtn" style="padding:8px 14px;">Seçimi temizle</button>
+        </div>
+    {% endif %}
+    
+    <table>
+        <thead>
+            <tr>
+                {% if tab != 'tamamlanan' %}
+                <th style="width:42px; text-align:center;">
+                    <input type="checkbox" id="ueSelectAll" title="Tümünü seç">
+                </th>
+                {% endif %}
+                <th>Emir No</th>
+                <th>Ürün</th>
+                <th>Miktar</th>
+                <th>Durum</th>
+                <th>Planlanan Başlangıç</th>
+                <th>Planlanan Bitiş</th>
+                <th>İşlemler</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for emir in emirler %}
+            <tr>
+                {% if tab != 'tamamlanan' %}
+                <td style="text-align:center;">
+                    <input type="checkbox" class="ue-emir-check" name="emir_ids" value="{{ emir.pk }}"
+                           data-durum="{{ emir.durum }}"
+                           data-tip="{{ emir.production_type }}"
+                           data-emir-no="{{ emir.emir_no }}">
+                </td>
+                {% endif %}
+                <td><strong>{{ emir.emir_no }}</strong></td>
+                <td>{{ emir.recete.urun.stok_kodu }} - {{ emir.recete.urun.ad }}</td>
+                <td>{{ emir.miktar|format_adet }} {{ emir.recete.urun.birim }}</td>
+                <td>
+                    <span style="padding: 3px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; margin-right: 6px;
+                        {% if emir.production_type == 'STOCK' %}background:#dcfce7; color:#166534; border:1px solid #86efac;
+                        {% else %}background:#dbeafe; color:#1d4ed8; border:1px solid #93c5fd;{% endif %}">
+                        {% if emir.production_type == 'STOCK' %}Stok Üretimi{% else %}Sipariş{% endif %}
+                    </span>
+                    <span style="padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600;
+                        {% if emir.durum == 'TAMAMLANDI' %}background: #d4edda; color: #155724;
+                        {% elif emir.durum == 'BASLADI' %}background: #fff3cd; color: #856404;
+                        {% elif emir.durum == 'IPTAL' %}background: #f8d7da; color: #721c24;
+                        {% else %}background: #d1ecf1; color: #0c5460;{% endif %}">
+                        {{ emir.get_durum_display }}
+                    </span>
+                </td>
+                <td>{{ emir.planlanan_baslama|date:"d.m.Y H:i" }}</td>
+                <td>{{ emir.planlanan_bitis|date:"d.m.Y H:i" }}</td>
+                <td>
+                    <div style="display: flex; gap: 6px;">
+                        <a href="{% url 'stokapp:uretim_emri_detay' emir.pk %}" class="btn btn-secondary" style="padding: 6px 12px; font-size: 13px;">Detay</a>
+                        <a href="{% url 'stokapp:uretim_emri_sil' emir.pk %}" 
+                           class="btn" 
+                           style="padding: 6px 12px; font-size: 13px; background: #dc3545; color: white;"
+                           onclick="return confirm('Bu üretim emrini silmek istediğinizden emin misiniz?');">
+                            🗑️ Sil
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="{% if tab != 'tamamlanan' %}8{% else %}7{% endif %}" style="text-align: center; padding: 40px; color: #6b7280;">
+                    {% if tab == 'tamamlanan' %}
+                        Tamamlanan iş emri bulunmuyor.
+                    {% else %}
+                        Devam eden iş emri bulunmuyor. <a href="{% url 'stokapp:uretim_emri_ekle' %}">Yeni emir oluştur</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% if tab != 'tamamlanan' %}
+    </form>
+    {% endif %}
+</div>
+
+{% if tab != 'tamamlanan' %}
+<script>
+(function() {
+    const form = document.getElementById('ueTopluForm');
+    if (!form) return;
+    const bar = document.getElementById('ueTopluBar');
+    const countEl = document.getElementById('ueSecimSayisi');
+    const selectAll = document.getElementById('ueSelectAll');
+    const actionInput = document.getElementById('ueTopluAction');
+    const allowNeg = document.getElementById('ueAllowNegative');
+
+    function checks() {
+        return Array.from(document.querySelectorAll('.ue-emir-check'));
+    }
+    function selected() {
+        return checks().filter(c => c.checked);
+    }
+    function updateBar() {
+        const n = selected().length;
+        countEl.textContent = String(n);
+        bar.style.display = n ? 'flex' : 'none';
+        if (selectAll) {
+            const all = checks();
+            selectAll.checked = all.length > 0 && all.every(c => c.checked);
+            selectAll.indeterminate = n > 0 && n < all.length;
+        }
+    }
+
+    checks().forEach(c => c.addEventListener('change', updateBar));
+    if (selectAll) {
+        selectAll.addEventListener('change', function() {
+            checks().forEach(c => { c.checked = selectAll.checked; });
+            updateBar();
+        });
+    }
+    document.getElementById('ueSecimTemizleBtn').addEventListener('click', function() {
+        checks().forEach(c => { c.checked = false; });
+        updateBar();
+    });
+
+    function submitAction(action) {
+        const sel = selected();
+        if (!sel.length) {
+            alert('Lütfen en az bir emir seçin.');
+            return;
+        }
+        if (action === 'baslat') {
+            const uygun = sel.filter(c => c.dataset.durum === 'PLANLANDI' && c.dataset.tip !== 'ORDER');
+            if (!uygun.length) {
+                alert('Seçilenlerde başlatılabilir (Planlandı / Stok Üretimi) emir yok.\nSipariş emirleri Siparişler ekranından başlatılır.');
+                return;
+            }
+            if (!confirm(uygun.length + ' üretim emri başlatılacak. Devam edilsin mi?')) return;
+            allowNeg.value = '0';
+        } else {
+            const uygun = sel.filter(c => c.dataset.durum === 'BASLADI');
+            if (!uygun.length) {
+                alert('Seçilenlerde tamamlanabilir (Başladı) emir yok.');
+                return;
+            }
+            const ok = confirm(
+                uygun.length + ' üretim emri tamamlanacak ve stok hareketi oluşacak.\n' +
+                'Bazı malzemelerde stok eksiye düşebilir. Devam edilsin mi?'
+            );
+            if (!ok) return;
+            allowNeg.value = '1';
+        }
+        actionInput.value = action;
+        form.submit();
+    }
+
+    document.getElementById('ueTopluBaslatBtn').addEventListener('click', function() {
+        submitAction('baslat');
+    });
+    document.getElementById('ueTopluTamamlaBtn').addEventListener('click', function() {
+        submitAction('tamamla');
+    });
+    updateBar();
+})();
+</script>
+{% endif %}
+{% endblock %}

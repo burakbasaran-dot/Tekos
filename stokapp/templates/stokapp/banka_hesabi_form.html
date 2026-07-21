@@ -1,0 +1,140 @@
+{% extends "stokapp/base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <a href="{% url 'stokapp:banka_hesaplari_listesi' %}" class="btn" style="background-color: #6b7280; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px;">
+                ← Geri
+            </a>
+            <h2 style="margin: 0;">{{ title }}</h2>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 15px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background: #fff3cd; color: #856404; border-left: 4px solid #ffc107;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" style="max-width: 800px;">
+        {% csrf_token %}
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+            <div>
+                <label for="{{ form.hesap_adi.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.hesap_adi.label }} *</label>
+                {{ form.hesap_adi }}
+                {% if form.hesap_adi.errors %}
+                    <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.hesap_adi.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label for="{{ form.banka_adi.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.banka_adi.label }} *</label>
+                {{ form.banka_adi }}
+                {% if form.banka_adi.errors %}
+                    <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.banka_adi.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label for="{{ form.iban.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.iban.label }} *</label>
+            {{ form.iban }}
+            {% if form.iban.errors %}
+                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.iban.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label for="{{ form.para_birimi.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.para_birimi.label }} *</label>
+            {{ form.para_birimi }}
+            {% if form.para_birimi.errors %}
+                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.para_birimi.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+            <div>
+                <label for="{{ form.hesap_tipi.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.hesap_tipi.label }} *</label>
+                {{ form.hesap_tipi }}
+                {% if form.hesap_tipi.errors %}
+                    <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.hesap_tipi.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label for="{{ form.hesap_sahibi.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.hesap_sahibi.label }}</label>
+                {{ form.hesap_sahibi }}
+                {% if form.hesap_sahibi.errors %}
+                    <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.hesap_sahibi.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+            <div>
+                <label for="{{ form.sube_kodu.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.sube_kodu.label }}</label>
+                {{ form.sube_kodu }}
+                {% if form.sube_kodu.errors %}
+                    <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.sube_kodu.errors }}</div>
+                {% endif %}
+            </div>
+            
+            <div>
+                <label for="{{ form.hesap_no.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.hesap_no.label }}</label>
+                {{ form.hesap_no }}
+                {% if form.hesap_no.errors %}
+                    <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.hesap_no.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label for="{{ form.fotograf.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.fotograf.label }}</label>
+            {{ form.fotograf }}
+            {% if is_edit and hesap.fotograf %}
+                <div style="margin-top: 10px;">
+                    <img src="{{ hesap.fotograf.url }}" alt="Mevcut fotoğraf" style="max-width: 200px; border-radius: 8px; border: 1px solid #e5e7eb;">
+                </div>
+            {% endif %}
+            {% if form.fotograf.errors %}
+                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.fotograf.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label for="{{ form.aciklama.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.aciklama.label }}</label>
+            {{ form.aciklama }}
+            {% if form.aciklama.errors %}
+                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.aciklama.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                {{ form.aktif }}
+                <span style="font-weight: 600;">{{ form.aktif.label }}</span>
+            </label>
+            {% if form.aktif.errors %}
+                <div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.aktif.errors }}</div>
+            {% endif %}
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 30px;">
+            <button type="submit" style="background-color: #22c55e; color: white; padding: 10px 24px; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">
+                💾 Kaydet
+            </button>
+            <a href="{% url 'stokapp:banka_hesaplari_listesi' %}" style="background-color: #6b7280; color: white; padding: 10px 24px; text-decoration: none; border-radius: 6px; font-weight: 600;">
+                İptal
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+

@@ -1,0 +1,283 @@
+{% extends "stokapp/base.html" %}
+{% load static %}
+{% block title %}Araç Detay - {{ arac.plaka }}{% endblock %}
+{% block content %}
+<style>
+    .belge-islem-hucre {
+        min-width: 200px;
+        white-space: nowrap;
+    }
+    .belge-islem-butonlar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+    }
+    .belge-islem-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 6px 10px;
+        border-radius: 4px;
+        text-decoration: none;
+        font-size: 13px;
+        font-weight: 500;
+        line-height: 1.2;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+    .belge-islem-btn-guncelle {
+        background-color: #8b5cf6;
+        color: white;
+    }
+    .belge-islem-btn-duzenle {
+        background-color: #3b82f6;
+        color: white;
+        min-width: 34px;
+    }
+    .belge-islem-btn-sil {
+        background-color: #ef4444;
+        color: white;
+        min-width: 34px;
+    }
+</style>
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <a href="{% url 'stokapp:arac_listesi' %}" class="btn" style="background-color: #6b7280; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px;">
+                ← Geri
+            </a>
+            <h2 style="margin: 0;">🚗 {{ arac.plaka }}</h2>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <a href="{% url 'stokapp:arac_belgesi_ekle' arac.pk %}" class="btn" style="background-color: #22c55e; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px;">
+                + Belge Ekle
+            </a>
+            <a href="{% url 'stokapp:arac_duzenle' arac.pk %}" class="btn" style="background-color: #3b82f6; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px;">
+                ✏️ Düzenle
+            </a>
+            <a href="{% url 'stokapp:arac_sil' arac.pk %}" class="btn" style="background-color: #ef4444; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px;">
+                🗑️ Sil
+            </a>
+        </div>
+    </div>
+
+    <!-- Hatırlatma Uyarıları -->
+    {% if hatirlatma_belgeler or suresi_dolan_belgeler %}
+    <div style="margin-bottom: 20px;">
+        {% if suresi_dolan_belgeler %}
+        <div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 16px; margin-bottom: 12px; border-radius: 8px;">
+            <div style="font-weight: 600; color: #991b1b; margin-bottom: 8px;">⚠️ Süresi Dolan Belgeler:</div>
+            <ul style="margin: 0; padding-left: 20px; color: #991b1b;">
+                {% for belge in suresi_dolan_belgeler %}
+                <li>{{ belge.get_belge_turu_display }} - Bitiş: {{ belge.gecerlilik_bitis|date:"d.m.Y" }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+        
+        {% if hatirlatma_belgeler %}
+        <div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 16px; border-radius: 8px;">
+            <div style="font-weight: 600; color: #92400e; margin-bottom: 8px;">⏰ Yakında Sona Erecek Belgeler (7 Gün İçinde):</div>
+            <ul style="margin: 0; padding-left: 20px; color: #92400e;">
+                {% for belge in hatirlatma_belgeler %}
+                <li>{{ belge.get_belge_turu_display }} - Bitiş: {{ belge.gecerlilik_bitis|date:"d.m.Y" }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Araç Bilgileri -->
+    <div style="display: grid; grid-template-columns: 300px 1fr; gap: 30px; margin-bottom: 30px;">
+        <!-- Sol: Fotoğraf -->
+        <div>
+            {% if arac.foto %}
+                <img src="{{ arac.foto.url }}" alt="{{ arac.plaka }}" style="width: 100%; border-radius: 12px; border: 2px solid #e5e7eb;">
+            {% else %}
+                <div style="width: 100%; height: 300px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: white; font-size: 64px;">
+                    🚗
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Sağ: Detaylar -->
+        <div>
+            <h3 style="margin-top: 0; margin-bottom: 20px; color: #111827;">Araç Bilgileri</h3>
+            <div style="display: grid; grid-template-columns: 150px 1fr; gap: 12px; margin-bottom: 12px;">
+                <div style="font-weight: 600; color: #6b7280;">Plaka:</div>
+                <div>{{ arac.plaka }}</div>
+                
+                <div style="font-weight: 600; color: #6b7280;">Marka/Model:</div>
+                <div>{{ arac.marka }} {{ arac.model }}</div>
+                
+                <div style="font-weight: 600; color: #6b7280;">Yıl:</div>
+                <div>{{ arac.yil }}</div>
+                
+                <div style="font-weight: 600; color: #6b7280;">Araç Tipi:</div>
+                <div>{{ arac.get_arac_tipi_display }}</div>
+                
+                {% if arac.renk %}
+                <div style="font-weight: 600; color: #6b7280;">Renk:</div>
+                <div>{{ arac.renk }}</div>
+                {% endif %}
+                
+                {% if arac.sasi_no %}
+                <div style="font-weight: 600; color: #6b7280;">Şasi No:</div>
+                <div>{{ arac.sasi_no }}</div>
+                {% endif %}
+                
+                {% if arac.motor_no %}
+                <div style="font-weight: 600; color: #6b7280;">Motor No:</div>
+                <div>{{ arac.motor_no }}</div>
+                {% endif %}
+                
+                {% if arac.ruhsat_pdf %}
+                <div style="font-weight: 600; color: #6b7280;">Ruhsat:</div>
+                <div>
+                    <a href="{{ arac.ruhsat_pdf.url }}" target="_blank" style="color: #3b82f6; text-decoration: none;">
+                        📄 Ruhsat PDF'ini Görüntüle
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+            
+            {% if arac.aciklama %}
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+                <div style="font-weight: 600; color: #6b7280; margin-bottom: 8px;">Açıklama:</div>
+                <div style="color: #374151;">{{ arac.aciklama|linebreaks }}</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Belgeler Tablosu -->
+    <div style="margin-top: 30px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 12px; flex-wrap: wrap;">
+            <h3 style="margin: 0; color: #111827;">
+                {% if arsivli %}📦 Arşivlenmiş Belgeler{% else %}Belgeler{% endif %}
+            </h3>
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                {% if arsivli %}
+                <a href="{% url 'stokapp:arac_detay' arac.pk %}" class="btn" style="background-color: #3b82f6; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px;">
+                    ← Güncel Belgeler
+                </a>
+                {% else %}
+                <a href="{% url 'stokapp:arac_detay' arac.pk %}?arsivli=true" class="btn" style="background-color: #6b7280; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px;">
+                    📦 Arşivlenmiş Belgeler
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% if belgeler %}
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; background: white;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #e5e7eb;">
+                        <th style="padding: 12px; text-align: left; font-weight: 600; color: #fff;">Belge Türü</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600; color: #fff;">Belge No</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600; color: #fff;">Başlangıç</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600; color: #fff;">Bitiş</th>
+                        {% if arsivli %}
+                        <th style="padding: 12px; text-align: left; font-weight: 600; color: #fff;">Arşivlenme</th>
+                        {% endif %}
+                        <th style="padding: 12px; text-align: left; font-weight: 600; color: #fff;">Belge</th>
+                        <th style="padding: 12px; text-align: left; font-weight: 600; color: #fff; min-width: 200px;">İşlemler</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for belge in belgeler %}
+                    <tr style="border-bottom: 1px solid #e5e7eb; 
+                        {% if belge.suresi_doldu_mu %}background-color: #fef2f2;
+                        {% elif belge.hatirlatma_gecerli_mi %}background-color: #fffbeb;{% endif %}">
+                        <td style="padding: 12px;">
+                            {{ belge.get_belge_turu_display }}
+                            {% if belge.suresi_doldu_mu %}
+                                <span style="color: #ef4444; font-size: 12px; margin-left: 8px;">⚠️ Süresi Doldu</span>
+                            {% elif belge.hatirlatma_gecerli_mi %}
+                                <span style="color: #f59e0b; font-size: 12px; margin-left: 8px;">⏰ Yakında</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 12px;">{{ belge.belge_no|default:"-" }}</td>
+                        <td style="padding: 12px;">
+                            {% if belge.gecerlilik_baslangic %}
+                                {{ belge.gecerlilik_baslangic|date:"d.m.Y" }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td style="padding: 12px;">
+                            {% if belge.bitis_tarihi_gerekmez_mi or not belge.gecerlilik_bitis %}
+                                -
+                            {% else %}
+                                {{ belge.gecerlilik_bitis|date:"d.m.Y" }}
+                            {% endif %}
+                        </td>
+                        {% if arsivli %}
+                        <td style="padding: 12px;">
+                            {% if belge.arsivlenme_tarihi %}
+                                {{ belge.arsivlenme_tarihi|date:"d.m.Y H:i" }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        {% endif %}
+                        <td style="padding: 12px;">
+                            {% for dosya in belge.dosyalar.all %}
+                                <a href="{{ dosya.dosya.url }}" target="_blank" style="color: #3b82f6; text-decoration: none; display: inline-block; margin-right: 8px; margin-bottom: 4px;">
+                                    📄 {{ dosya.dosya_adi|truncatechars:24 }}
+                                </a>
+                            {% empty %}
+                                {% if belge.belge_pdf %}
+                                    <a href="{{ belge.belge_pdf.url }}" target="_blank" style="color: #3b82f6; text-decoration: none;">📄 PDF</a>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            {% endfor %}
+                            {% if belge.hasar_foto %}
+                                <a href="{{ belge.hasar_foto.url }}" target="_blank" style="color: #3b82f6; text-decoration: none; margin-left: 8px;">📷 Foto</a>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 12px;" class="belge-islem-hucre">
+                            <div class="belge-islem-butonlar">
+                            {% if not arsivli %}
+                            <a href="{% url 'stokapp:arac_belgesi_guncelle' belge.pk %}"
+                               class="belge-islem-btn belge-islem-btn-guncelle"
+                               title="Belgeleri Güncelle">
+                                🔄 Güncelle
+                            </a>
+                            <a href="{% url 'stokapp:arac_belgesi_duzenle' belge.pk %}"
+                               class="belge-islem-btn belge-islem-btn-duzenle"
+                               title="Düzenle">
+                                ✏️
+                            </a>
+                            {% endif %}
+                            <a href="{% url 'stokapp:arac_belgesi_sil' belge.pk %}"
+                               class="belge-islem-btn belge-islem-btn-sil"
+                               title="Sil">
+                                🗑️
+                            </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="text-align: center; padding: 40px; color: #6b7280; background: #f9fafb; border-radius: 8px;">
+            <div style="font-size: 48px; margin-bottom: 16px;">{% if arsivli %}📦{% else %}📋{% endif %}</div>
+            <div>{% if arsivli %}Arşivde belge bulunmuyor.{% else %}Henüz belge eklenmemiş{% endif %}</div>
+            {% if not arsivli %}
+            <a href="{% url 'stokapp:arac_belgesi_ekle' arac.pk %}" 
+               style="display: inline-block; margin-top: 16px; background-color: #22c55e; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none;">
+                + İlk Belgeyi Ekle
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

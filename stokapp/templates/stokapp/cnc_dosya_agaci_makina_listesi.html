@@ -1,0 +1,91 @@
+{% extends "stokapp/base.html" %}
+{% block title %}CNC Makina Tanımları{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+        <h2 style="margin:0;">🏭 CNC Makina Tanımları</h2>
+        <a href="{% url 'stokapp:cnc_dosya_agaci_listesi' %}" class="btn btn-secondary">📂 Dosya Ağacına Dön</a>
+    </div>
+    <p style="color:#6b7280;margin-top:10px;">
+        CNC dosya ağacı sekmeleri burada tanımlanan makina kayıtlarından üretilir.
+    </p>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div style="margin:10px 0;padding:10px 12px;border-radius:8px;{% if message.tags == 'error' %}background:#fee2e2;color:#991b1b;{% else %}background:#ecfdf5;color:#065f46;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <div style="margin:16px 0 22px 0;padding:12px;border:1px solid #e5e7eb;border-radius:10px;background:#f8fafc;">
+        <form method="post" action="{% url 'stokapp:cnc_dosya_agaci_makina_ekle' %}" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+            {% csrf_token %}
+            <div style="min-width:260px;flex:1;">
+                <label style="display:block;font-size:13px;font-weight:600;margin-bottom:5px;">İstasyon *</label>
+                <select name="istasyon_id" required class="form-select">
+                    <option value="">— İstasyon seçiniz —</option>
+                    {% for istasyon in aday_istasyonlar %}
+                        <option value="{{ istasyon.id }}">{{ istasyon.ad }} ({{ istasyon.machine_type_display }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label style="display:block;font-size:13px;font-weight:600;margin-bottom:5px;">Sıra</label>
+                <input type="number" name="sira" value="0" class="form-control" style="width:120px;">
+            </div>
+            <button type="submit" class="btn btn-primary">➕ Makina Ekle</button>
+        </form>
+        <small style="color:#6b7280;display:block;margin-top:8px;">
+            Not: Ekleme için CNC torna/freze grubunda ve aktif bir istasyon seçilmelidir.
+        </small>
+    </div>
+
+    <div style="overflow:auto;">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>İstasyon</th>
+                    <th>Makine Tipi</th>
+                    <th>Slug</th>
+                    <th>Sıra</th>
+                    <th>Durum</th>
+                    <th style="width:120px;">İşlem</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for makina in makineler %}
+                <tr>
+                    <td>{{ makina.id }}</td>
+                    <td>{{ makina.istasyon.ad }}</td>
+                    <td>
+                        {% if makina.effective_machine_type == 'cnc_lathe' %}
+                            CNC Torna
+                        {% elif makina.effective_machine_type == 'cnc_mill' %}
+                            CNC Freze
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    <td><code>{{ makina.slug }}</code></td>
+                    <td>{{ makina.sira }}</td>
+                    <td>{% if makina.aktif %}Aktif{% else %}Pasif{% endif %}</td>
+                    <td>
+                        <form method="post" action="{% url 'stokapp:cnc_dosya_agaci_makina_sil' %}" onsubmit="return confirm('Bu makina tanımı silinsin mi?');">
+                            {% csrf_token %}
+                            <input type="hidden" name="makina_id" value="{{ makina.id }}">
+                            <button type="submit" class="btn btn-secondary" style="background:#fee2e2;color:#991b1b;">Sil</button>
+                        </form>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="7" style="text-align:center;color:#6b7280;padding:20px;">Henüz makina tanımı yok.</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

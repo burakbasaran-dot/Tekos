@@ -1,0 +1,115 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Yeni Sigorta Poliçesi Ekle{% endblock %}
+{% block content %}
+{% include "stokapp/includes/tdk_form_styles.html" %}
+
+<div class="tdk-page">
+  <div class="tdk-header">
+    <div>
+      <h1>🛡️ Yeni Sigorta Poliçesi</h1>
+      <p>Varlık ve poliçe bilgilerini kaydedin; bitiş tarihine göre sistem uyarıları oluşturulur.</p>
+    </div>
+    <a href="{% url 'stokapp:sigorta_listesi' %}" class="btn btn-secondary">← Geri</a>
+  </div>
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="tdk-alert {% if message.tags == 'error' %}tdk-alert-error{% elif message.tags == 'warning' %}tdk-alert-warning{% else %}tdk-alert-success{% endif %}">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <form method="post" enctype="multipart/form-data" class="tdk-form-card">
+    {% csrf_token %}
+
+    <section class="tdk-section">
+      <h2 class="tdk-section-title">
+        <span class="tdk-section-icon">🏢</span>
+        Varlık Bilgileri
+      </h2>
+      <div class="tdk-grid">
+        <div class="tdk-field tdk-has-help" data-help="Sigortalanan varlığın adı. Araç, bina, makine veya ekipman tanımı.">
+          <label class="tdk-label required" for="{{ form.varlik_adi.id_for_label }}">{{ form.varlik_adi.label }}</label>
+          {{ form.varlik_adi }}
+          {% if form.varlik_adi.errors %}<div class="tdk-error">{{ form.varlik_adi.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Plaka, şasi no, tapu no veya envanter kodu gibi tanımlayıcı numara.">
+          <label class="tdk-label" for="{{ form.varlik_kimlik_no.id_for_label }}">{{ form.varlik_kimlik_no.label }}</label>
+          {{ form.varlik_kimlik_no }}
+          {% if form.varlik_kimlik_no.errors %}<div class="tdk-error">{{ form.varlik_kimlik_no.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help full" data-help="Varlık hakkında ek açıklama veya not.">
+          <label class="tdk-label" for="{{ form.varlik_aciklama.id_for_label }}">{{ form.varlik_aciklama.label }}</label>
+          {{ form.varlik_aciklama }}
+          {% if form.varlik_aciklama.errors %}<div class="tdk-error">{{ form.varlik_aciklama.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Poliçenin kişisel mi şirket varlığına mı ait olduğunu belirtir.">
+          <label class="tdk-label" for="{{ form.varlik_turu.id_for_label }}">{{ form.varlik_turu.label }}</label>
+          {{ form.varlik_turu }}
+          {% if form.varlik_turu.errors %}<div class="tdk-error">{{ form.varlik_turu.errors }}</div>{% endif %}
+        </div>
+      </div>
+    </section>
+
+    <section class="tdk-section">
+      <h2 class="tdk-section-title">
+        <span class="tdk-section-icon green">📋</span>
+        Poliçe Bilgileri
+      </h2>
+      <div class="tdk-grid">
+        <div class="tdk-field tdk-has-help" data-help="Sigorta poliçe numarası. Benzersiz olmalıdır.">
+          <label class="tdk-label required" for="{{ form.police_no.id_for_label }}">{{ form.police_no.label }}</label>
+          {{ form.police_no }}
+          {% if form.police_no.errors %}<div class="tdk-error">{{ form.police_no.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Poliçeyi düzenleyen sigorta şirketi veya acente adı.">
+          <label class="tdk-label required" for="{{ form.police_duzenleyen_firma.id_for_label }}">{{ form.police_duzenleyen_firma.label }}</label>
+          {{ form.police_duzenleyen_firma }}
+          {% if form.police_duzenleyen_firma.errors %}<div class="tdk-error">{{ form.police_duzenleyen_firma.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Poliçenin yürürlüğe girdiği tarih.">
+          <label class="tdk-label required" for="{{ form.police_baslangic_tarihi.id_for_label }}">{{ form.police_baslangic_tarihi.label }}</label>
+          {{ form.police_baslangic_tarihi }}
+          {% if form.police_baslangic_tarihi.errors %}<div class="tdk-error">{{ form.police_baslangic_tarihi.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Poliçe bitiş tarihi. Yaklaşan süreler dashboard uyarılarında görünür.">
+          <label class="tdk-label required" for="{{ form.police_bitis_tarihi.id_for_label }}">{{ form.police_bitis_tarihi.label }}</label>
+          {{ form.police_bitis_tarihi }}
+          {% if form.police_bitis_tarihi.errors %}<div class="tdk-error">{{ form.police_bitis_tarihi.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Yıllık veya dönemsel poliçe prim tutarı (TRY).">
+          <label class="tdk-label required" for="{{ form.police_prim_bedeli.id_for_label }}">{{ form.police_prim_bedeli.label }}</label>
+          {{ form.police_prim_bedeli }}
+          {% if form.police_prim_bedeli.errors %}<div class="tdk-error">{{ form.police_prim_bedeli.errors }}</div>{% endif %}
+        </div>
+        <div class="tdk-field tdk-has-help" data-help="Prim ödemesinin yapıldığı banka hesabı veya kredi kartı bilgisi.">
+          <label class="tdk-label" for="{{ form.odeme_hesap_kart.id_for_label }}">{{ form.odeme_hesap_kart.label }}</label>
+          {{ form.odeme_hesap_kart }}
+          {% if form.odeme_hesap_kart.errors %}<div class="tdk-error">{{ form.odeme_hesap_kart.errors }}</div>{% endif %}
+        </div>
+      </div>
+    </section>
+
+    <section class="tdk-section">
+      <h2 class="tdk-section-title">
+        <span class="tdk-section-icon amber">📎</span>
+        Poliçe Dosyası
+      </h2>
+      <div class="tdk-grid">
+        <div class="tdk-field tdk-has-help full" data-help="Poliçe PDF dosyasını yükleyin. Arşiv ve denetim için saklanır.">
+          <label class="tdk-label" for="{{ form.police_dosyasi.id_for_label }}">{{ form.police_dosyasi.label }}</label>
+          {{ form.police_dosyasi }}
+          <div class="tdk-help">PDF formatında yükleyebilirsiniz.</div>
+          {% if form.police_dosyasi.errors %}<div class="tdk-error">{{ form.police_dosyasi.errors }}</div>{% endif %}
+        </div>
+      </div>
+    </section>
+
+    <div class="tdk-footer">
+      <a href="{% url 'stokapp:sigorta_listesi' %}" class="btn btn-secondary">İptal</a>
+      <button type="submit" class="btn btn-primary">💾 Kaydet</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

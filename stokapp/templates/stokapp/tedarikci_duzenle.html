@@ -1,0 +1,95 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Tedarikçi Düzenle{% endblock %}
+{% block content %}
+<div class="card" style="margin-bottom: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2>✏️ Tedarikçi Düzenle: {{ tedarikci.ad }}</h2>
+        <a href="{% url 'stokapp:tedarikci_listesi' %}" class="btn btn-secondary">← Geri</a>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+        
+        <div style="max-width: 960px; margin-bottom: 30px;">
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Tedarikçi Adı:</label>
+                {{ form.ad }}
+                {% if form.ad.errors %}
+                    <div style="color: #dc3545; font-size: 12px; margin-top: 5px;">{{ form.ad.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Telefon:</label>
+                {{ form.telefon }}
+                {% if form.telefon.errors %}
+                    <div style="color: #dc3545; font-size: 12px; margin-top: 5px;">{{ form.telefon.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">E-posta:</label>
+                {{ form.email }}
+                {% include "stokapp/includes/cari_email_bilgi_notu.html" with tip="tedarikci" %}
+                {% if form.email.errors %}
+                    <div style="color: #dc3545; font-size: 12px; margin-top: 5px;">{{ form.email.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Adres:</label>
+                {{ form.adres }}
+                {% if form.adres.errors %}
+                    <div style="color: #dc3545; font-size: 12px; margin-top: 5px;">{{ form.adres.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 8px; font-weight: 600;">{{ form.kategoriler.label }}:</label>
+                {{ form.kategoriler }}
+                {% if form.kategoriler.help_text %}
+                    <div style="color: #6b7280; font-size: 12px; margin-top: 5px;">{{ form.kategoriler.help_text }}</div>
+                {% endif %}
+                {% if form.kategoriler.errors %}
+                    <div style="color: #dc3545; font-size: 12px; margin-top: 5px;">{{ form.kategoriler.errors }}</div>
+                {% endif %}
+            </div>
+
+            {% include "stokapp/tedarikci_ilgililer_inline.html" %}
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                <a href="{% url 'stokapp:tedarikci_listesi' %}" class="btn btn-secondary">İptal</a>
+                <button type="submit" class="btn btn-primary">💾 Kaydet</button>
+                <a href="{% url 'stokapp:tedarikci_sil' tedarikci.pk %}" class="btn btn-secondary" style="background: #dc3545; color: white;">🗑️ Sil</a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Stoklar -->
+<div class="card">
+    <h3>📦 Bu Tedarikçideki Stoklar ({{ stoklar.count }})</h3>
+    {% if stoklar %}
+    <table>
+        <thead>
+            <tr>
+                <th>Stok Kodu</th>
+                <th>Ürün Adı</th>
+                <th>Miktar</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for stok in stoklar %}
+            <tr>
+                <td><strong>{{ stok.stok_kodu }}</strong></td>
+                <td>{{ stok.ad }}</td>
+                <td>{{ stok.mevcut_miktar }} {{ stok.birim }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="text-align: center; padding: 20px; color: #6b7280;">Bu tedarikçide henüz stok bulunmuyor.</p>
+    {% endif %}
+</div>
+{% endblock %}

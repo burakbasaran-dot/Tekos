@@ -1,0 +1,53 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Dosya ekle — {{ gm.ad }}{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <a href="{% url 'stokapp:gayrimenkul_detay' gm.pk %}?tab=dosyalar" class="btn" style="background-color: #6b7280; color: white; padding: 8px 16px; text-decoration: none; border-radius: 6px;">
+                ← Geri
+            </a>
+            <h2 style="margin: 0;">📎 Dosya ekle — {{ gm.ad }}</h2>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 15px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da{% else %}background: #d4edda{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" style="max-width: 640px;">
+        {% csrf_token %}
+        {{ form.gayrimenkul }}
+
+        <div style="margin-bottom: 20px;">
+            <label for="{{ form.baslik.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.baslik.label }} *</label>
+            {{ form.baslik }}
+            {% if form.baslik.errors %}<div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.baslik.errors }}</div>{% endif %}
+        </div>
+        <div style="margin-bottom: 20px;">
+            <label for="{{ form.dosya.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.dosya.label }} *</label>
+            {{ form.dosya }}
+            {% if form.dosya.errors %}<div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.dosya.errors }}</div>{% endif %}
+        </div>
+        <div style="margin-bottom: 20px;">
+            <label for="{{ form.aciklama.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.aciklama.label }}</label>
+            {{ form.aciklama }}
+            {% if form.aciklama.errors %}<div style="color: #dc3545; font-size: 14px; margin-top: 5px;">{{ form.aciklama.errors }}</div>{% endif %}
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 30px;">
+            <button type="submit" style="background-color: #22c55e; color: white; padding: 12px 24px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer;">
+                💾 Kaydet
+            </button>
+            <a href="{% url 'stokapp:gayrimenkul_detay' gm.pk %}?tab=dosyalar" style="background-color: #6b7280; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-size: 16px; font-weight: 600; display: inline-block;">
+                İptal
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

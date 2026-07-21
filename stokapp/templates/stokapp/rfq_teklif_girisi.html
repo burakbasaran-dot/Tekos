@@ -1,0 +1,122 @@
+{% extends "stokapp/base.html" %}
+{% block title %}{{ rfq.rfq_no }} — {{ bag.gosterim_adi }} Teklif Girişi{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <div>
+            <h2 style="margin:0;">💰 Teklif Girişi</h2>
+            <div style="color:#6b7280; margin-top:4px;">
+                <strong>{{ bag.gosterim_adi }}</strong> — {{ rfq.rfq_no }} / {{ rfq.baslik }}
+            </div>
+        </div>
+        <a href="{% url 'stokapp:rfq_detay' rfq.pk %}" class="btn btn-secondary" style="padding:8px 14px;">← Geri</a>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding:12px; margin-bottom:15px; border-radius:8px;
+            {% if message.tags == 'error' %}background:#f8d7da; color:#721c24; border-left:4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background:#fff3cd; color:#856404; border-left:4px solid #ffc107;
+            {% else %}background:#d4edda; color:#155724; border-left:4px solid #28a745;{% endif %}">{{ message }}</div>
+        {% endfor %}
+    {% endif %}
+
+    <form method="post" id="teklifForm">
+        {% csrf_token %}
+        <input type="hidden" name="kalemler" id="kalemlerInput">
+
+        <table style="width:100%; border-collapse:collapse; background:white; margin-bottom:20px;">
+            <thead>
+                <tr style="background:#f3f4f6; border-bottom:2px solid #e5e7eb;">
+                    <th style="padding:10px; text-align:left;">#</th>
+                    <th style="padding:10px; text-align:left;">Kalem</th>
+                    <th style="padding:10px; text-align:right;">Miktar</th>
+                    <th style="padding:10px; text-align:right;">Birim Fiyat</th>
+                    <th style="padding:10px; text-align:left;">Para Birimi</th>
+                    <th style="padding:10px; text-align:right;">Teslim Süresi (gün)</th>
+                    <th style="padding:10px; text-align:left;">Teslim Tarihi</th>
+                    <th style="padding:10px; text-align:left;">Not</th>
+                </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+        </table>
+
+        <div style="display:flex; gap:10px; align-items:flex-start; margin-bottom:20px;">
+            <div style="flex:1;">
+                <label style="display:block; margin-bottom:6px; font-weight:600;">Genel Not (tedarikçinin bu teklif talebi için iletmek istediği genel not)</label>
+                <textarea name="genel_not" rows="3" style="width:100%; padding:8px; border:1px solid #d1d5db; border-radius:6px;">{{ genel_not }}</textarea>
+            </div>
+            <div style="flex:0 0 280px; background:#fff7ed; padding:14px; border-radius:8px; border-left:4px solid #f59e0b; font-size:13px;">
+                <strong>İpucu</strong><br>
+                Boş bıraktığınız kalemler değerlendirmeye girmez. Tedarikçinin verdiği fiyat ve termini girip kaydedin.
+                Tüm tedarikçilerden teklif girişi yapıldığında tedarikçi teklif talebi otomatik <em>Değerlendirmede</em>'ye geçer.
+            </div>
+        </div>
+
+        <div style="display:flex; gap:10px; justify-content:flex-end;">
+            <a href="{% url 'stokapp:rfq_detay' rfq.pk %}" class="btn btn-secondary" style="padding:10px 20px;">İptal</a>
+            <button type="button" onclick="kaydet()" class="btn btn-primary" style="padding:10px 20px; background:#22c55e;">💾 Kaydet</button>
+        </div>
+    </form>
+</div>
+
+<script>
+const KALEMLER = {{ kalemler_initial_json|safe }};
+const PARA_BIRIMLERI = [
+    {% for kod, ad in para_birimleri %}["{{ kod }}", "{{ ad|escapejs }}"]{% if not forloop.last %},{% endif %}
+    {% endfor %}
+];
+
+function formatMiktarDisplay(v) {
+    if (v === null || v === undefined || v === '') return '';
+    const n = Number(String(v).replace(',', '.'));
+    if (!isFinite(n)) return String(v);
+    if (Math.abs(n - Math.round(n)) < 1e-9) return String(Math.round(n));
+    return String(n).replace(/(\.\d*?[1-9])0+$/, '$1').replace(/\.0+$/, '');
+}
+
+function pbOptions(selected) {
+    return PARA_BIRIMLERI.map(([kod, ad]) =>
+        `<option value="${kod}" ${kod === selected ? 'selected' : ''}>${kod}</option>`).join('');
+}
+
+function satir(k, idx) {
+    return `<tr data-id="${k.id}">
+        <td style="padding:8px;">${idx + 1}</td>
+        <td style="padding:8px;">
+            <strong>${k.kalem_adi}</strong>
+            ${k.stok_kodu ? `<br><small style="color:#6b7280;">${k.stok_kodu}</small>` : ''}
+            ${k.teknik_notlar ? `<br><small style="color:#6b7280;">${k.teknik_notlar}</small>` : ''}
+        </td>
+        <td style="padding:8px; text-align:right;">${formatMiktarDisplay(k.miktar)} ${k.birim}</td>
+        <td style="padding:8px; text-align:right;"><input type="number" step="0.0001" min="0" class="f-fiyat" value="${k.birim_fiyat || ''}" style="width:120px; padding:6px; text-align:right;"></td>
+        <td style="padding:8px;"><select class="f-pb" style="padding:6px;">${pbOptions(k.para_birimi || 'TRY')}</select></td>
+        <td style="padding:8px; text-align:right;"><input type="number" step="1" min="0" class="f-sure" value="${k.teslim_suresi_gun || ''}" style="width:80px; padding:6px; text-align:right;"></td>
+        <td style="padding:8px;"><input type="date" class="f-tarih" value="${k.teslim_tarihi || ''}" style="padding:6px;"></td>
+        <td style="padding:8px;"><input type="text" class="f-not" value="${k.notlar || ''}" style="width:100%; padding:6px;" placeholder="-"></td>
+    </tr>`;
+}
+
+function render() {
+    document.getElementById('tbody').innerHTML = KALEMLER.map(satir).join('');
+}
+
+function kaydet() {
+    const out = [];
+    document.querySelectorAll('#tbody tr').forEach(tr => {
+        out.push({
+            id: parseInt(tr.dataset.id),
+            birim_fiyat: tr.querySelector('.f-fiyat').value || null,
+            para_birimi: tr.querySelector('.f-pb').value,
+            teslim_suresi_gun: tr.querySelector('.f-sure').value || null,
+            teslim_tarihi: tr.querySelector('.f-tarih').value || null,
+            notlar: tr.querySelector('.f-not').value || '',
+        });
+    });
+    document.getElementById('kalemlerInput').value = JSON.stringify(out);
+    document.getElementById('teklifForm').submit();
+}
+
+document.addEventListener('DOMContentLoaded', render);
+</script>
+{% endblock %}

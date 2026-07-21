@@ -1,0 +1,54 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Teklif gönder — alıcılar{% endblock %}
+{% block content %}
+<div class="card" style="max-width: 720px; margin: 0 auto;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
+        <h2 style="margin:0;">📧 Teklif — alıcı seçimi</h2>
+        <a href="{% url 'stokapp:teklif_detay' teklif.pk %}" class="btn btn-secondary">← Teklife dön</a>
+    </div>
+    <p style="color:#374151; font-size:14px;">
+        Teklif: <strong>{{ teklif.teklif_no }}</strong> — {{ teklif.ad }}
+        {% if teklif.musteri %}<br/>Müşteri: {{ teklif.musteri.ad }}{% endif %}
+    </p>
+    {% if not teklif.musteri %}
+    <div style="padding:12px; background:#fef3c7; border-radius:8px; margin-bottom:16px; color:#92400e;">
+        Kayıtlı müşteri seçili değil; alıcı listesi oluşturulamaz. Teklifi düzenleyerek müşteri bağlayın.
+    </div>
+    {% elif not choices %}
+    <div style="padding:12px; background:#fef3c7; border-radius:8px; margin-bottom:16px; color:#92400e;">
+        Müşteri kartında firma veya ilgili kişi e-postası yok.
+        {% if teklif.musteri %}<a href="{% url 'stokapp:musteri_duzenle' teklif.musteri.pk %}">Müşteriyi düzenle</a>{% endif %}
+    </div>
+    {% else %}
+    <p style="font-size: 13px; color: #6b7280;">PDF teklifini göndereceğiniz alıcıları işaretleyin. İsterseniz CC ve BCC ekleyin.</p>
+    {% endif %}
+
+    <form method="post" style="margin-top: 16px;">
+        {% csrf_token %}
+        {% if choices %}
+        <div style="border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; margin-bottom: 16px;">
+            {% for c in choices %}
+            <label style="display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-bottom: 1px solid #f3f4f6; cursor: pointer; margin: 0;">
+                <input type="checkbox" name="alici_keys" value="{{ c.key }}" style="margin-top: 4px;"{% if c.key in selected_keys %} checked{% endif %}>
+                <span style="font-size: 14px; line-height: 1.45;">{{ c.label }}</span>
+            </label>
+            {% endfor %}
+        </div>
+        {% endif %}
+        <div style="margin-bottom:14px;">
+            <label style="display:block; font-weight:600; font-size:13px; margin-bottom:6px;">CC (isteğe bağlı)</label>
+            <input type="text" name="cc" value="{{ cc_value|default:'' }}" style="width:100%; padding:10px; border:1px solid #d1d5db; border-radius:8px;" placeholder="mail1@firma.com; mail2@firma.com" />
+        </div>
+        <div style="margin-bottom:14px;">
+            <label style="display:block; font-weight:600; font-size:13px; margin-bottom:6px;">BCC (isteğe bağlı)</label>
+            <input type="text" name="bcc" value="{{ bcc_value|default:'' }}" style="width:100%; padding:10px; border:1px solid #d1d5db; border-radius:8px;" placeholder="gizli@firma.com" />
+        </div>
+        <div style="display:flex; gap:12px; justify-content:flex-end; flex-wrap:wrap;">
+            <a href="{% url 'stokapp:teklif_pdf_indir' teklif.pk %}" class="btn btn-secondary" target="_blank">PDF önizle</a>
+            {% if choices %}
+            <button type="submit" class="btn btn-primary">Devam — özet ve gönder</button>
+            {% endif %}
+        </div>
+    </form>
+</div>
+{% endblock %}

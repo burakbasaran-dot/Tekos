@@ -1,0 +1,78 @@
+{% extends "stokapp/base.html" %}
+{% block title %}{{ product.stok_kodu }} — Kontrol{% endblock %}
+{% block content %}
+<style>
+.uk-wrap { max-width: 1000px; margin: 0 auto; }
+.uk-bc { font-size: 13px; color: #64748b; margin-bottom: 20px; }
+.uk-bc a { color: #2563eb; text-decoration: none; }
+.uk-title { margin: 0 0 8px; font-size: 24px; }
+.uk-sub { color: #64748b; margin-bottom: 24px; }
+.uk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+.uk-bilesen {
+  background: #fff; border-radius: 12px; padding: 18px;
+  box-shadow: 0 1px 3px rgba(0,0,0,.08); border: 1px solid #e2e8f0;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.uk-bilesen h4 { margin: 0; font-size: 15px; }
+.uk-bilesen .kod { font-size: 12px; color: #64748b; }
+.uk-meta { font-size: 12px; color: #475569; }
+.uk-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; }
+.uk-actions .btn { flex: 1; min-width: 100px; text-align: center; padding: 12px 10px; font-size: 14px; }
+.uk-actions-secondary { display: flex; gap: 8px; flex-wrap: wrap; padding-top: 8px; border-top: 1px solid #f1f5f9; }
+.uk-actions-secondary form { flex: 1; min-width: 120px; display: flex; }
+.uk-actions-secondary .btn { flex: 1; padding: 8px 10px; font-size: 13px; text-align: center; }
+.uk-btn-danger { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; cursor: pointer; border-radius: 6px; }
+.uk-btn-danger:hover { background: #fee2e2; }
+.uk-no-sablon { border-style: dashed; background: #fafafa; }
+</style>
+<div class="uk-wrap">
+  <p class="uk-bc"><a href="{% url 'stokapp:uretim_kontrol_ana' %}">← Üretim Kontrol</a></p>
+  <h1 class="uk-title">{{ product.stok_kodu }}</h1>
+  <p class="uk-sub">{{ product.ad }} — {{ sablonlu_sayisi }}/{{ toplam_bilesen }} bileşende kontrol şablonu</p>
+
+  {% if not bilesenler %}
+  <div class="card">
+    <p>Bu ürünün reçetesinde bileşen bulunamadı. Önce reçete tanımlayın.</p>
+    <a href="{% url 'stokapp:recete_listesi' %}" class="btn btn-secondary">Reçetelere git</a>
+  </div>
+  {% else %}
+  <div class="uk-grid">
+    {% for b in bilesenler %}
+    <div class="uk-bilesen {% if not b.has_template %}uk-no-sablon{% endif %}">
+      <div>
+        <div class="kod">{{ b.kod }}</div>
+        <h4>{{ b.ad }}</h4>
+      </div>
+      {% if b.has_template %}
+      <p class="uk-meta">Şablon <strong>{{ b.revision_no }}</strong> · {{ b.step_count }} kontrol adımı{% if b.has_sessions %} · kayıtlı kontrol var{% endif %}</p>
+      <div class="uk-actions">
+        <a href="{% url 'stokapp:uretim_kontrol_baslat' %}?plan={{ b.plan.pk }}" class="btn btn-primary">▶ Kontrol Başlat</a>
+        <a href="{% url 'stokapp:uretim_kontrol_sablon' b.plan.pk %}" class="btn btn-secondary">Adımlar</a>
+      </div>
+      <div class="uk-actions-secondary">
+        <a href="{% url 'stokapp:uretim_kontrol_plan_duzenle' b.plan.pk %}" class="btn btn-secondary">✏️ Şablonu Değiştir</a>
+        <form method="post" action="{% url 'stokapp:uretim_kontrol_plan_sil' b.plan.pk %}" onsubmit="return ukSablonSilOnay({{ b.has_sessions|yesno:'true,false' }}, '{{ b.kod|escapejs }}');">
+          {% csrf_token %}
+          <button type="submit" class="btn uk-btn-danger">🗑️ Şablonu Sil</button>
+        </form>
+      </div>
+      {% else %}
+      <p class="uk-meta">Kontrol şablonu yok</p>
+      <div class="uk-actions">
+        <a href="{% url 'stokapp:uretim_kontrol_plan_olustur' %}?product={{ product.pk }}&sub_part={{ b.id }}" class="btn btn-secondary">➕ Şablon Oluştur</a>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+<script>
+function ukSablonSilOnay(hasSessions, kod) {
+  if (hasSessions) {
+    return confirm('"' + kod + '" şablonunda kayıtlı kontroller var.\n\nŞablon arşivlenecek (ölçüm geçmişi korunur). Devam edilsin mi?');
+  }
+  return confirm('"' + kod + '" kontrol şablonu ve tüm adımları kalıcı olarak silinecek.\n\nDevam edilsin mi?');
+}
+</script>
+{% endblock %}

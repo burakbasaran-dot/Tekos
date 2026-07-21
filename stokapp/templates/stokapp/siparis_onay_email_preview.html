@@ -1,0 +1,39 @@
+{% extends "stokapp/base.html" %}
+{% load currency_filters %}
+{% block title %}Sipariş Onay Maili Önizleme{% endblock %}
+{% block content %}
+<div class="card" style="max-width: 900px; margin: 0 auto;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+    <h2 style="margin:0;">Sipariş Onay Maili Önizleme</h2>
+    <a href="{% url 'stokapp:siparis_listesi' %}" class="btn btn-secondary">← Geri</a>
+  </div>
+
+  <div style="margin-bottom: 12px; color:#6b7280;">
+    Alıcı e-posta adresleri (`;` ile çoklu): 
+  </div>
+  <div style="margin-bottom: 16px;">
+    <input
+      type="text"
+      name="to_emails"
+      form="onayMailForm"
+      value="{{ recipient_emails|default:'' }}"
+      placeholder="ornek1@firma.com;ornek2@firma.com"
+      style="width: 100%; max-width: 640px; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;"
+    />
+  </div>
+
+  <div style="border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; background: #ffffff;">
+    {% include "stokapp/emails/siparis_onay_email.html" %}
+  </div>
+
+  <form id="onayMailForm" method="post" style="margin-top: 16px; display:flex; gap:10px;">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-primary" style="background-color:#22c55e; border-color:#22c55e;">
+      Gönder
+    </button>
+    <button type="submit" name="skip_email" value="1" class="btn btn-secondary">
+      Göndermeden Onayla
+    </button>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,141 @@
+{% extends "stokapp/base.html" %}
+{% load currency_filters %}
+{% block title %}Maliyet Düzenle - {{ siparis.siparis_numarasi }}{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h2 style="margin: 0;">Maliyet Düzenle: {{ siparis.siparis_numarasi }}</h2>
+        <a href="{% url 'stokapp:siparis_maliyetleri' siparis.pk %}" class="btn btn-secondary" style="padding: 8px 16px;">← Geri</a>
+    </div>
+    
+    {% if messages %}
+        {% for message in messages %}
+        <div style="padding: 12px; margin-bottom: 15px; border-radius: 8px;
+            {% if message.tags == 'error' %}background: #f8d7da; color: #721c24; border-left: 4px solid #dc3545;
+            {% elif message.tags == 'warning' %}background: #fff3cd; color: #856404; border-left: 4px solid #ffc107;
+            {% else %}background: #d4edda; color: #155724; border-left: 4px solid #28a745;{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+    
+    <div style="background-color: #f9fafb; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Sipariş Numarası</label>
+            <div style="font-size: 16px; font-weight: 600; color: #111827;">{{ siparis.siparis_numarasi }}</div>
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Maliyet Tipi</label>
+            <div style="font-size: 16px; color: #111827;">
+                <span style="padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600;
+                    {% if maliyet.maliyet_tipi == 'MALZEME' %}background-color: #3b82f6; color: white;{% else %}background-color: #f59e0b; color: white;{% endif %}">
+                    {{ maliyet.get_maliyet_tipi_display }}
+                </span>
+            </div>
+        </div>
+    </div>
+    
+    <form method="post">
+        {% csrf_token %}
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div>
+                <div style="margin-bottom: 15px;">
+                    <label for="{{ form.aciklama.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.aciklama.label }}</label>
+                    {{ form.aciklama }}
+                    {% if form.aciklama.errors %}
+                    <div style="color: #dc2626; font-size: 12px; margin-top: 5px;">{{ form.aciklama.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label for="{{ form.miktar.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.miktar.label }}</label>
+                    {{ form.miktar }}
+                    {% if form.miktar.errors %}
+                    <div style="color: #dc2626; font-size: 12px; margin-top: 5px;">{{ form.miktar.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label for="{{ form.birim.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.birim.label }}</label>
+                    {{ form.birim }}
+                    {% if form.birim.errors %}
+                    <div style="color: #dc2626; font-size: 12px; margin-top: 5px;">{{ form.birim.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label for="{{ form.kayit_tarihi.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.kayit_tarihi.label }}</label>
+                    {{ form.kayit_tarihi }}
+                    {% if form.kayit_tarihi.errors %}
+                    <div style="color: #dc2626; font-size: 12px; margin-top: 5px;">{{ form.kayit_tarihi.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div>
+                <div style="margin-bottom: 15px;">
+                    <label for="{{ form.birim_fiyat.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.birim_fiyat.label }}</label>
+                    {{ form.birim_fiyat }}
+                    {% if form.birim_fiyat.errors %}
+                    <div style="color: #dc2626; font-size: 12px; margin-top: 5px;">{{ form.birim_fiyat.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label for="{{ form.para_birimi.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.para_birimi.label }}</label>
+                    {{ form.para_birimi }}
+                    {% if form.para_birimi.errors %}
+                    <div style="color: #dc2626; font-size: 12px; margin-top: 5px;">{{ form.para_birimi.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label for="{{ form.aciklama_detay.id_for_label }}" style="display: block; margin-bottom: 5px; font-weight: 600;">{{ form.aciklama_detay.label }}</label>
+                    {{ form.aciklama_detay }}
+                    {% if form.aciklama_detay.errors %}
+                    <div style="color: #dc2626; font-size: 12px; margin-top: 5px;">{{ form.aciklama_detay.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div style="background-color: #f0f9ff; padding: 15px; border-radius: 8px; margin-top: 20px;">
+                    <div style="margin-bottom: 10px;">
+                        <label style="display: block; margin-bottom: 5px; font-weight: 600; color: #6b7280; font-size: 12px;">Hesaplanan Toplam</label>
+                        <div style="font-size: 18px; font-weight: 600; color: #1e40af;" id="hesaplananToplam">0,00</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 30px; padding-top: 20px; border-top: 2px solid #e5e7eb;">
+            <a href="{% url 'stokapp:siparis_maliyetleri' siparis.pk %}" class="btn btn-secondary" style="padding: 10px 20px;">İptal</a>
+            <button type="submit" class="btn btn-primary" style="padding: 10px 20px;">Kaydet</button>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const miktarInput = document.getElementById('{{ form.miktar.id_for_label }}');
+    const birimFiyatInput = document.getElementById('{{ form.birim_fiyat.id_for_label }}');
+    const toplamSpan = document.getElementById('hesaplananToplam');
+    
+    function hesaplaToplam() {
+        const miktar = parseFloat(miktarInput.value) || 0;
+        const birimFiyat = parseFloat(birimFiyatInput.value) || 0;
+        const toplam = miktar * birimFiyat;
+        
+        // Format: 1.234,56
+        const formatted = toplam.toLocaleString('tr-TR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+        toplamSpan.textContent = formatted;
+    }
+    
+    miktarInput.addEventListener('input', hesaplaToplam);
+    birimFiyatInput.addEventListener('input', hesaplaToplam);
+    hesaplaToplam(); // İlk hesaplama
+});
+</script>
+{% endblock %}
+

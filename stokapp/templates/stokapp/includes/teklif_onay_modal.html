@@ -1,0 +1,196 @@
+{# Teklif onayı — seçili kalemlerle sipariş; liste ve detayda {% include %} ile kullanılır #}
+<style>
+.tf-modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 1000; align-items: center; justify-content: center; }
+.tf-modal-bg.tf-open { display: flex; }
+.tf-modal { background: #fff; border-radius: 12px; padding: 24px; max-width: 760px; width: 94%; max-height: 90vh; overflow: auto; box-shadow: 0 20px 50px rgba(0,0,0,.2); }
+#tfOnayModal.tf-modal-bg.tf-open { align-items: flex-start; justify-content: center; padding-top: 48px; }
+.tf-onay-kalem-table { width: 100%; border-collapse: collapse; font-size: 12px; margin: 12px 0 16px; }
+.tf-onay-kalem-table th, .tf-onay-kalem-table td { padding: 8px 6px; border-bottom: 1px solid #e5e7eb; text-align: left; vertical-align: top; }
+.tf-onay-kalem-table th { background: #f8fafc; font-weight: 600; }
+.tf-onay-kalem-table tr.tf-aktarildi td { color: #94a3b8; background: #f9fafb; }
+.tf-onay-ozet { font-size: 13px; color: #475569; margin: 8px 0 0; }
+.tf-onay-loading { color: #64748b; font-size: 13px; padding: 12px 0; }
+.tf-onay-error { color: #b91c1c; font-size: 13px; padding: 12px 0; }
+</style>
+<div id="tfOnayModal" class="tf-modal-bg">
+    <div class="tf-modal">
+        <h3 style="margin-top:0;">Teklifi onayla — kalem seçimi</h3>
+        <p style="font-size:13px;color:#64748b;margin-top:0;line-height:1.45;">
+            Müşterinin sipariş ettiği kalemleri işaretleyin. Yalnızca seçili satırlar siparişe aktarılır;
+            diğer kalemler teklifte beklemeye devam eder.
+        </p>
+        <div id="tfOnayLoading" class="tf-onay-loading" style="display:none;">Kalemler yükleniyor…</div>
+        <div id="tfOnayError" class="tf-onay-error" style="display:none;"></div>
+        <form id="tfOnayForm" method="post" action="" enctype="multipart/form-data" style="display:none;">
+            {% csrf_token %}
+            <input type="hidden" name="onay_error_redirect" value="{{ teklif_onay_error_redirect|default:'detail' }}" />
+            <div style="overflow-x:auto;">
+                <table class="tf-onay-kalem-table">
+                    <thead>
+                        <tr>
+                            <th style="width:36px;">
+                                <input type="checkbox" id="tfOnaySelectAll" title="Bekleyenleri seç" />
+                            </th>
+                            <th>Ürün / Açıklama</th>
+                            <th>Miktar</th>
+                            <th>Birim fiyat</th>
+                            <th>Satır</th>
+                            <th>Durum</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tfOnayKalemBody"></tbody>
+                </table>
+            </div>
+            <div id="tfOnayOzet" class="tf-onay-ozet"></div>
+            <label style="font-weight:600;font-size:13px;display:block;margin-top:16px;">Sipariş numarası</label>
+            <span style="font-size:11px;color:#94a3b8;">İsteğe bağlı — boş bırakılırsa otomatik numara (ör. SO-…) atanır.</span>
+            <input type="text" name="siparis_numarasi" maxlength="50" autocomplete="off"
+                placeholder="Boş bırakın veya örn. müşteri sipariş no yazın"
+                style="width:100%;padding:10px;margin-top:8px;margin-bottom:16px;border-radius:8px;border:1px solid #d1d5db;box-sizing:border-box;" />
+            <label style="font-weight:600;font-size:13px;display:block;">Sipariş mektubu (PDF)</label>
+            <span style="font-size:11px;color:#94a3b8;">İsteğe bağlı — yüklerseniz hem teklifte hem oluşan siparişte saklanır.</span>
+            <input type="file" name="siparis_mektubu" accept=".pdf,application/pdf"
+                style="width:100%;padding:10px;margin-top:8px;margin-bottom:16px;border-radius:8px;border:1px solid #d1d5db;box-sizing:border-box;background:#fff;" />
+            <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
+                <button type="button" class="btn btn-secondary" id="tfOnayCancel">Vazgeç</button>
+                <button type="submit" class="btn btn-primary" id="tfOnaySubmit" style="background:#22c55e;border:none;">Seçili kalemleri onayla</button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+(function(){
+  var onayUrlTmpl = "{% url 'stokapp:teklif_onayla' 987654321 %}".replace('987654321', '__PK__');
+  var kalemlerUrlTmpl = "{% url 'stokapp:teklif_onay_kalemleri' 987654321 %}".replace('987654321', '__PK__');
+  var modal = document.getElementById('tfOnayModal');
+  var form = document.getElementById('tfOnayForm');
+  var loadingEl = document.getElementById('tfOnayLoading');
+  var errorEl = document.getElementById('tfOnayError');
+  var tbody = document.getElementById('tfOnayKalemBody');
+  var ozetEl = document.getElementById('tfOnayOzet');
+  var selectAll = document.getElementById('tfOnaySelectAll');
+  var submitBtn = document.getElementById('tfOnaySubmit');
+  if (!modal || !form) return;
+
+  function fmtNum(val, dec) {
+    var n = parseFloat(val);
+    if (isNaN(n)) return val;
+    return n.toLocaleString('tr-TR', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+  }
+
+  function updateOzet() {
+    var checked = form.querySelectorAll('input[name="kalem_ids"]:checked:not(:disabled)');
+    var total = 0;
+    checked.forEach(function(cb) {
+      total += parseFloat(cb.getAttribute('data-satir-toplam') || '0') || 0;
+    });
+    ozetEl.textContent = checked.length
+      ? (checked.length + ' kalem seçildi — seçili satır toplamı (KDV dahil): ' + fmtNum(total, 2))
+      : 'Siparişe aktarılacak kalem seçin.';
+    submitBtn.disabled = checked.length === 0;
+  }
+
+  function renderKalemler(data) {
+    tbody.innerHTML = '';
+    var bekleyen = 0;
+    (data.kalemler || []).forEach(function(k) {
+      var tr = document.createElement('tr');
+      if (k.siparise_aktarildi) tr.className = 'tf-aktarildi';
+      else bekleyen += 1;
+
+      var tdChk = document.createElement('td');
+      if (!k.siparise_aktarildi) {
+        var cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.name = 'kalem_ids';
+        cb.value = k.id;
+        cb.checked = true;
+        cb.setAttribute('data-satir-toplam', k.satir_toplam);
+        cb.addEventListener('change', updateOzet);
+        tdChk.appendChild(cb);
+      }
+      tr.appendChild(tdChk);
+
+      var tdLabel = document.createElement('td');
+      tdLabel.textContent = k.label;
+      tr.appendChild(tdLabel);
+
+      var tdMiktar = document.createElement('td');
+      tdMiktar.textContent = fmtNum(k.miktar, 3) + ' ' + (k.birim || '');
+      tr.appendChild(tdMiktar);
+
+      var tdFiyat = document.createElement('td');
+      tdFiyat.textContent = fmtNum(k.birim_fiyat, 2) + ' ' + (k.para_birimi || '');
+      tr.appendChild(tdFiyat);
+
+      var tdSatir = document.createElement('td');
+      tdSatir.textContent = fmtNum(k.satir_toplam, 2) + ' ' + (k.para_birimi || '');
+      tr.appendChild(tdSatir);
+
+      var tdDurum = document.createElement('td');
+      tdDurum.textContent = k.siparise_aktarildi ? 'Siparişe aktarıldı' : 'Bekliyor';
+      tr.appendChild(tdDurum);
+
+      tbody.appendChild(tr);
+    });
+
+    selectAll.checked = bekleyen > 0;
+    selectAll.disabled = bekleyen === 0;
+    submitBtn.disabled = bekleyen === 0;
+    if (bekleyen === 0) {
+      ozetEl.textContent = 'Bu teklifte siparişe aktarılacak bekleyen kalem kalmadı.';
+    } else {
+      updateOzet();
+    }
+  }
+
+  selectAll.addEventListener('change', function() {
+    form.querySelectorAll('input[name="kalem_ids"]:not(:disabled)').forEach(function(cb) {
+      cb.checked = selectAll.checked;
+    });
+    updateOzet();
+  });
+
+  function openModal(pk) {
+    form.action = onayUrlTmpl.replace('__PK__', pk);
+    var inp = form.querySelector('[name=siparis_numarasi]');
+    if (inp) inp.value = '';
+    form.style.display = 'none';
+    loadingEl.style.display = 'block';
+    errorEl.style.display = 'none';
+    errorEl.textContent = '';
+    tbody.innerHTML = '';
+    modal.classList.add('tf-open');
+
+    fetch(kalemlerUrlTmpl.replace('__PK__', pk), {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+      .then(function(r) { return r.json().then(function(j) { return { ok: r.ok, j: j }; }); })
+      .then(function(res) {
+        loadingEl.style.display = 'none';
+        if (!res.ok) {
+          errorEl.textContent = (res.j && res.j.error) ? res.j.error : 'Kalemler yüklenemedi.';
+          errorEl.style.display = 'block';
+          return;
+        }
+        form.style.display = 'block';
+        renderKalemler(res.j);
+      })
+      .catch(function() {
+        loadingEl.style.display = 'none';
+        errorEl.textContent = 'Kalemler yüklenirken bir hata oluştu.';
+        errorEl.style.display = 'block';
+      });
+  }
+
+  document.querySelectorAll('.teklif-onay-open').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var pk = btn.getAttribute('data-pk');
+      if (!pk) return;
+      openModal(pk);
+    });
+  });
+  document.getElementById('tfOnayCancel').addEventListener('click', function(){ modal.classList.remove('tf-open'); });
+  modal.addEventListener('click', function(e){ if (e.target === modal) modal.classList.remove('tf-open'); });
+})();
+</script>

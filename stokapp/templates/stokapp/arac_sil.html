@@ -1,0 +1,47 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Araç Sil - {{ arac.plaka }}{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="max-width: 600px; margin: 0 auto;">
+        <div style="text-align: center; margin-bottom: 30px;">
+            <div style="font-size: 64px; margin-bottom: 16px;">⚠️</div>
+            <h2 style="margin: 0; color: #dc3545;">Araç Sil</h2>
+        </div>
+
+        <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 20px; margin-bottom: 30px;">
+            <p style="margin: 0; color: #991b1b; font-size: 16px;">
+                <strong>{{ arac.plaka }}</strong> plakalı aracı silmek istediğinizden emin misiniz?
+            </p>
+            <p style="margin: 10px 0 0 0; color: #991b1b; font-size: 14px;">
+                Bu işlem geri alınamaz. Araç ile ilgili tüm belgeler de silinecektir.
+            </p>
+        </div>
+
+        <div style="background: #f9fafb; border-radius: 8px; padding: 20px; margin-bottom: 30px;">
+            <div style="margin-bottom: 12px;">
+                <strong>Plaka:</strong> {{ arac.plaka }}
+            </div>
+            <div style="margin-bottom: 12px;">
+                <strong>Marka/Model:</strong> {{ arac.marka }} {{ arac.model }}
+            </div>
+            <div style="margin-bottom: 12px;">
+                <strong>Yıl:</strong> {{ arac.yil }}
+            </div>
+            <div>
+                <strong>Belge Sayısı:</strong> {{ arac.belgeler.count }}
+            </div>
+        </div>
+
+        <form method="post" style="display: flex; gap: 10px; justify-content: center;">
+            {% csrf_token %}
+            <button type="submit" style="background-color: #ef4444; color: white; padding: 12px 24px; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer;">
+                🗑️ Evet, Sil
+            </button>
+            <a href="{% url 'stokapp:arac_listesi' %}" style="background-color: #6b7280; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-size: 16px; font-weight: 600; display: inline-block;">
+                ❌ İptal
+            </a>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

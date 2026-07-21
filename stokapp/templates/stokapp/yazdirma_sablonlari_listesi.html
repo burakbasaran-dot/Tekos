@@ -1,0 +1,202 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Yazdırma Şablonları{% endblock %}
+{% block content %}
+
+<style>
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #e5e7eb;
+  }
+  
+  .page-header h1 {
+    font-size: 32px;
+    font-weight: 700;
+    color: #111827;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  
+  .sablon-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 24px;
+    margin-top: 30px;
+  }
+  
+  .sablon-card {
+    background: #fff;
+    border: 2px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .sablon-card:hover {
+    border-color: #2ecc71;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+  }
+  
+  .sablon-icon {
+    font-size: 48px;
+    text-align: center;
+    margin-bottom: 8px;
+  }
+  
+  .sablon-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #111827;
+    text-align: center;
+    margin-bottom: 8px;
+  }
+  
+  .sablon-description {
+    font-size: 14px;
+    color: #6b7280;
+    text-align: center;
+    margin-bottom: 16px;
+  }
+  
+  .sablon-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    margin: 0 auto;
+  }
+  
+  .sablon-status.active {
+    background: #d1fae5;
+    color: #065f46;
+  }
+  
+  .sablon-status.inactive {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+  
+  .sablon-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: auto;
+  }
+  
+  .btn {
+    flex: 1;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-weight: 600;
+    text-decoration: none;
+    text-align: center;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  
+  .btn-primary {
+    background: #2ecc71;
+    color: white;
+  }
+  
+  .btn-primary:hover {
+    background: #27ae60;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
+  }
+  
+  .btn-secondary {
+    background: #f3f4f6;
+    color: #374151;
+    border: 2px solid #e5e7eb;
+  }
+  
+  .btn-secondary:hover {
+    background: #e5e7eb;
+  }
+</style>
+
+<div class="page-header">
+  <h1>
+    <span>🖨️</span>
+    <span>Yazdırma Şablonları</span>
+  </h1>
+</div>
+
+<div class="sablon-grid">
+  {% for sablon in sablonlar %}
+  <div class="sablon-card">
+    <div class="sablon-icon">
+      {% if sablon.tip == 'TEKLIF_TALEBI' %}
+        📋
+      {% elif sablon.tip == 'SIPARIS' %}
+        📝
+      {% elif sablon.tip == 'MALZEME_LISTESI' %}
+        📦
+      {% elif sablon.tip == 'IS_EMRI' %}
+        🔧
+      {% elif sablon.tip == 'BARKOD' %}
+        🏷️
+      {% endif %}
+    </div>
+    
+    <div class="sablon-title">{{ sablon.get_tip_display }}</div>
+    
+    <div class="sablon-description">
+      {% if sablon.tip == 'TEKLIF_TALEBI' %}
+        Müşterilere gönderilecek teklif talebi formu şablonu
+      {% elif sablon.tip == 'SIPARIS' %}
+        Sipariş formu yazdırma şablonu
+      {% elif sablon.tip == 'MALZEME_LISTESI' %}
+        Malzeme listesi yazdırma şablonu
+      {% elif sablon.tip == 'IS_EMRI' %}
+        İş emri yazdırma şablonu
+      {% elif sablon.tip == 'BARKOD' %}
+        Barkod etiket baskı şablonu
+      {% endif %}
+    </div>
+    
+    <div style="text-align: center;">
+      <span class="sablon-status {% if sablon.aktif %}active{% else %}inactive{% endif %}">
+        <span>{% if sablon.aktif %}✓{% else %}✕{% endif %}</span>
+        <span>{% if sablon.aktif %}Aktif{% else %}Pasif{% endif %}</span>
+      </span>
+    </div>
+    
+    <div class="sablon-actions">
+      <a href="{% url 'stokapp:yazdirma_sablonu_duzenle' sablon.pk %}" class="btn btn-primary">
+        <span>✏️</span>
+        <span>Düzenle</span>
+      </a>
+      <a href="{% url 'stokapp:yazdirma_sablonu_onizleme' sablon.pk %}" class="btn btn-secondary" target="_blank">
+        <span>👁️</span>
+        <span>Önizle</span>
+      </a>
+    </div>
+  </div>
+  {% empty %}
+  <div style="grid-column: 1 / -1; text-align: center; padding: 60px; color: #6b7280;">
+    <div style="font-size: 48px; margin-bottom: 16px;">📄</div>
+    <div style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">Henüz şablon bulunmuyor</div>
+    <div style="font-size: 14px;">Şablonlar otomatik olarak oluşturulacaktır.</div>
+  </div>
+  {% endfor %}
+</div>
+
+{% endblock %}
+

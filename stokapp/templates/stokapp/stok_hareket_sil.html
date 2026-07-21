@@ -1,0 +1,177 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Stok Hareketi Sil{% endblock %}
+{% block content %}
+
+<style>
+  .delete-card {
+    background: #fff;
+    border: 2px solid #fee2e2;
+    border-radius: 16px;
+    padding: 32px;
+    max-width: 600px;
+    margin: 40px auto;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+  
+  .delete-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #fee2e2;
+  }
+  
+  .delete-icon {
+    font-size: 48px;
+  }
+  
+  .delete-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #dc2626;
+    margin: 0;
+  }
+  
+  .delete-info {
+    background: #f9fafb;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+  }
+  
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  .info-row:last-child {
+    border-bottom: none;
+  }
+  
+  .info-label {
+    font-weight: 600;
+    color: #6b7280;
+  }
+  
+  .info-value {
+    font-weight: 600;
+    color: #111827;
+  }
+  
+  .warning-box {
+    background: #fef3c7;
+    border-left: 4px solid #f59e0b;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 24px;
+  }
+  
+  .warning-box strong {
+    color: #92400e;
+  }
+  
+  .action-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+  }
+  
+  .btn {
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+    border: none;
+    cursor: pointer;
+    font-size: 15px;
+  }
+  
+  .btn-cancel {
+    background: #f3f4f6;
+    color: #374151;
+    border: 2px solid #e5e7eb;
+  }
+  
+  .btn-cancel:hover {
+    background: #e5e7eb;
+  }
+  
+  .btn-delete {
+    background: #dc2626;
+    color: white;
+  }
+  
+  .btn-delete:hover {
+    background: #b91c1c;
+  }
+</style>
+
+<div class="delete-card">
+  <div class="delete-header">
+    <span class="delete-icon">⚠️</span>
+    <h1 class="delete-title">Stok Hareketi Sil</h1>
+  </div>
+  
+  <div class="warning-box">
+    <strong>⚠️ Uyarı:</strong> Bu işlem geri alınamaz! Stok hareketi silindiğinde, stok miktarı otomatik olarak düzeltilecektir.
+  </div>
+  
+  <div class="delete-info">
+    <div class="info-row">
+      <span class="info-label">Tarih:</span>
+      <span class="info-value">{{ hareket.tarih|date:"d.m.Y H:i" }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Stok Kodu:</span>
+      <span class="info-value">{{ hareket.stok_item.stok_kodu }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Ürün Adı:</span>
+      <span class="info-value">{{ hareket.stok_item.ad }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Hareket Tipi:</span>
+      <span class="info-value">{{ hareket.get_hareket_tipi_display }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Miktar:</span>
+      <span class="info-value">{{ hareket.miktar|floatformat:"-3" }} {{ hareket.birim }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Önceki Stok:</span>
+      <span class="info-value">{{ hareket.onceki_stok|floatformat:"-3" }}</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">Sonraki Stok:</span>
+      <span class="info-value">{{ hareket.sonraki_stok|floatformat:"-3" }}</span>
+    </div>
+    {% if hareket.referans_no %}
+    <div class="info-row">
+      <span class="info-label">Referans No:</span>
+      <span class="info-value">{{ hareket.referans_no }}</span>
+    </div>
+    {% endif %}
+  </div>
+  
+  <form method="post">
+    {% csrf_token %}
+    <div class="action-buttons">
+      <a href="{% url 'stokapp:stok_hareket_listesi' %}" class="btn btn-cancel">
+        ✕ İptal
+      </a>
+      <button type="submit" class="btn btn-delete" onclick="return confirm('Bu stok hareketini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz!');">
+        🗑️ Sil
+      </button>
+    </div>
+  </form>
+</div>
+
+{% endblock %}
+

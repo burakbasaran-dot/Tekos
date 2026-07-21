@@ -1,0 +1,57 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Ar-Ge Projeleri{% endblock %}
+{% block content %}
+<div class="card">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
+    <h2 style="margin:0;">🔬 Ar-Ge — Projeler</h2>
+    {% if rbac_god or 'arge.ekle' in rbac_kodlar %}
+    <a href="{% url 'stokapp:arge_proje_ekle' %}" class="btn btn-primary">➕ Yeni proje</a>
+    {% endif %}
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;border-bottom:1px solid #e5e7eb;padding-bottom:8px;">
+    <a href="?tab=aktif" style="padding:8px 14px;border-radius:8px;text-decoration:none;font-weight:600;{% if tab != 'arsiv' %}background:#ecfdf5;color:#065f46;{% else %}color:#6b7280;{% endif %}">Aktif projeler</a>
+    <a href="?tab=arsiv" style="padding:8px 14px;border-radius:8px;text-decoration:none;font-weight:600;{% if tab == 'arsiv' %}background:#fef3c7;color:#92400e;{% else %}color:#6b7280;{% endif %}">Arşiv</a>
+  </div>
+  <form method="get" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;align-items:center;">
+    <input type="hidden" name="tab" value="{{ tab }}">
+    <input type="search" name="q" value="{{ q }}" placeholder="Kod, ad, stok…" style="padding:8px 12px;border:1px solid #ddd;border-radius:8px;min-width:200px;">
+    <select name="durum" style="padding:8px;border-radius:8px;border:1px solid #ddd;">
+      <option value="">Tüm durumlar</option>
+      {% for val,label in durum_secenekleri %}
+      <option value="{{ val }}" {% if durum == val %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="btn btn-secondary">Filtrele</button>
+  </form>
+  <table>
+    <thead>
+      <tr>
+        <th>Kod</th>
+        <th>Proje</th>
+        <th>Stok ürünü</th>
+        <th>Durum</th>
+        <th>Sorumlu</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in projeler %}
+      <tr>
+        <td><strong>{{ p.proje_kodu }}</strong></td>
+        <td>{{ p.proje_adi }}</td>
+        <td>{{ p.stok_item.stok_kodu }} — {{ p.stok_item.ad }}</td>
+        <td>{{ p.get_durum_display }}</td>
+        <td>{% if p.sorumlu %}{{ p.sorumlu.get_full_name|default:p.sorumlu.username }}{% else %}—{% endif %}</td>
+        <td>
+          {% if rbac_god or 'arge.goruntule' in rbac_kodlar %}
+          <a href="{% url 'stokapp:arge_proje_detay' p.pk %}" class="btn btn-secondary" style="padding:6px 12px;font-size:13px;">Detay</a>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" style="text-align:center;color:#6b7280;padding:28px;">Kayıt yok.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

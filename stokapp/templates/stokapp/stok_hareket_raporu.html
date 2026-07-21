@@ -1,0 +1,50 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Stok Hareket Raporu{% endblock %}
+{% block content %}
+<div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+        <h2 style="margin: 0;">📋 Stok Hareket Raporu</h2>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <a href="{% url 'stokapp:stok_hareket_raporu_excel' %}" class="btn btn-secondary">📊 Excel İndir</a>
+            <a href="{% url 'stokapp:stok_hareket_raporu_pdf' %}" class="btn btn-secondary">📄 PDF İndir</a>
+        </div>
+    </div>
+
+    <table style="width: 100%; border-collapse: collapse; background: white;">
+        <thead>
+            <tr style="background-color: #f9fafb; border-bottom: 2px solid #e5e7eb;">
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Tarih</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Stok Kodu</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Ürün Adı</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Hareket Tipi</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Miktar</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Önceki Stok</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Sonraki Stok</th>
+                <th style="padding: 12px; text-align: left; font-weight: 600;">Referans</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for hareket in hareketler %}
+            <tr style="border-bottom: 1px solid #e5e7eb;">
+                <td style="padding: 12px;">{{ hareket.tarih|date:"d.m.Y H:i" }}</td>
+                <td style="padding: 12px;">{{ hareket.stok_item.stok_kodu }}</td>
+                <td style="padding: 12px;">{{ hareket.stok_item.ad }}</td>
+                <td style="padding: 12px; {% if hareket.hareket_tipi == 'GIRIS' %}color: #16a34a;{% else %}color: #dc2626;{% endif %}">
+                    {{ hareket.get_hareket_tipi_display }}
+                </td>
+                <td style="padding: 12px;">{{ hareket.miktar|floatformat:"-3" }} {{ hareket.birim }}</td>
+                <td style="padding: 12px;">{{ hareket.onceki_stok|floatformat:"-3" }}</td>
+                <td style="padding: 12px;">{{ hareket.sonraki_stok|floatformat:"-3" }}</td>
+                <td style="padding: 12px;">{{ hareket.referans_no|default:"-" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="8" style="text-align: center; padding: 24px; color: #6b7280;">
+                    Henüz stok hareketi kaydı bulunmuyor.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
