@@ -1,3 +1,4 @@
+from .audit import PlatformAuditLog
 from .company import Company, CompanyMembership, CompanySetupDraft, Department
 from .subscription import Plan, PlanModuleEntitlement, Subscription
 
@@ -8,5 +9,6 @@ __all__ = [
     "Department",
     "Plan",
     "PlanModuleEntitlement",
+    "PlatformAuditLog",
     "Subscription",
 ]

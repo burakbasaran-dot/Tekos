@@ -21,6 +21,12 @@ Varsayılan veritabanı: SQLite (`db.sqlite3`). PostgreSQL için `DATABASE_URL` 
 
 - [DEPLOYMENT.md](DEPLOYMENT.md) — Render production kurulumu, env değişkenleri, domain, checklist
 - [BACKUP_RESTORE.md](BACKUP_RESTORE.md) — PostgreSQL yedekleme / geri yükleme
+- [docs/POSTGRESQL.md](docs/POSTGRESQL.md) — PostgreSQL / pgvector
+- [docs/MULTI_TENANT.md](docs/MULTI_TENANT.md) — Multi-tenant temel
+- [docs/COMPANY_SETUP_WIZARD.md](docs/COMPANY_SETUP_WIZARD.md) — Firma kurulum sihirbazı
+- [docs/SUBSCRIPTION_SYSTEM.md](docs/SUBSCRIPTION_SYSTEM.md) — Lisans / abonelik
+- [docs/AUDIT_LOG.md](docs/AUDIT_LOG.md) — Platform audit log
+- [docs/ROADMAP_NEXT.md](docs/ROADMAP_NEXT.md) — Sonraki adımlar
 - [YEDEKLEME_REHBERI.md](YEDEKLEME_REHBERI.md) — Genel yedekleme notları
 - [KLON_README.md](KLON_README.md) — Klon ortamı notları
 

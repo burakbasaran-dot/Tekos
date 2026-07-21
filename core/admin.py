@@ -6,6 +6,7 @@ from core.models import (
     Department,
     Plan,
     PlanModuleEntitlement,
+    PlatformAuditLog,
     Subscription,
 )
 
@@ -59,3 +60,43 @@ class SubscriptionAdmin(admin.ModelAdmin):
 class PlanModuleEntitlementAdmin(admin.ModelAdmin):
     list_display = ("plan", "module_code", "is_enabled")
     list_filter = ("is_enabled", "plan")
+
+
+@admin.register(PlatformAuditLog)
+class PlatformAuditLogAdmin(admin.ModelAdmin):
+    list_display = (
+        "created_at",
+        "action",
+        "company",
+        "user",
+        "model_name",
+        "object_id",
+        "ip_address",
+    )
+    list_filter = ("action", "company", "model_name", "created_at")
+    search_fields = ("object_repr", "model_name", "object_id", "user__username", "request_path")
+    readonly_fields = (
+        "company",
+        "user",
+        "action",
+        "model_name",
+        "object_id",
+        "object_repr",
+        "old_values",
+        "new_values",
+        "ip_address",
+        "user_agent",
+        "request_path",
+        "request_method",
+        "created_at",
+    )
+    date_hierarchy = "created_at"
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return request.user.is_superuser
