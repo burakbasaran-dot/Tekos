@@ -1,0 +1,13 @@
+{% extends "core/signup/base.html" %}
+{% block title %}Başvuru Alındı{% endblock %}
+{% block content %}
+<h1>Başvurunuz alındı</h1>
+<p class="lead">
+  {% if type == "trial" %}
+  E-posta adresinize doğrulama bağlantısı gönderdik. Lütfen gelen kutunuzu kontrol edin.
+  {% else %}
+  Geliştirici başvurunuz için doğrulama e-postası gönderildi.
+  {% endif %}
+</p>
+<p>Spam klasörünü de kontrol etmeyi unutmayın. Bağlantı sınırlı süre geçerlidir.</p>
+{% endblock %}

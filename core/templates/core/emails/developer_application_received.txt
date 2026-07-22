@@ -1,0 +1,5 @@
+Merhaba {{ application.first_name }},
+
+Geliştirici başvurunuz alındı ve inceleme sürecine alındı.
+
+TEKOS

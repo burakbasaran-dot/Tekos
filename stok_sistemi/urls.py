@@ -5,14 +5,17 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 from core.urls import platform_urlpatterns
+from core.urls_signup import legal_urlpatterns, signup_urlpatterns
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('accounts/', include((signup_urlpatterns, 'signup'))),
     path('accounts/', include('django.contrib.auth.urls')),
+    path('legal/', include((legal_urlpatterns, 'legal'))),
     path('api/', include('core.urls')),
     path('platform/', include((platform_urlpatterns, 'core'))),
     path('stok/', include('stokapp.urls')),
-    path('', RedirectView.as_view(url='/stok/dashboard/')),  # Giriş sonrası ana dashboard'a yönlendir
+    path('', RedirectView.as_view(url='/stok/dashboard/')),
 ]
 
 if settings.DEBUG:

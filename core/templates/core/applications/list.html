@@ -1,0 +1,40 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Başvurular{% endblock %}
+{% block content %}
+<div class="card" style="max-width:1200px;">
+  <h2>{{ page_title }}</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin:16px 0;">
+    <div class="card" style="padding:12px;"><strong>{{ stats.today_trials }}</strong><br><span style="color:#6b7280;font-size:.85rem;">Bugün deneme</span></div>
+    <div class="card" style="padding:12px;"><strong>{{ stats.active_trials }}</strong><br><span style="color:#6b7280;font-size:.85rem;">Aktif deneme</span></div>
+    <div class="card" style="padding:12px;"><strong>{{ stats.expiring_soon }}</strong><br><span style="color:#6b7280;font-size:.85rem;">7 gün içinde bitecek</span></div>
+    <div class="card" style="padding:12px;"><strong>{{ stats.pending_developers }}</strong><br><span style="color:#6b7280;font-size:.85rem;">Geliştirici bekliyor</span></div>
+    <div class="card" style="padding:12px;"><strong>{{ stats.failed }}</strong><br><span style="color:#6b7280;font-size:.85rem;">Başarısız</span></div>
+  </div>
+  <form method="get" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;">
+    <input type="text" name="q" value="{{ q }}" placeholder="Ara…">
+    <select name="type"><option value="">Tüm türler</option><option value="trial" {% if type_filter == "trial" %}selected{% endif %}>Deneme</option><option value="developer" {% if type_filter == "developer" %}selected{% endif %}>Geliştirici</option></select>
+    <select name="status"><option value="">Tüm durumlar</option>{% for val,label in status_choices %}<option value="{{ val }}" {% if status_filter == val %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+    <button type="submit" class="btn btn-secondary">Filtrele</button>
+  </form>
+  <table class="table" style="width:100%;border-collapse:collapse;font-size:.9rem;">
+    <thead><tr style="text-align:left;border-bottom:1px solid #e5e7eb;">
+      <th style="padding:.4rem;">Tür</th><th>Ad Soyad</th><th>E-posta</th><th>Firma</th><th>Durum</th><th>Tarih</th><th></th>
+    </tr></thead>
+    <tbody>
+    {% for app in applications %}
+    <tr style="border-bottom:1px solid #f3f4f6;">
+      <td style="padding:.4rem;">{{ app.get_application_type_display }}</td>
+      <td>{{ app.full_name }}</td>
+      <td>{{ app.email }}</td>
+      <td>{{ app.company_name|default:"—" }}</td>
+      <td>{{ app.get_status_display }}</td>
+      <td>{{ app.created_at|date:"d.m.Y H:i" }}</td>
+      <td><a href="{% url 'core:application_detail' app.pk %}">Detay</a></td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="7" style="padding:1rem;color:#6b7280;">Başvuru bulunamadı.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

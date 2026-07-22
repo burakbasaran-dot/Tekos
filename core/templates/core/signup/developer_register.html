@@ -1,0 +1,38 @@
+{% extends "core/signup/base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block content %}
+<h1>{{ page_title }}</h1>
+<p class="lead">TEKOS ekosisteminde geliştirici olarak yer alın.</p>
+{% if form.non_field_errors %}<div class="errors">{{ form.non_field_errors }}</div>{% endif %}
+<form method="post" enctype="multipart/form-data" novalidate>
+  {% csrf_token %}
+  {{ form.source }}
+  <div style="position:absolute;left:-9999px;" aria-hidden="true">{{ form.website_url }}</div>
+  <div class="grid-2">
+    <div class="field">{{ form.first_name.label_tag }}{{ form.first_name }}</div>
+    <div class="field">{{ form.last_name.label_tag }}{{ form.last_name }}</div>
+  </div>
+  <div class="field">{{ form.email.label_tag }}{{ form.email }}</div>
+  <div class="field">{{ form.phone.label_tag }}{{ form.phone }}</div>
+  <div class="grid-2">
+    <div class="field">{{ form.city.label_tag }}{{ form.city }}</div>
+    <div class="field">{{ form.country.label_tag }}{{ form.country }}</div>
+  </div>
+  <div class="field">{{ form.company_name.label_tag }}{{ form.company_name }}</div>
+  <div class="field">{{ form.job_title.label_tag }}{{ form.job_title }}</div>
+  <div class="grid-2">
+    <div class="field">{{ form.experience_level.label_tag }}{{ form.experience_level }}</div>
+    <div class="field">{{ form.work_style.label_tag }}{{ form.work_style }}</div>
+  </div>
+  <div class="field">{{ form.technologies.label_tag }}<div class="checkbox-group">{{ form.technologies }}</div></div>
+  <div class="field">{{ form.github_url.label_tag }}{{ form.github_url }}</div>
+  <div class="field">{{ form.linkedin_url.label_tag }}{{ form.linkedin_url }}</div>
+  <div class="field">{{ form.cv_file.label_tag }}{{ form.cv_file }}</div>
+  <div class="field">{{ form.motivation.label_tag }}{{ form.motivation }}</div>
+  <div class="field checkbox-group">
+    <label>{{ form.kvkk_accepted }} <a href="{% url 'legal:legal_kvkk' %}" target="_blank">KVKK</a></label>
+    <label>{{ form.terms_accepted }} <a href="{% url 'legal:legal_terms' %}" target="_blank">Kullanım Koşulları</a></label>
+  </div>
+  <button type="submit" class="btn btn-primary">Başvuruyu Gönder</button>
+</form>
+{% endblock %}

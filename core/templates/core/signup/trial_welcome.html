@@ -1,0 +1,24 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Deneme Hesabınız Hazır{% endblock %}
+{% block content %}
+<div class="card" style="max-width:720px;">
+  <h2>TEKOS deneme hesabınız hazır</h2>
+  {% if company %}
+  <p><strong>Firma:</strong> {{ company.name }}</p>
+  {% endif %}
+  {% if subscription and subscription.trial_end_date %}
+  <p><strong>Deneme bitiş:</strong> {{ subscription.trial_end_date|date:"d.m.Y" }}</p>
+  {% endif %}
+  <h3>İlk adımlar</h3>
+  <ul>
+    <li>Firma bilgilerinizi gözden geçirin</li>
+    <li>Kullanıcı ekleyin</li>
+    <li>Örnek stok kartlarını inceleyin</li>
+    <li>Dashboard'u keşfedin</li>
+  </ul>
+  <p>
+    <a class="btn btn-primary" href="/stok/dashboard/">Dashboard'a Git</a>
+    <a class="btn btn-secondary" href="/platform/setup/">Kurulum Sihirbazı</a>
+  </p>
+</div>
+{% endblock %}

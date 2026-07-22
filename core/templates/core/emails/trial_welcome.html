@@ -1,0 +1,4 @@
+<p>Merhaba {{ application.first_name }},</p>
+<p>TEKOS deneme hesabınız hazır.</p>
+{% if company %}<p><strong>Firma:</strong> {{ company.name }}</p>{% endif %}
+<p><a href="{{ login_url }}">Giriş yap</a></p>

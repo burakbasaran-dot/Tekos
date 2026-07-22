@@ -1,0 +1,37 @@
+{% extends "core/signup/base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+{% block content %}
+<h1>{{ page_title }}</h1>
+<p class="lead">30 gün boyunca TEKOS'u ücretsiz deneyin.</p>
+{% if form.non_field_errors %}<div class="errors">{{ form.non_field_errors }}</div>{% endif %}
+<form method="post" novalidate>
+  {% csrf_token %}
+  {{ form.source }}
+  <div style="position:absolute;left:-9999px;" aria-hidden="true">{{ form.website_url }}</div>
+  <div class="grid-2">
+    <div class="field">{{ form.first_name.label_tag }}{{ form.first_name }}{% if form.first_name.errors %}<div class="errors">{{ form.first_name.errors }}</div>{% endif %}</div>
+    <div class="field">{{ form.last_name.label_tag }}{{ form.last_name }}{% if form.last_name.errors %}<div class="errors">{{ form.last_name.errors }}</div>{% endif %}</div>
+  </div>
+  <div class="field">{{ form.email.label_tag }}{{ form.email }}{% if form.email.errors %}<div class="errors">{{ form.email.errors }}</div>{% endif %}</div>
+  <div class="field">{{ form.phone.label_tag }}{{ form.phone }}</div>
+  <div class="field">{{ form.company_name.label_tag }}{{ form.company_name }}</div>
+  <div class="grid-2">
+    <div class="field">{{ form.industry.label_tag }}{{ form.industry }}</div>
+    <div class="field">{{ form.city.label_tag }}{{ form.city }}</div>
+  </div>
+  <div class="field">{{ form.company_size.label_tag }}{{ form.company_size }}</div>
+  <div class="field">{{ form.username_preference.label_tag }}{{ form.username_preference }}</div>
+  <div class="grid-2">
+    <div class="field">{{ form.password1.label_tag }}{{ form.password1 }}{% if form.password1.errors %}<div class="errors">{{ form.password1.errors }}</div>{% endif %}</div>
+    <div class="field">{{ form.password2.label_tag }}{{ form.password2 }}</div>
+  </div>
+  <div class="field">{{ form.job_title.label_tag }}{{ form.job_title }}</div>
+  <div class="field">{{ form.message.label_tag }}{{ form.message }}</div>
+  <div class="field checkbox-group">
+    <label>{{ form.kvkk_accepted }} <a href="{% url 'legal:legal_kvkk' %}" target="_blank" rel="noopener">KVKK</a></label>
+    <label>{{ form.terms_accepted }} <a href="{% url 'legal:legal_terms' %}" target="_blank" rel="noopener">Kullanım Koşulları</a></label>
+    <label>{{ form.commercial_communication_accepted }}</label>
+  </div>
+  <button type="submit" class="btn btn-primary">Başvuruyu Gönder</button>
+</form>
+{% endblock %}

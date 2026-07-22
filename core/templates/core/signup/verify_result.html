@@ -1,0 +1,9 @@
+{% extends "core/signup/base.html" %}
+{% block title %}E-posta Doğrulama{% endblock %}
+{% block content %}
+<h1>{% if success %}Başarılı{% else %}Doğrulama{% endif %}</h1>
+<p class="lead">{{ message }}</p>
+{% if success and application_type != "developer" %}
+<p><a class="btn btn-primary" href="{% url 'login' %}">Giriş Yap</a></p>
+{% endif %}
+{% endblock %}

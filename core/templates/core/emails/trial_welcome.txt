@@ -1,0 +1,9 @@
+Merhaba {{ application.first_name }},
+
+TEKOS deneme hesabınız hazır.
+
+Firma: {% if company %}{{ company.name }}{% endif %}
+Giriş: {{ login_url }}
+{% if subscription and subscription.trial_end_date %}Deneme bitiş: {{ subscription.trial_end_date }}{% endif %}
+
+TEKOS

@@ -1,0 +1,2 @@
+Deneme provisioning başarısız: {{ application.email }}
+Özet: {{ application.failure_summary }}

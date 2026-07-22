@@ -1,0 +1,7 @@
+{% extends "core/signup/base.html" %}
+{% block title %}{{ doc.title }}{% endblock %}
+{% block content %}
+<h1>{{ doc.title }}</h1>
+<p class="lead">Sürüm {{ doc.version }}</p>
+<div style="line-height:1.7; white-space:pre-wrap;">{{ doc.content }}</div>
+{% endblock %}

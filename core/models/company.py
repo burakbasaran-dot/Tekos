@@ -11,6 +11,7 @@ class Company(models.Model):
     is_active = models.BooleanField(default=True)
     setup_completed = models.BooleanField(default=False)
     is_demo = models.BooleanField(default=False)
+    demo_seed_completed = models.BooleanField(default=False)
     custom_domain = models.CharField(
         max_length=255,
         blank=True,

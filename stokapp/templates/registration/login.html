@@ -202,6 +202,44 @@
       font-family: inherit;
     }
     .login-btn:hover { filter: brightness(0.97); }
+    .signup-actions {
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .signup-actions p {
+      margin: 0;
+      font-size: 0.88rem;
+      color: var(--muted);
+      text-align: center;
+    }
+    .signup-btn {
+      display: block;
+      width: 100%;
+      padding: 13px 16px;
+      border-radius: 12px;
+      font-weight: 700;
+      text-align: center;
+      text-decoration: none;
+      font-family: inherit;
+      cursor: pointer;
+      transition: filter 0.15s;
+    }
+    .signup-btn:focus { outline: 2px solid var(--primary); outline-offset: 2px; }
+    .signup-btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--primary-d));
+      color: #fff;
+      border: none;
+    }
+    .signup-btn-outline {
+      background: #fff;
+      color: var(--primary-d);
+      border: 2px solid var(--primary);
+    }
+    .signup-btn:hover { filter: brightness(0.97); }
     @media (max-width: 960px) {
       .login-shell { grid-template-columns: 1fr; }
       .login-hero { min-height: 360px; padding: 28px 20px; }
@@ -257,6 +295,17 @@
           </div>
           <button type="submit" class="login-btn">Giriş Yap</button>
         </form>
+
+        <div class="signup-actions">
+          <a href="/accounts/trial/register/?source=login" class="signup-btn signup-btn-primary">
+            Ücretsiz Deneme — 30 Gün
+          </a>
+          <p>30 gün boyunca TEKOS'u ücretsiz deneyin.</p>
+          <a href="/accounts/developer/register/?source=login" class="signup-btn signup-btn-outline">
+            Geliştirici Olmak İstiyorum
+          </a>
+          <p>TEKOS ekosisteminde geliştirici olarak yer alın.</p>
+        </div>
       </div>
     </section>
   </div>

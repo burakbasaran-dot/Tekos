@@ -1,0 +1,51 @@
+{% extends "stokapp/base.html" %}
+{% block title %}Başvuru #{{ application.pk }}{% endblock %}
+{% block content %}
+<div class="card" style="max-width:960px;">
+  <h2>{{ application.full_name }} — {{ application.get_application_type_display }}</h2>
+  <p><strong>Durum:</strong> {{ application.get_status_display }} · <strong>E-posta doğrulama:</strong> {% if application.email_verified %}Evet{% else %}Hayır{% endif %}</p>
+  <div class="grid-2" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <div>
+      <h3>Bilgiler</h3>
+      <ul style="line-height:1.8;">
+        <li>E-posta: {{ application.email }}</li>
+        <li>Telefon: {{ application.phone|default:"—" }}</li>
+        <li>Firma: {{ application.company_name|default:"—" }}</li>
+        <li>Şehir: {{ application.city|default:"—" }}</li>
+        <li>Kaynak: {{ application.source|default:"—" }}</li>
+      </ul>
+      {% if application.created_company %}
+      <p><a href="/platform/companies/">Firma: {{ application.created_company.name }}</a></p>
+      {% endif %}
+      {% if application.created_subscription %}
+      <p>Deneme bitiş: {{ application.created_subscription.trial_end_date|date:"d.m.Y"|default:"—" }}</p>
+      {% endif %}
+    </div>
+    <div>
+      <h3>Yönetici işlemleri</h3>
+      <form method="post" style="display:flex;flex-direction:column;gap:8px;">
+        {% csrf_token %}
+        <textarea name="note" rows="2" placeholder="Not / red nedeni"></textarea>
+        <button name="action" value="assign_me" class="btn btn-secondary">Bana ata</button>
+        <button name="action" value="approve" class="btn btn-secondary">Onayla</button>
+        <button name="action" value="reject" class="btn btn-secondary">Reddet</button>
+        <button name="action" value="resend_verification" class="btn btn-secondary">Doğrulama e-postası yeniden gönder</button>
+        {% if application.application_type == "trial" %}
+        <button name="action" value="extend_trial" class="btn btn-secondary">Denemeyi 7 gün uzat</button>
+        <button name="action" value="convert_customer" class="btn btn-secondary">Müşteriye dönüştür</button>
+        {% endif %}
+        <button name="action" value="add_note" class="btn btn-secondary">Not ekle</button>
+      </form>
+    </div>
+  </div>
+  {% if application.internal_notes %}
+  <h3>İç notlar</h3>
+  <pre style="white-space:pre-wrap;background:#f9fafb;padding:12px;border-radius:8px;">{{ application.internal_notes }}</pre>
+  {% endif %}
+  <h3>Durum geçmişi</h3>
+  <ul>{% for h in application.status_history.all %}<li>{{ h.created_at|date:"d.m.Y H:i" }} — {{ h.old_status }} → {{ h.new_status }}{% if h.note %} ({{ h.note }}){% endif %}</li>{% empty %}<li>Kayıt yok</li>{% endfor %}</ul>
+  {% for upload in application.uploads.all %}
+  <p><a href="{% url 'core:application_cv_download' application.pk upload.pk %}">CV indir: {{ upload.original_name }}</a></p>
+  {% endfor %}
+</div>
+{% endblock %}

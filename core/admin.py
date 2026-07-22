@@ -1,12 +1,17 @@
 from django.contrib import admin
 
 from core.models import (
+    ApplicationStatusHistory,
+    ApplicationUpload,
     Company,
     CompanyMembership,
     Department,
+    EmailVerificationToken,
+    LegalDocument,
     Plan,
     PlanModuleEntitlement,
     PlatformAuditLog,
+    SignupApplication,
     Subscription,
 )
 
@@ -100,3 +105,39 @@ class PlatformAuditLogAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return request.user.is_superuser
+
+
+class ApplicationStatusHistoryInline(admin.TabularInline):
+    model = ApplicationStatusHistory
+    extra = 0
+    readonly_fields = ("old_status", "new_status", "changed_by", "note", "created_at")
+    can_delete = False
+
+
+@admin.register(SignupApplication)
+class SignupApplicationAdmin(admin.ModelAdmin):
+    list_display = (
+        "pk", "application_type", "full_name", "email", "company_name",
+        "status", "email_verified", "created_at",
+    )
+    list_filter = ("application_type", "status", "email_verified", "industry")
+    search_fields = ("first_name", "last_name", "email", "company_name", "phone")
+    readonly_fields = ("created_at", "updated_at", "completed_at", "email_verified_at")
+    inlines = [ApplicationStatusHistoryInline]
+
+
+@admin.register(LegalDocument)
+class LegalDocumentAdmin(admin.ModelAdmin):
+    list_display = ("doc_type", "version", "title", "is_active", "created_at")
+    list_filter = ("doc_type", "is_active")
+
+
+@admin.register(EmailVerificationToken)
+class EmailVerificationTokenAdmin(admin.ModelAdmin):
+    list_display = ("application", "expires_at", "used_at", "created_at")
+    readonly_fields = ("token_hash",)
+
+
+@admin.register(ApplicationUpload)
+class ApplicationUploadAdmin(admin.ModelAdmin):
+    list_display = ("application", "original_name", "uploaded_at")

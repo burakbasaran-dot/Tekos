@@ -1,0 +1,1 @@
+Yeni geliştirici başvurusu: {{ application.full_name }} ({{ application.email }})

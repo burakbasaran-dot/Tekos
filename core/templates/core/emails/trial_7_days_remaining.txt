@@ -1,0 +1,2 @@
+TEKOS deneme sürenizin bitmesine {{ days_left }} gün kaldı.
+{% if subscription %}Bitiş: {{ subscription.trial_end_date }}{% endif %}

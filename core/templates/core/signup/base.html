@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ page_title|default:"TEKOS" }}{% endblock %}</title>
+  <style>
+    :root { --bg:#f5f7fb; --ink:#111827; --muted:#6b7280; --card:#fff; --border:#e5e7eb; --primary:#2ecc71; --primary-d:#27ae60; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; background:var(--bg); color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+    .shell { max-width:720px; margin:0 auto; padding:24px 16px 48px; }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:16px; padding:28px; box-shadow:0 8px 30px rgba(17,24,39,.06); }
+    h1 { margin:0 0 8px; font-size:1.5rem; }
+    .lead { color:var(--muted); margin:0 0 24px; }
+    .field { margin-bottom:14px; }
+    label { display:block; font-weight:600; margin-bottom:6px; font-size:.92rem; }
+    input[type=text],input[type=email],input[type=password],input[type=url],input[type=tel],select,textarea {
+      width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:10px; font:inherit;
+    }
+    .btn { display:inline-block; padding:12px 18px; border-radius:10px; font-weight:700; text-decoration:none; border:none; cursor:pointer; font:inherit; }
+    .btn-primary { background:linear-gradient(135deg,var(--primary),var(--primary-d)); color:#fff; }
+    .btn-outline { background:#fff; color:var(--primary-d); border:2px solid var(--primary); }
+    .btn:focus,.btn-primary:focus,.btn-outline:focus { outline:2px solid var(--primary); outline-offset:2px; }
+    .errors { background:#fef2f2; color:#b91c1c; padding:12px; border-radius:10px; margin-bottom:16px; }
+    .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .checkbox-group label { font-weight:400; }
+    .back { margin-top:20px; font-size:.9rem; }
+    .back a { color:var(--primary-d); }
+    @media (max-width:640px) { .grid-2 { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <div class="card">
+      {% block content %}{% endblock %}
+      <p class="back"><a href="{% url 'login' %}">← Giriş sayfasına dön</a></p>
+    </div>
+  </div>
+</body>
+</html>

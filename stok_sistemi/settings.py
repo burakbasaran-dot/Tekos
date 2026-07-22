@@ -269,6 +269,18 @@ IMAP_SERVER = os.getenv("IMAP_SERVER")
 IMAP_PORT = int(os.getenv("IMAP_PORT", "993"))
 MAIL_ACCOUNTS_JSON = os.getenv("MAIL_ACCOUNTS_JSON", "[]")
 
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "tekos-signup",
+    }
+}
+
+# Public signup feature flags (see docs/RENDER_SIGNUP_ENVIRONMENT.md)
+PUBLIC_SIGNUP_ENABLED = env_flag("PUBLIC_SIGNUP_ENABLED", "True")
+TRIAL_SIGNUP_ENABLED = env_flag("TRIAL_SIGNUP_ENABLED", "True")
+DEVELOPER_SIGNUP_ENABLED = env_flag("DEVELOPER_SIGNUP_ENABLED", "True")
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,

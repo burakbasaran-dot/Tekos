@@ -1,0 +1,6 @@
+Merhaba {{ application.first_name }},
+
+Geliştirici başvurunuz için e-posta doğrulama bağlantısı:
+{{ verify_url }}
+
+TEKOS

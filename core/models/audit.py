@@ -17,6 +17,7 @@ class PlatformAuditLog(models.Model):
     ACTION_IMPORT = "import"
     ACTION_PERMISSION_CHANGE = "permission_change"
     ACTION_SETTINGS_CHANGE = "settings_change"
+    ACTION_SIGNUP = "signup"
     ACTION_CHOICES = [
         (ACTION_LOGIN, "Login"),
         (ACTION_LOGOUT, "Logout"),
@@ -28,6 +29,7 @@ class PlatformAuditLog(models.Model):
         (ACTION_IMPORT, "Import"),
         (ACTION_PERMISSION_CHANGE, "Permission change"),
         (ACTION_SETTINGS_CHANGE, "Settings change"),
+        (ACTION_SIGNUP, "Signup"),
     ]
 
     company = models.ForeignKey(

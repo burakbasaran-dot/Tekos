@@ -1,0 +1,10 @@
+Merhaba {{ application.first_name }},
+
+TEKOS ücretsiz deneme başvurunuz için e-posta adresinizi doğrulamanız gerekiyor.
+
+Doğrulama bağlantısı:
+{{ verify_url }}
+
+Bu bağlantı sınırlı süre geçerlidir.
+
+TEKOS
